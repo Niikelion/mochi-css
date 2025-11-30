@@ -96,6 +96,7 @@ Benchmarks and performance comparisons will be released at a later stage.
 | **Benchmarks**              | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                       |
 | **Tree-shaking**            | 🕒 Queued      | Support injecting css outside globals.css file, making it possible for the frameworks like NextJS to tree-shake generated styles |
 | **Mochi-CSS/mango**         | 🕒 Queued      | Theming library built on top of Mochi-CSS/vanilla                                                                                |
+
 Status legend
 
 🚧 In Progress — actively being worked on  
