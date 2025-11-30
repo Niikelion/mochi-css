@@ -1,4 +1,4 @@
-import SWC from "@swc/types"
+import SWC from "@swc/core"
 
 const ret = Symbol("ret")
 type Ret = typeof ret

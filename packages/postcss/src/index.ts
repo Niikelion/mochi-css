@@ -1,6 +1,6 @@
 import {PluginCreator, TransformCallback} from "postcss";
 import * as path from "path";
-import {Builder} from "@mochi-js/builder";
+import {Builder} from "@mochi-css/builder";
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -11,7 +11,7 @@ type Options = {
     rootDir?: string
 }
 
-const pluginName = "postcss-mochi-js"
+const pluginName = "postcss-mochi-css"
 
 const creator: PluginCreator<Options> = (opts?: Options) => {
     const options = Object.assign({
@@ -30,7 +30,6 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         if (!filePath.endsWith("globals.css")) return
 
         const css = await builder.collectMochiCss(path => {
-            console.log({path})
             result.messages.push({
                 type: "dependency",
                 file: path,

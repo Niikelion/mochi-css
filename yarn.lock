@@ -805,30 +805,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mochi-js/builder@workspace:^, @mochi-js/builder@workspace:packages/builder":
+"@mochi-css/builder@workspace:^, @mochi-css/builder@workspace:packages/builder":
   version: 0.0.0-use.local
-  resolution: "@mochi-js/builder@workspace:packages/builder"
+  resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.0.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
-    "@mochi-js/styling": "npm:0.0.1"
+    "@mochi-css/vanilla": "npm:0.0.1"
     "@swc/core": "npm:^1.15.2"
     "@types/node": "npm:^24.8.1"
-    postcss: "npm:^8.5.6"
     tsdown: "npm:^0.15.7"
-    vm2: "npm:^3.10.0"
-    woodpile: "npm:^0.0.6"
   languageName: unknown
   linkType: soft
 
-"@mochi-js/nextjs-example@workspace:examples/nextjs":
+"@mochi-css/nextjs-example@workspace:examples/nextjs":
   version: 0.0.0-use.local
-  resolution: "@mochi-js/nextjs-example@workspace:examples/nextjs"
+  resolution: "@mochi-css/nextjs-example@workspace:examples/nextjs"
   dependencies:
     "@eslint/eslintrc": "npm:^3"
-    "@mochi-js/postcss": "workspace:^"
-    "@mochi-js/styling": "workspace:^"
+    "@mochi-css/postcss": "npm:^0.0.1"
+    "@mochi-css/vanilla": "npm:^0.0.1"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -841,23 +838,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-js/postcss@workspace:^, @mochi-js/postcss@workspace:packages/postcss":
+"@mochi-css/postcss@npm:^0.0.1, @mochi-css/postcss@workspace:packages/postcss":
   version: 0.0.0-use.local
-  resolution: "@mochi-js/postcss@workspace:packages/postcss"
+  resolution: "@mochi-css/postcss@workspace:packages/postcss"
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.0.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
-    "@mochi-js/builder": "workspace:^"
+    "@mochi-css/builder": "workspace:^"
     "@types/node": "npm:^24.8.1"
     postcss: "npm:^8.5.6"
     tsdown: "npm:^0.15.7"
   languageName: unknown
   linkType: soft
 
-"@mochi-js/styling@npm:0.0.1, @mochi-js/styling@workspace:^, @mochi-js/styling@workspace:packages/styling":
+"@mochi-css/vanilla@npm:0.0.1, @mochi-css/vanilla@npm:^0.0.1, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
-  resolution: "@mochi-js/styling@workspace:packages/styling"
+  resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.0.0"
@@ -1638,16 +1635,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"acorn-walk@npm:^8.3.4":
-  version: 8.3.4
-  resolution: "acorn-walk@npm:8.3.4"
-  dependencies:
-    acorn: "npm:^8.11.0"
-  checksum: 10c0/76537ac5fb2c37a64560feaf3342023dadc086c46da57da363e64c6148dc21b57d49ace26f949e225063acb6fb441eabffd89f7a3066de5ad37ab3e328927c62
-  languageName: node
-  linkType: hard
-
-"acorn@npm:^8.11.0, acorn@npm:^8.14.1, acorn@npm:^8.15.0":
+"acorn@npm:^8.15.0":
   version: 8.15.0
   resolution: "acorn@npm:8.15.0"
   bin:
@@ -3857,9 +3845,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mochi-js@workspace:.":
+"mochi-css@workspace:.":
   version: 0.0.0-use.local
-  resolution: "mochi-js@workspace:."
+  resolution: "mochi-css@workspace:."
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
     "@changesets/cli": "npm:^2.29.7"
@@ -5511,18 +5499,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vm2@npm:^3.10.0":
-  version: 3.10.0
-  resolution: "vm2@npm:3.10.0"
-  dependencies:
-    acorn: "npm:^8.14.1"
-    acorn-walk: "npm:^8.3.4"
-  bin:
-    vm2: bin/vm2
-  checksum: 10c0/f454f3bd9560cad82fdbcd8bc331a66672586f84f6a5bbf7151be592192bba0be719237f9a95c49fdbf4383b6960ebaca931e729f02361aabc9518c865409ef9
-  languageName: node
-  linkType: hard
-
 "which-boxed-primitive@npm:^1.1.0, which-boxed-primitive@npm:^1.1.1":
   version: 1.1.1
   resolution: "which-boxed-primitive@npm:1.1.1"
@@ -5592,13 +5568,6 @@ __metadata:
   bin:
     node-which: ./bin/node-which
   checksum: 10c0/66522872a768b60c2a65a57e8ad184e5372f5b6a9ca6d5f033d4b0dc98aff63995655a7503b9c0a2598936f532120e81dd8cc155e2e92ed662a2b9377cc4374f
-  languageName: node
-  linkType: hard
-
-"woodpile@npm:^0.0.6":
-  version: 0.0.6
-  resolution: "woodpile@npm:0.0.6"
-  checksum: 10c0/46fe96c69f8630f7e69b472e901dc8ee34a2169d19c4fe486fe8cb756ad6752274b46c278df3b681e972c5239925f3376e547aeeca8521d65c12d660154b3226
   languageName: node
   linkType: hard
 

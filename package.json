@@ -1,13 +1,14 @@
 {
-    "name": "mochi-js",
+    "name": "mochi-css",
     "packageManager": "yarn@4.10.3",
-    "repository": "git@github.com:niikelion/mochi-js.git",
+    "repository": "git@github.com:niikelion/mochi-css.git",
     "workspaces": [
         "packages/**",
         "examples/**"
     ],
     "scripts": {
         "build": "turbo build",
+        "build-all": "turbo build && turbo build-example",
         "dev": "turbo dev"
     },
     "devDependencies": {

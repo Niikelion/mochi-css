@@ -91,7 +91,7 @@ function extractData(ast: SWC.Module) {
         // mochi imports
         importDeclaration(node: SWC.ImportDeclaration, { descend, context }) {
             descend(context)
-            if (node.source.value !== "@mochi-js/styling") return
+            if (node.source.value !== "@mochi-css/vanilla") return
             for (const spec of ProjectIndex.extractImportSpecs(node)) {
                 const ref = spec.ref
                 const sourceName = spec.sourceName

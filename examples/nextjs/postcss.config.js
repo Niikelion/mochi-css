@@ -1,5 +1,5 @@
 module.exports = {
   plugins: {
-    '@mochi-js/postcss': {}
+    '@mochi-css/postcss': {}
   }
 }

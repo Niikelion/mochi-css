@@ -3,11 +3,16 @@ import path from "path";
 import * as SWC from "@swc/core";
 import {Module, ProjectIndex} from "@/ProjectIndex";
 import vm from "vm";
-import {CSSObject, StyleProps} from "@mochi-js/styling";
+import {CSSObject, StyleProps} from "@mochi-css/vanilla";
 
 export type BuilderOptions = {
   rootDir: string
 }
+
+const rootFileSuffix = `\
+declare global {
+    function registerStyles(...args: any[]): void
+}`
 
 export class Builder {
     constructor(private options: BuilderOptions) {}
@@ -85,8 +90,8 @@ export class Builder {
 
         // prepare extracted project
         const tmp = path.resolve(process.cwd(), ".mochi")
-        const rootPath = path.join(tmp, "__mochi-js__.ts")
-        const outputPath = path.join(tmp, "__mochi-js__.js")
+        const rootPath = path.join(tmp, "__mochi-css__.ts")
+        const outputPath = path.join(tmp, "__mochi-css__.js")
 
         const paths: string[] = []
 
@@ -99,7 +104,9 @@ export class Builder {
             await fs.mkdir(path.dirname(filePath), { recursive: true })
             await fs.writeFile(filePath, source, "utf8")
         }
-        await fs.writeFile(rootPath, paths.map(f => `import "./${f}";`).join("\n"), "utf8")
+        const rootImports = paths.map(f => `import "./${f}";`).join("\n")
+
+        await fs.writeFile(rootPath, [rootImports, rootFileSuffix].join("\n\n"), "utf8")
 
         // bundle all
         const newFiles = await SWC.bundle({
@@ -112,7 +119,7 @@ export class Builder {
             },
             entry: rootPath
         })
-        const resultFile = newFiles["__mochi-js__.ts"] ?? null
+        const resultFile = newFiles["__mochi-css__.ts"] ?? null
         if (!resultFile) return
 
         await vm.runInContext(resultFile.code, context)

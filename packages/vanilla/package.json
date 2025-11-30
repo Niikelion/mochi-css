@@ -1,6 +1,6 @@
 {
-  "name": "@mochi-js/styling",
-  "repository": "git@github.com:niikelion/mochi-js.git",
+  "name": "@mochi-css/vanilla",
+  "repository": "git@github.com:niikelion/mochi-css.git",
   "version": "0.0.1",
   "license": "MIT",
   "main": "dist/index.js",
