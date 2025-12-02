@@ -52,13 +52,13 @@ function asVar(value: CssLike<string | number>): string {
 
 export type NestedSelector = `&${string}`
 export type MediaSelector = `${AtRules}${string}`
-type NestedStyleKeys = Exclude<string, keyof Props | CssVar>
+type NestedStyleKeys = MediaSelector | NestedSelector
 
 export type StyleProps
     = { [K in keyof typeof styles]?: Parameters<(typeof styles)[K]>[0] }
     & { [K in Exclude<keyof Props, keyof typeof styles>]?: CssLike<Props[K]> }
     & { [K in CssVar]?: Parameters<(typeof asVar)>[0] }
-    // & { [K in NestedStyleKeys]?: StyleProps }
+    & { [K in NestedStyleKeys]?: StyleProps }
 
 function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
     return value.startsWith(prefix)
