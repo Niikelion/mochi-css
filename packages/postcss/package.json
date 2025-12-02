@@ -1,6 +1,6 @@
 {
   "name": "@mochi-css/postcss",
-  "repository": "git@github.com:niikelion/mochi-css.git",
+  "repository": "git@github.com:Niikelion/mochi-css.git",
   "version": "0.0.3",
   "license": "MIT",
   "main": "dist/index.js",

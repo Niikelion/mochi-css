@@ -1,7 +1,7 @@
 {
     "name": "mochi-css",
     "packageManager": "yarn@4.10.3",
-    "repository": "git@github.com:niikelion/mochi-css.git",
+    "repository": "git@github.com:Niikelion/mochi-css.git",
     "workspaces": [
         "packages/**",
         "examples/**"
