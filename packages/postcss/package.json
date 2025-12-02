@@ -1,7 +1,7 @@
 {
   "name": "@mochi-css/postcss",
   "repository": "git@github.com:niikelion/mochi-css.git",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -30,7 +30,7 @@
     "tsdown": "^0.15.7"
   },
   "dependencies": {
-    "@mochi-css/builder": "^0.0.1",
+    "@mochi-css/builder": "^0.0.2",
     "postcss": "^8.5.6"
   }
 }
