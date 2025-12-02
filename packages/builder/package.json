@@ -30,7 +30,7 @@
     "tsdown": "^0.15.7"
   },
   "dependencies": {
-    "@mochi-css/vanilla": "0.0.1",
+    "@mochi-css/vanilla": "^0.0.1",
     "@swc/core": "^1.15.2"
   }
 }

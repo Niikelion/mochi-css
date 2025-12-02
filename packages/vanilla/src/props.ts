@@ -1,10 +1,5 @@
-import {Properties, ObsoleteProperties, Property, DataType} from "csstype"
+import {Properties, ObsoleteProperties, AtRules } from "csstype"
 import {asColor, asLength, CssLike, CssVar} from "@/values";
-
-function todo(_: unknown, n: string): string {
-    console.error(`Property ${n} is not implemented`)
-    return "<missing>"
-}
 
 function asEnum<E extends string>(v: CssLike<E>): string {
     if (typeof v === "string") return v
@@ -55,10 +50,15 @@ function asVar(value: CssLike<string | number>): string {
     }
 }
 
+export type NestedSelector = `&${string}`
+export type MediaSelector = `${AtRules}${string}`
+type NestedStyleKeys = Exclude<string, keyof Props | CssVar>
+
 export type StyleProps
     = { [K in keyof typeof styles]?: Parameters<(typeof styles)[K]>[0] }
     & { [K in Exclude<keyof Props, keyof typeof styles>]?: CssLike<Props[K]> }
     & { [K in CssVar]?: Parameters<(typeof asVar)>[0] }
+    // & { [K in NestedStyleKeys]?: StyleProps }
 
 function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
     return value.startsWith(prefix)
@@ -70,6 +70,7 @@ function camelToKebab(str: string): string {
 
 export function cssFromProps(props: StyleProps): Record<string, string> {
     return Object.fromEntries(Object.entries(props).map(([key, value]) => {
+        // transform variable
         if (startsWith(key, "--")) return [key, asVar(value as CssLike<string | number>)]
         const parser = (styles as Record<string, (v: unknown, n: string) => string>)[key]
         if (value === undefined || value === null) return undefined
@@ -104,7 +105,7 @@ function shortHash(input: string, length = 8): string {
 export function hashCss(value: Record<string, string>): string {
     const items = [...Object.entries(value)]
     const stringified = items
-        .sort(([a], [b]) => a === b ? 0 : a > b ? 1 : 0)
+        .sort(([a], [b]) => a === b ? 0 : a > b ? 1 : -1)
         .map(([key, value]) => `${key}: ${value};`)
         .join('\n')
     return `s${shortHash(stringified)}`

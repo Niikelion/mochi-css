@@ -21,6 +21,6 @@ export class Token<T> {
     }
 }
 
-export function createToken<T>(name: string): CssVarVal extends T ? Token<T> : never {
-    return new Token(name) as CssVarVal extends T ? Token<T> : never
+export function createToken<T>(name: string): Token<T> {
+    return new Token(name)
 }

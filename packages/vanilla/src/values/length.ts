@@ -12,7 +12,7 @@ export class PercentValue extends NumericValue<"%"> {
 
 export type LengthUnit = "%" | "px" | "vw" | "vh" | "rem"
 export type CssLengthString = `${number}${LengthUnit}` | CssVarVal | Globals
-export type CssLength = number | CssLengthString
+export type CssLength = number | CssLengthString | CssVarVal
 export type CssLengthLike = CssLike<CssLength>
 
 export function asLength(value: CssLengthLike): CssLengthString {

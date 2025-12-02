@@ -30,7 +30,7 @@
     "tsdown": "^0.15.7"
   },
   "dependencies": {
-    "@mochi-css/builder": "workspace:^",
+    "@mochi-css/builder": "^0.0.1",
     "postcss": "^8.5.6"
   }
 }

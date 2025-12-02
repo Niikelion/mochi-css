@@ -4,7 +4,7 @@
 
 <div align="center">
 
-# 🧁 Mochi-CSS
+# 🧁 Mochi-CSS 🧁
 [![Patreon](https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/Niikelion)
 
 </div>
@@ -92,6 +92,7 @@ Benchmarks and performance comparisons will be released at a later stage.
 |-----------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------|
 | **Nested selectors**        | 🚧 In Progress | Achieve stitches.js–style nested syntax                                                                                          |
 | **Cross-file symbol usage** | 🚧 In Progress | Use imported tokens/objects in extracted styles                                                                                  |
+| **Mochi-CSS/tsuki**         | 🕒 Queued      | Small CLI tool for adding Mochi-CSS to existing projects                                                                         |
 | **Better DX tooling**       | 🕒 Queued      | Better warnings and errors; more precise code extraction                                                                         |
 | **Benchmarks**              | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                       |
 | **Tree-shaking**            | 🕒 Queued      | Support injecting css outside globals.css file, making it possible for the frameworks like NextJS to tree-shake generated styles |

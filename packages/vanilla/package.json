@@ -1,38 +1,46 @@
 {
-  "name": "@mochi-css/vanilla",
-  "repository": "git@github.com:niikelion/mochi-css.git",
-  "version": "0.0.1",
-  "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "files": [
-    "/dist"
-  ],
-  "exports": {
-    "import": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
+    "name": "@mochi-css/vanilla",
+    "repository": "git@github.com:niikelion/mochi-css.git",
+    "version": "0.0.1",
+    "license": "MIT",
+    "keywords": [
+        "css-in-js",
+        "styling",
+        "styles",
+        "react"
+    ],
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "exports": {
+        "import": {
+            "types": "./dist/index.d.mts",
+            "import": "./dist/index.mjs"
+        },
+        "require": {
+            "types": "./dist/index.d.ts",
+            "require": "./dist/index.js"
+        }
     },
-    "require": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js"
+    "scripts": {
+        "build": "tsdown && attw --pack .",
+        "test": "vitest"
+    },
+    "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.2",
+        "@gamedev-sensei/ts-config": "^2.0.0",
+        "@gamedev-sensei/tsdown-config": "^2.0.0",
+        "@types/node": "^24.8.1",
+        "tsdown": "^0.15.7",
+        "vitest": "^4.0.14"
+    },
+    "dependencies": {
+        "@types/react": "^19.2.2",
+        "clsx": "^2.1.1",
+        "csstype": "^3.2.3",
+        "react": "^19.2.0"
     }
-  },
-  "scripts": {
-    "build": "tsdown && attw --pack ."
-  },
-  "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.2",
-    "@gamedev-sensei/ts-config": "^2.0.0",
-    "@gamedev-sensei/tsdown-config": "^2.0.0",
-    "@types/node": "^24.8.1",
-    "tsdown": "^0.15.7"
-  },
-  "dependencies": {
-    "@types/react": "^19.2.2",
-    "clsx": "^2.1.1",
-    "csstype": "^3.2.3",
-    "react": "^19.2.0"
-  }
 }
