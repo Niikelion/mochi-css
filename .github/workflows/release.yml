@@ -24,7 +24,7 @@ jobs:
                     YARN_ENABLE_IMMUTABLE_INSTALLS: false
             -   name: Get version from package.json
                 id: version
-                run: echo "VERSION=v$(jq -r .version packages/ts-config/package.json)" >> $GITHUB_OUTPUT
+                run: echo "VERSION=v$(jq -r .version packages/vanilla/package.json)" >> $GITHUB_OUTPUT
             -   name: Commit and push changes
                 id: commit
                 uses: EndBug/add-and-commit@v9
