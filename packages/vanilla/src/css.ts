@@ -1,12 +1,7 @@
-import {cssFromProps, hashCss, StyleProps} from "@/props";
+import {cssFromProps, StyleProps} from "@/props";
 import clsx from "clsx";
-
-function compareString<T extends string>(a: T, b: T) {
-    return a < b ? -1 : a === b ? 0 : 1
-}
-function compareStringKey<T extends [string, any]>(a: T, b: T) {
-    return compareString(a[0], b[0])
-}
+import {compareStringKey} from "@/compare";
+import {hashProps} from "@/hash";
 
 export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}> {
     constructor(
@@ -15,11 +10,7 @@ export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}>
         public readonly defaultVariants: Partial<RefineVariants<V>>
     ) {}
 
-    toString() {
-        return this.classNames.map(c => `.${c}`).join('')
-    }
-
-    variant(props: RefineVariants<V>): string {
+    variant(props: Partial<RefineVariants<V>>): string {
         const keys = new Set<keyof V & string>([
             ...Object.keys(props),
             ...Object.keys(this.defaultVariants)
@@ -39,7 +30,7 @@ export class CssObjectBlock {
         styles: StyleProps
     ) {
         this.cssProps = cssFromProps(styles)
-        this.className = hashCss(this.cssProps)
+        this.className = hashProps(this.cssProps)
     }
 
     get selector(): string {
@@ -72,7 +63,7 @@ export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}
             this.variantBlocks[variantGroupName] = {} as typeof this.variantBlocks[keyof typeof this.variantBlocks]
             const variantGroup = variants[variantGroupName]
             for (const variantItemName in variantGroup) {
-                this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(variantGroup[variantItemName] ?? {})
+                this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(variantGroup[variantItemName]!)
             }
         }
         this.variantDefaults = defaultVariants!
@@ -80,7 +71,7 @@ export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}
 
     public asCssString(): string {
         return [
-            this.mainBlock.asCssString([]),
+            this.mainBlock.asCssString([""]),
             ...Object.entries(this.variantBlocks)
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))

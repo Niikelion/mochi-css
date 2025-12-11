@@ -1,7 +1,7 @@
 import {CssVar, CssVarVal} from "@/values";
 
 export class Token<T> {
-    constructor(public readonly name: String) {}
+    constructor(public readonly name: string) {}
 
     get variable(): CssVar {
         return `--${this.name}`
@@ -12,12 +12,6 @@ export class Token<T> {
 
     toString(): CssVar {
         return this.variable
-    }
-
-    set(value: T): Record<CssVar, T> {
-        return {
-            [this.variable]: value
-        } as Record<CssVar, T>
     }
 }
 

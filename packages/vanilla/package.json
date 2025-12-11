@@ -27,7 +27,8 @@
     },
     "scripts": {
         "build": "tsdown && attw --pack .",
-        "test": "vitest"
+        "test": "vitest",
+        "coverage": "vitest run --coverage"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
@@ -35,12 +36,15 @@
         "@gamedev-sensei/tsdown-config": "^2.0.0",
         "@types/node": "^24.8.1",
         "tsdown": "^0.15.7",
-        "vitest": "^4.0.14"
+        "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^4.0.15"
     },
     "dependencies": {
         "@types/react": "^19.2.2",
+        "@vitest/coverage-v8": "^4.0.15",
         "clsx": "^2.1.1",
         "csstype": "^3.2.3",
+        "known-css-properties": "^0.37.0",
         "react": "^19.2.0"
     }
 }

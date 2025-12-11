@@ -2,25 +2,18 @@
     "$schema": "https://turborepo.com/schema.json",
     "tasks": {
         "build": {
-            "dependsOn": [
-                "^build"
-            ],
-            "outputs": [
-                "dist/**"
-            ]
+            "dependsOn": [ "^build" ],
+            "outputs": [ "dist/**" ]
         },
         "build-example": {
-            "dependsOn": [
-                "^build-example"
-            ],
-            "outputs": [
-                "dist/**"
-            ]
+            "dependsOn": [ "^build-example" ],
+            "outputs": [ "dist/**" ]
         },
         "test": {
-            "dependsOn": [
-                "^test"
-            ]
+            "dependsOn": [ "^build" ]
+        },
+        "coverage": {
+            "dependsOn": [ "^build" ]
         },
         "dev": {
             "persistent": true,

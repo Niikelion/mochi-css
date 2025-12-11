@@ -1,0 +1,6 @@
+export function compareString<T extends string>(a: T, b: T) {
+    return a < b ? -1 : a === b ? 0 : 1
+}
+export function compareStringKey<T extends [string, any]>(a: T, b: T) {
+    return compareString(a[0], b[0])
+}

@@ -128,10 +128,10 @@ const buttonStyle = css({
     variants: {
         variant: {
             primary: {
-                [buttonColor]: primaryColor
+                [buttonColor.variable]: primaryColor
             },
             secondary: {
-                [buttonColor]: secondaryColor
+                [buttonColor.variable]: secondaryColor
             }
         }
     },
