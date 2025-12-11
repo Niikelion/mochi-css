@@ -11,6 +11,7 @@
         "build.examples": "turbo build-example",
         "build.all": "yarn build && yarn build.examples",
         "test": "turbo test",
+        "coverage": "turbo coverage",
         "dev": "turbo dev"
     },
     "devDependencies": {
