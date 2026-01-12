@@ -1,6 +1,6 @@
-import {Properties, ObsoleteProperties, AtRules } from "csstype"
+import {Properties, ObsoleteProperties } from "csstype"
 import {asColor, asLength, CssLike, CssVar} from "@/values"
-import {all as allProperties} from "known-css-properties"
+import properties from "known-css-properties"
 
 function asEnum<E extends string | number>(v: CssLike<E>): string {
     if (typeof v === "string") return v
@@ -44,9 +44,9 @@ const styles = {
     borderWidth: asLength,
 } satisfies { [K in keyof Props]?: (v: any, n: string) => string }
 
-const knownPropertySet = new Set<string>(allProperties.map(kebabToCamel))
+const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
 
-function asVar(value: CssLike<string | number>): string {
+export function asVar(value: CssLike<string | number>): string {
     switch (typeof value) {
         case 'string': return value
         case 'number': return `${value}`
@@ -54,8 +54,14 @@ function asVar(value: CssLike<string | number>): string {
     }
 }
 
+export function asKnownProp(value: any, key: keyof typeof styles): string {
+    const parser: (v: any, k: string) => string = (styles)[key]
+    if (!parser) return asEnum(value)
+    return parser(value, key)
+}
+
 export type NestedCssSelector = `${string}&${string}`
-export type MediaSelector = `${AtRules}${string}`
+export type MediaSelector = `@${string}`
 type NestedStyleKeys = MediaSelector | NestedCssSelector
 
 export type SimpleStyleProps
@@ -69,10 +75,10 @@ function startsWith<P extends string>(value: string, prefix: P): value is `${P}$
     return value.startsWith(prefix)
 }
 
-function camelToKebab(str: string): string {
+export function camelToKebab(str: string): string {
     return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase())
 }
-function kebabToCamel(str: string): string {
+export function kebabToCamel(str: string): string {
     return str.replace(/-[a-z]/g, m => m.substring(1).toUpperCase())
 }
 
@@ -80,14 +86,30 @@ export function cssFromProps(props: SimpleStyleProps): Record<string, string> {
     return Object.fromEntries(Object.entries(props).map(([key, value]) => {
         if (value === undefined) return undefined
         // transform variable
-        if (startsWith(key, "--")) return [key, asVar(value as CssLike<string | number>)]
+        if (isCssVariableName(key)) return [key, asVar(value as CssLike<string | number>)]
         // transform CSS prop
-        if (knownPropertySet.has(key)) {
-            const parser = (styles as Record<string, (v: unknown, n: string) => string>)[key]
+        if (isKnownPropertyName(key)) {
+            const parser: (v: any, k: string) => string = (styles)[key]
             const cssKey = camelToKebab(key)
             if (!parser) return [cssKey, asEnum(value)]
             return [cssKey, parser(value, key)]
         }
         return undefined
     }).filter(v => v !== undefined))
+}
+
+export function isCssVariableName(key: string): key is CssVar {
+    return startsWith(key, '--')
+}
+
+export function isKnownPropertyName(key: string): key is keyof typeof styles {
+    return knownPropertySet.has(key)
+}
+
+export function isNestedSelector(key: string): key is NestedCssSelector {
+    return key.includes("&")
+}
+
+export function isMediaSelector(key: string): key is MediaSelector {
+    return key.startsWith("@")
 }

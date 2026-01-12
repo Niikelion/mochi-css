@@ -4,6 +4,7 @@ import * as SWC from "@swc/core";
 import {Module, ProjectIndex} from "@/ProjectIndex";
 import vm from "vm";
 import {CSSObject, StyleProps} from "@mochi-css/vanilla";
+import {rolldown} from "rolldown";
 
 export type BuilderOptions = {
   rootDir: string
@@ -83,6 +84,8 @@ export class Builder {
     }
     private async executeFiles(files: Record<string, string | null>, onStyleRegistered: (source: string, styles: StyleProps[]) => void): Promise<void> {
         const context = vm.createContext({
+            ...globalThis,
+            process,
             registerStyles(source: string, ...registeredStyles: StyleProps[]) {
                 onStyleRegistered(source, registeredStyles)
             }
@@ -108,20 +111,19 @@ export class Builder {
 
         await fs.writeFile(rootPath, [rootImports, rootFileSuffix].join("\n\n"), "utf8")
 
-        // bundle all
-        const newFiles = await SWC.bundle({
-            target: "node",
-            module: {},
-            workingDir: tmp,
-            output: {
-                path: outputPath,
-                name: "generated"
-            },
-            entry: rootPath
+        // bundle into single file
+        const bundle = await rolldown({
+            input: rootPath,
+            platform: "node",
+            treeshake: false
         })
-        const resultFile = newFiles["__mochi-css__.ts"] ?? null
-        if (!resultFile) return
 
+        const { output } = await bundle.generate({
+            format: "cjs"
+        })
+
+        const resultFile = output[0]
+        await fs.writeFile(outputPath, resultFile.code)
         await vm.runInContext(resultFile.code, context)
     }
 

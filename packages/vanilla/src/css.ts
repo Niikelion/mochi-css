@@ -1,7 +1,55 @@
-import {cssFromProps, StyleProps} from "@/props";
+import {
+    asKnownProp,
+    asVar,
+    camelToKebab,
+    isCssVariableName,
+    isKnownPropertyName, isMediaSelector, isNestedSelector,
+    StyleProps
+} from "@/props";
 import clsx from "clsx";
-import {compareStringKey} from "@/compare";
-import {hashProps} from "@/hash";
+import {compareStringKey, compareStringProp} from "@/compare";
+import {shortHash} from "@/hash";
+
+export class MochiSelector {
+    constructor(
+        private readonly cssSelectors: string[] = [],
+        private readonly mediaSelectors: string[] = []
+    ) {}
+
+    get mediaQuery(): string | undefined {
+        if (this.mediaSelectors.length === 0) return undefined
+        return `@media ${this.mediaSelectors.join(", ")}`
+    }
+    get cssSelector(): string {
+        if (this.cssSelectors.length === 0) return "*"
+        return this.cssSelectors.join(", ")
+    }
+
+    substitute(root: string): MochiSelector {
+        return new MochiSelector(
+            this.cssSelectors.map(selector => selector.replace(/&/g, root)),
+            this.mediaSelectors
+        )
+    }
+    extend(child: string): MochiSelector {
+        // TODO: parse and validate css
+        const children = MochiSelector.split(child)
+        const selectors = this.cssSelectors.flatMap(parentSelector => children.map(childSelector => {
+            return childSelector.replace(/&/g, parentSelector)
+        }))
+        return new MochiSelector(selectors, this.mediaSelectors)
+    }
+    wrap(mediaQuery: string): MochiSelector {
+        // TODO: validate query
+        if (!mediaQuery.startsWith("@")) return this
+        const mediaQueryPart = mediaQuery.substring(1)
+        return new MochiSelector(this.cssSelectors, [...this.mediaSelectors, mediaQueryPart])
+    }
+
+    private static split(selector: string): string[] {
+        return [selector]
+    }
+}
 
 export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}> {
     constructor(
@@ -22,27 +70,92 @@ export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}>
     }
 }
 
+export class CssObjectSubBlock {
+    constructor(
+        public readonly cssProps: Record<string, string>,
+        public readonly selector: MochiSelector
+    ) {}
+
+    get hash(): string {
+        const str = this.asCssString("&")
+        return shortHash(str)
+    }
+
+    asCssString(root: string): string {
+        const props = Object.entries(this.cssProps)
+            .toSorted(compareStringKey)
+            .map(([k, v]) => `    ${k}: ${v};\n`)
+            .join('')
+
+        const selector = this.selector.substitute(root)
+
+        const blockCss = `${selector.cssSelector} {\n${props}}`
+        const mediaQuery = selector.mediaQuery
+
+        return mediaQuery === undefined ? blockCss : `@media ${mediaQuery} {\n${blockCss}\n}`
+    }
+
+    // this is expected to yield list in a consistent, deterministic manner
+    static fromProps(props: StyleProps, selector?: MochiSelector): [CssObjectSubBlock, ...CssObjectSubBlock[]] {
+        selector ??= new MochiSelector(["&"])
+
+        const cssProps: Record<string, string> = {}
+        const additionalSubBlocks: CssObjectSubBlock[] = []
+
+        for (const [key, value] of Object.entries(props)) {
+            // skip undefined value
+            if (value === undefined) continue
+
+            // transform variable
+            if (isCssVariableName(key)) {
+                cssProps[key] = asVar(value as StyleProps[typeof key] & {})
+                continue
+            }
+
+            // transform known CSS prop
+            if (isKnownPropertyName(key)) {
+                cssProps[camelToKebab(key)] = asKnownProp(value, key)
+                continue
+            }
+
+            // transform nested and media selectors
+            if (isNestedSelector(key)) {
+                additionalSubBlocks.push(...CssObjectSubBlock.fromProps(value as StyleProps, selector.extend(key)))
+                continue
+            }
+
+            // transform media selector
+            if (isMediaSelector(key)) {
+                additionalSubBlocks.push(...CssObjectSubBlock.fromProps(value as StyleProps, selector.wrap(key)))
+            }
+        }
+
+        return [
+            new CssObjectSubBlock(cssProps, selector),
+            ...additionalSubBlocks
+        ].toSorted(compareStringProp("hash")) as [CssObjectSubBlock, ...CssObjectSubBlock[]]
+    }
+}
+
 export class CssObjectBlock {
     public readonly className: string
-    public readonly cssProps: Record<string, string>
+    public readonly subBlocks: CssObjectSubBlock[] = []
 
     constructor(
         styles: StyleProps
     ) {
-        this.cssProps = cssFromProps(styles)
-        this.className = hashProps(this.cssProps)
+        const blocks = CssObjectSubBlock.fromProps(styles)
+
+        this.className = "c" + shortHash(blocks.map(b => b.hash).join('+'))
+        this.subBlocks = blocks
     }
 
     get selector(): string {
         return `.${this.className}`
     }
 
-    asCssString(selectors: string[]): string {
-        const props = Object.entries(this.cssProps)
-            .toSorted(compareStringKey)
-            .map(([k, v]) => `    ${k}: ${v};\n`)
-            .join('')
-        return selectors.map(s => `${s}${this.selector} {\n${props}}`).join('\n\n')
+    asCssString(root: string): string {
+        return this.subBlocks.map(b => b.asCssString(new MochiSelector([root]).extend(`&.${this.className}`).cssSelector)).join('\n\n')
     }
 }
 
@@ -71,11 +184,11 @@ export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}
 
     public asCssString(): string {
         return [
-            this.mainBlock.asCssString([""]),
+            this.mainBlock.asCssString(this.mainBlock.selector),
             ...Object.entries(this.variantBlocks)
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))
-                .map(([_, b]) => b.asCssString([this.mainBlock.selector]))
+                .map(([_, b]) => b.asCssString(this.mainBlock.selector))
         ].join('\n\n')
     }
 
