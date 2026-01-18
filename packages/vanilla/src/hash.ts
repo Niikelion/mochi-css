@@ -23,12 +23,3 @@ export function shortHash(input: string, length = 8): string {
 
     return numberToBase62(h, length)
 }
-
-export function hashProps(value: Record<string, string>): string {
-    const items = [...Object.entries(value)]
-    const stringified = items
-        .sort(compareStringKey)
-        .map(([key, value]) => `${key}: ${value};`)
-        .join('\n')
-    return `s${shortHash(stringified)}`
-}

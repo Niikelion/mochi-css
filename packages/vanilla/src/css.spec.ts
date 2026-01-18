@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest"
-import {css, CSSObject} from "@/css"
+import {css, CSSObject, MochiCSS} from "@/css"
 import {CssColor} from "@/values"
 import {createToken} from "@/token"
 
@@ -56,7 +56,7 @@ describe('css', () => {
         expect(cssWithVariants.variant({ width: "wide" })).not.toEqual(cssWithVariants.variant({ width: "narrow" }))
     })
 
-    it("when default variant is specified, not selecting value for a variant should select default one", () => {
+    it("should fall back to default variant when specified", () => {
         const cssWithVariants = css({
             variants: {
                 color: {
@@ -73,12 +73,12 @@ describe('css', () => {
             }
         })
 
-        // should default to red
         expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "red" }))
         expect(cssWithVariants.variant({})).not.toEqual(cssWithVariants.variant({ color: "blue" }))
     })
 })
 
+//TODO: move to separate file
 describe("CssObject", () => {
     it("should generate css code that accurately reflects provided styles for base styles", () => {
         const bg = createToken<CssColor>("background-color")
@@ -93,7 +93,7 @@ describe("CssObject", () => {
             [bg.variable]: "red"
         })
 
-        const styles = obj.asMochiCss()
+        const styles = MochiCSS.from(obj)
 
         const expectedParts: string[] = [
             "width: 200px;",
@@ -136,7 +136,7 @@ describe("CssObject", () => {
             }
         })
 
-        const styles = obj.asMochiCss()
+        const styles = MochiCSS.from(obj)
         const cssSource = obj.asCssString()
 
         expect(cssSource).toContain(styles.variant({ width: "default" }).split(" ").map(c => `.${c}`).join(""))

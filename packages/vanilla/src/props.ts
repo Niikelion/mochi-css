@@ -28,6 +28,10 @@ const styles = {
     borderTopLeftRadius: asLength,
     borderTopRightRadius: asLength,
     borderTopWidth: asLength,
+    borderBlockWidth: asLength,
+    borderInlineWidth: asLength,
+    borderWidth: asLength,
+    gap: asLength,
     height: asLength,
     lineHeight: asLength,
     marginBottom: asLength,
@@ -39,12 +43,17 @@ const styles = {
     paddingRight: asLength,
     paddingTop: asLength,
     width: asLength,
-    borderBlockWidth: asLength,
-    borderInlineWidth: asLength,
-    borderWidth: asLength,
 } satisfies { [K in keyof Props]?: (v: any, n: string) => string }
 
 const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
+
+function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
+    return value.startsWith(prefix)
+}
+
+export function isCssVariableName(key: string): key is CssVar {
+    return startsWith(key, '--')
+}
 
 export function asVar(value: CssLike<string | number>): string {
     switch (typeof value) {
@@ -54,10 +63,24 @@ export function asVar(value: CssLike<string | number>): string {
     }
 }
 
-export function asKnownProp(value: any, key: keyof typeof styles): string {
-    const parser: (v: any, k: string) => string = (styles)[key]
+export function isKnownPropertyName(key: string): key is keyof Props {
+    return knownPropertySet.has(key)
+}
+
+export function asKnownProp(value: any, key: keyof Props): string {
+    const parser: ((v: any, k: string) => string) | undefined = key in styles ? styles[key as keyof typeof styles] : undefined
     if (!parser) return asEnum(value)
     return parser(value, key)
+}
+
+//TODO: make better validation, provide human readable errors
+export function isNestedSelector(key: string): key is NestedCssSelector {
+    return key.includes("&")
+}
+
+//TODO: make better validation, provide human readable errors
+export function isMediaSelector(key: string): key is MediaSelector {
+    return key.startsWith("@")
 }
 
 export type NestedCssSelector = `${string}&${string}`
@@ -71,13 +94,10 @@ export type SimpleStyleProps
 
 export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProps | CssLike<string | number> }
 
-function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
-    return value.startsWith(prefix)
-}
-
 export function camelToKebab(str: string): string {
     return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase())
 }
+
 export function kebabToCamel(str: string): string {
     return str.replace(/-[a-z]/g, m => m.substring(1).toUpperCase())
 }
@@ -88,28 +108,7 @@ export function cssFromProps(props: SimpleStyleProps): Record<string, string> {
         // transform variable
         if (isCssVariableName(key)) return [key, asVar(value as CssLike<string | number>)]
         // transform CSS prop
-        if (isKnownPropertyName(key)) {
-            const parser: (v: any, k: string) => string = (styles)[key]
-            const cssKey = camelToKebab(key)
-            if (!parser) return [cssKey, asEnum(value)]
-            return [cssKey, parser(value, key)]
-        }
+        if (isKnownPropertyName(key)) return [camelToKebab(key), asKnownProp(value, key)]
         return undefined
     }).filter(v => v !== undefined))
-}
-
-export function isCssVariableName(key: string): key is CssVar {
-    return startsWith(key, '--')
-}
-
-export function isKnownPropertyName(key: string): key is keyof typeof styles {
-    return knownPropertySet.has(key)
-}
-
-export function isNestedSelector(key: string): key is NestedCssSelector {
-    return key.includes("&")
-}
-
-export function isMediaSelector(key: string): key is MediaSelector {
-    return key.startsWith("@")
 }

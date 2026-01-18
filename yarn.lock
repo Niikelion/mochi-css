@@ -3031,12 +3031,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dist-e532d4@workspace:examples/nextjs/dist":
-  version: 0.0.0-use.local
-  resolution: "dist-e532d4@workspace:examples/nextjs/dist"
-  languageName: unknown
-  linkType: soft
-
 "doctrine@npm:^2.1.0":
   version: 2.1.0
   resolution: "doctrine@npm:2.1.0"

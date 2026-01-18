@@ -3,3 +3,4 @@ export * from "./css"
 export { createToken, Token } from "./token"
 export * from "./values"
 export { type StyleProps, cssFromProps } from "./props"
+export {MochiSelector} from "@/selector";

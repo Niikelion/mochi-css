@@ -3,72 +3,15 @@ import {
     asVar,
     camelToKebab,
     isCssVariableName,
-    isKnownPropertyName, isMediaSelector, isNestedSelector,
+    isKnownPropertyName,
+    isMediaSelector,
+    isNestedSelector,
     StyleProps
 } from "@/props";
 import clsx from "clsx";
 import {compareStringKey, compareStringProp} from "@/compare";
 import {shortHash} from "@/hash";
-
-export class MochiSelector {
-    constructor(
-        private readonly cssSelectors: string[] = [],
-        private readonly mediaSelectors: string[] = []
-    ) {}
-
-    get mediaQuery(): string | undefined {
-        if (this.mediaSelectors.length === 0) return undefined
-        return `@media ${this.mediaSelectors.join(", ")}`
-    }
-    get cssSelector(): string {
-        if (this.cssSelectors.length === 0) return "*"
-        return this.cssSelectors.join(", ")
-    }
-
-    substitute(root: string): MochiSelector {
-        return new MochiSelector(
-            this.cssSelectors.map(selector => selector.replace(/&/g, root)),
-            this.mediaSelectors
-        )
-    }
-    extend(child: string): MochiSelector {
-        // TODO: parse and validate css
-        const children = MochiSelector.split(child)
-        const selectors = this.cssSelectors.flatMap(parentSelector => children.map(childSelector => {
-            return childSelector.replace(/&/g, parentSelector)
-        }))
-        return new MochiSelector(selectors, this.mediaSelectors)
-    }
-    wrap(mediaQuery: string): MochiSelector {
-        // TODO: validate query
-        if (!mediaQuery.startsWith("@")) return this
-        const mediaQueryPart = mediaQuery.substring(1)
-        return new MochiSelector(this.cssSelectors, [...this.mediaSelectors, mediaQueryPart])
-    }
-
-    private static split(selector: string): string[] {
-        return [selector]
-    }
-}
-
-export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}> {
-    constructor(
-        public readonly classNames: string[],
-        public readonly variantClassNames: { [K in keyof V]: { [P in keyof V[K]]: string } },
-        public readonly defaultVariants: Partial<RefineVariants<V>>
-    ) {}
-
-    variant(props: Partial<RefineVariants<V>>): string {
-        const keys = new Set<keyof V & string>([
-            ...Object.keys(props),
-            ...Object.keys(this.defaultVariants)
-        ].filter(k => k in this.variantClassNames))
-        return clsx(this.classNames, ...keys.values().map(k => {
-            const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]!
-            return this.variantClassNames[k][`${variantKey}`]
-        }))
-    }
-}
+import {MochiSelector} from "@/selector";
 
 export class CssObjectSubBlock {
     constructor(
@@ -191,16 +134,35 @@ export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}
                 .map(([_, b]) => b.asCssString(this.mainBlock.selector))
         ].join('\n\n')
     }
+}
 
-    public asMochiCss(): MochiCSS<V> {
+export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}> {
+    constructor(
+        public readonly classNames: string[],
+        public readonly variantClassNames: { [K in keyof V]: { [P in keyof V[K]]: string } },
+        public readonly defaultVariants: Partial<RefineVariants<V>>
+    ) {}
+
+    variant(props: Partial<RefineVariants<V>>): string {
+        const keys = new Set<keyof V & string>([
+            ...Object.keys(props),
+            ...Object.keys(this.defaultVariants)
+        ].filter(k => k in this.variantClassNames))
+        return clsx(this.classNames, ...keys.values().map(k => {
+            const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]!
+            return this.variantClassNames[k][`${variantKey}`]
+        }))
+    }
+
+    static from<V extends Record<string, Record<string, StyleProps>> = {}>(object: CSSObject<V>): MochiCSS<V> {
         return new MochiCSS<V>(
-            [this.mainBlock.className],
-            Object.fromEntries(Object.entries(this.variantBlocks).map(([key, variantOptions]) => {
+            [object.mainBlock.className],
+            Object.fromEntries(Object.entries(object.variantBlocks).map(([key, variantOptions]) => {
                 return [key, Object.fromEntries(Object.entries(variantOptions).map(([optionKey, block]) => {
                     return [optionKey, block.className]
                 }))]
             })) as { [K in keyof V]: { [P in keyof V[K]]: string } },
-            this.variantDefaults ?? {}
+            object.variantDefaults ?? {}
         )
     }
 }
@@ -225,7 +187,7 @@ export function css<V extends DefaultVariants[]>(...props: { [K in keyof V]: Moc
 {
     const cssToMerge: MochiCSS<DefaultVariants>[] = props.map(p => {
         if (p instanceof MochiCSS) return p
-        return new CSSObject<DefaultVariants>(p).asMochiCss()
+        return MochiCSS.from(new CSSObject<DefaultVariants>(p))
     })
 
     return new MochiCSS<DefaultVariants>(
