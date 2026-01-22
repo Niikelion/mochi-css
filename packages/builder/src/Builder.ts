@@ -15,6 +15,7 @@ declare global {
     function registerStyles(...args: any[]): void
 }`
 
+//TODO: make more modular to allow replacing bundler and adding root elements
 export class Builder {
     constructor(private options: BuilderOptions) {}
 

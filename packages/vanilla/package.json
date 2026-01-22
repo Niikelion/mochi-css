@@ -35,6 +35,7 @@
         "@gamedev-sensei/ts-config": "^2.0.0",
         "@gamedev-sensei/tsdown-config": "^2.0.0",
         "@types/node": "^24.8.1",
+        "dedent": "^1.7.1",
         "tsdown": "^0.15.7",
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.0.15"

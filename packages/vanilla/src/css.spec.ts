@@ -1,7 +1,8 @@
 import {describe, it, expect} from "vitest"
-import {css, CSSObject, MochiCSS} from "@/css"
+import {css, MochiCSS} from "@/css"
 import {CssColor} from "@/values"
 import {createToken} from "@/token"
+import {CSSObject} from "@/cssObject";
 
 describe('css', () => {
     it("should have a classname list that is deterministic and dependent on styles", () => {
@@ -75,81 +76,5 @@ describe('css', () => {
 
         expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "red" }))
         expect(cssWithVariants.variant({})).not.toEqual(cssWithVariants.variant({ color: "blue" }))
-    })
-})
-
-//TODO: move to separate file
-describe("CssObject", () => {
-    it("should generate css code that accurately reflects provided styles for base styles", () => {
-        const bg = createToken<CssColor>("background-color")
-
-        const obj = new CSSObject({
-            width: 200,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "end",
-            background: bg,
-            [bg.variable]: "red"
-        })
-
-        const styles = MochiCSS.from(obj)
-
-        const expectedParts: string[] = [
-            "width: 200px;",
-            "display: flex;",
-            "flex-direction: column;",
-            "align-items: center;",
-            "justify-content: end;",
-            `background: ${bg.value};`,
-            `${bg}: red;`
-        ]
-
-        const cssSource = obj.asCssString()
-
-        // classnames appear in the source
-        for (const className of styles.classNames)
-            expect(cssSource).toContain(`.${className}`)
-
-        // all expected parts appear in the source
-        for (const part of expectedParts)
-            expect(cssSource).toContain(part)
-    })
-
-    it("should generate css code that accurately reflects provided styles for variant styles", () => {
-        const obj = new CSSObject({
-            variants: {
-                width: {
-                    default: {
-                        width: "auto"
-                    },
-                    wide: {
-                        width: "100%"
-                    },
-                    narrow: {
-                        width: 200
-                    }
-                }
-            },
-            defaultVariants: {
-                width: "default"
-            }
-        })
-
-        const styles = MochiCSS.from(obj)
-        const cssSource = obj.asCssString()
-
-        expect(cssSource).toContain(styles.variant({ width: "default" }).split(" ").map(c => `.${c}`).join(""))
-        expect(cssSource).toContain(styles.variant({ width: "wide" }).split(" ").map(c => `.${c}`).join(""))
-        expect(cssSource).toContain(styles.variant({ width: "narrow" }).split(" ").map(c => `.${c}`).join(""))
-
-        const expectedParts: string[] = [
-            "width: auto;",
-            "width: 100%;",
-            "width: 200px;",
-        ]
-
-        for (const expectedPart of expectedParts)
-            expect(cssSource).toContain(expectedPart)
     })
 })

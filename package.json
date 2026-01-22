@@ -3,8 +3,8 @@
     "packageManager": "yarn@4.10.3",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "workspaces": [
-        "packages/**",
-        "examples/**"
+        "packages/*",
+        "examples/*"
     ],
     "scripts": {
         "build": "turbo build",
