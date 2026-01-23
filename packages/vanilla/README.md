@@ -35,7 +35,7 @@ const buttonStyles = css(textStyles, {
 
 ### `styled(component, ...styles)`
 
-`styled`  is just a simple wrapper around `css` that takes a component as the first argument and applies all the classnames for you.
+`styled` is just a simple wrapper around `css` that takes a component as the first argument and applies all the class names for you.
 
 ```tsx
 import {styled} from "@mochi-css/vanilla"
@@ -51,12 +51,12 @@ const Button = styled("button", {
 Now, that we know how to use our style definitions, we probably should learn how to write them, right?
 Style definition is either bundle of styles returned by `css` or object containing:
 
-* any number of valid css properties converted to camelCase, like in reacts styles property
-* any number of css variable assignments, more on that later
+* any number of valid CSS properties converted to camelCase, like in React's style property
+* any number of CSS variable assignments, more on that later
 * optional variants definition
 * optional default variants definition
 
-In the future, nested css selectors and media queries will be available as parts of style definitions
+In the future, nested CSS selectors and media queries will be available as parts of style definitions
 
 ## Variants
 

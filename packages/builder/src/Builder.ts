@@ -1,13 +1,14 @@
 import fs from "fs/promises";
 import path from "path";
 import * as SWC from "@swc/core";
-import {Module, ProjectIndex} from "@/ProjectIndex";
+import {Module, ProjectIndex, StyleSource} from "@/ProjectIndex";
 import vm from "vm";
 import {CSSObject, StyleProps} from "@mochi-css/vanilla";
 import {rolldown} from "rolldown";
 
 export type BuilderOptions = {
   rootDir: string
+  styleSources: StyleSource[]
 }
 
 const rootFileSuffix = `\
@@ -15,7 +16,7 @@ declare global {
     function registerStyles(...args: any[]): void
 }`
 
-//TODO: make more modular to allow replacing bundler and adding root elements
+//TODO: make more modular to allow replacing bundler
 export class Builder {
     constructor(private options: BuilderOptions) {}
 
@@ -131,7 +132,7 @@ export class Builder {
     public async collectMochiStyles() {
         const files = await this.findAllFiles(this.options.rootDir)
         const modules = await Promise.all(files.map(async file => this.parseFile(file)))
-        const index = new ProjectIndex(modules)
+        const index = new ProjectIndex(modules, this.options.styleSources)
         index.propagateUsages()
         const resultingFiles = await this.extractRelevantSymbols(index)
         const collectedStyles: { path: string, styles: StyleProps[] }[] = []

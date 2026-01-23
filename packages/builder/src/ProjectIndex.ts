@@ -70,24 +70,13 @@ export class RefMap<T> {
     }
 }
 
-class StyleSource {
+export class StyleSource {
     constructor(
         public readonly importPath: string,
         public readonly symbolName: string,
         public readonly extractor: (call: SWC.CallExpression) => SWC.Expression[]
     ) {}
 }
-
-const cssSource = new StyleSource(
-    "@mochi-css/vanilla",
-    "css",
-    call => call.arguments.map(a => a.expression)
-)
-const styledSource = new StyleSource(
-    "@mochi-css/vanilla",
-    "styled",
-        call => call.arguments.map(a => a.expression).slice(1)
-)
 
 function getOrInsert<K, V>(target: Map<K, V>, key: K, compute: () => V): V
 {
@@ -188,6 +177,18 @@ function extractData(ast: SWC.Module, styleSources: Map<string, Map<string, Styl
     }
 }
 
+export const cssFunctionStyleSource = new StyleSource(
+    "@mochi-css/vanilla",
+    "css",
+    call => call.arguments.map(a => a.expression)
+)
+//TODO: move to react package
+export const styledFunctionStyleSource = new StyleSource(
+    "@mochi-css/vanilla",
+    "styled",
+    call => call.arguments.map(a => a.expression).slice(1)
+)
+
 export class ProjectIndex {
     private filesInfo: Map<string, FileInfo> = new Map()
 
@@ -195,13 +196,9 @@ export class ProjectIndex {
         return [...this.filesInfo.entries()]
     }
 
-    constructor(modules: Module[]) {
-        const sources: StyleSource[] = [
-            cssSource,
-            styledSource
-        ]
+    constructor(modules: Module[], styleSources: StyleSource[]) {
         const sourceLookup = new Map<string, Map<string, StyleSource>>()
-        for (const source of sources) {
+        for (const source of styleSources) {
             const importScope = getOrInsert(sourceLookup, source.importPath, () => new Map<string, StyleSource>())
             importScope.set(source.symbolName, source)
         }
