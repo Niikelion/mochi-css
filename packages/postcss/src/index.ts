@@ -1,6 +1,6 @@
 import {PluginCreator, TransformCallback} from "postcss";
 import * as path from "path";
-import {Builder} from "@mochi-css/builder";
+import {Builder, StyleSource, defaultStyleSources} from "@mochi-css/builder";
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -9,13 +9,15 @@ function isValidCssFilePath(file: string) {
 
 type Options = {
     rootDir?: string
+    styleSources?: StyleSource[]
 }
 
 const pluginName = "postcss-mochi-css"
 
 const creator: PluginCreator<Options> = (opts?: Options) => {
     const options = Object.assign({
-        rootDir: "src"
+        rootDir: "src",
+        styleSources: defaultStyleSources
     }, opts)
 
     const builder = new Builder(options)

@@ -1,5 +1,7 @@
 import * as SWC from "@swc/core"
-import {visit, AnyNode} from "@/Visitors";
+import {visit, AnyNode} from "@/Visitor";
+
+//TODO: move to separate package
 
 declare module '@swc/core' {
     interface Identifier {
@@ -68,16 +70,27 @@ export class RefMap<T> {
     }
 }
 
-const mochiIdentifiers = [ "css", "styled" ] as const
-type MochiIdentifier = (typeof mochiIdentifiers)[number]
-
-function isMochiIdentifier(v: any): v is MochiIdentifier {
-    return mochiIdentifiers.includes(v)
+export class StyleSource {
+    constructor(
+        public readonly importPath: string,
+        public readonly symbolName: string,
+        public readonly extractor: (call: SWC.CallExpression) => SWC.Expression[]
+    ) {}
 }
 
-function extractData(ast: SWC.Module) {
+function getOrInsert<K, V>(target: Map<K, V>, key: K, compute: () => V): V
+{
+    const value = target.get(key)
+    if (value) return value
+
+    const newValue = compute()
+    target.set(key, newValue)
+    return newValue
+}
+
+function extractData(ast: SWC.Module, styleSources: Map<string, Map<string, StyleSource>>) {
     const parentLookup = new Map<AnyNode, AnyNode>()
-    const identifiers = new RefMap<MochiIdentifier>()
+    const identifiers = new RefMap<StyleSource>()
     const styleExpressions = new Set<SWC.Expression>()
     const identifierSources = new RefMap<SWC.Identifier>
     const references = new Set<SWC.Identifier>()
@@ -88,22 +101,26 @@ function extractData(ast: SWC.Module) {
             if (context !== null) parentLookup.set(node, context)
             descend(node)
         },
-        // mochi imports
+        // construct style source lookup by identifiers
         importDeclaration(node: SWC.ImportDeclaration, { descend, context }) {
             descend(context)
-            if (node.source.value !== "@mochi-css/vanilla") return
+
+            const possibleSources = styleSources.get(node.source.value)
+            if (!possibleSources) return
+
             for (const spec of ProjectIndex.extractImportSpecs(node)) {
                 const ref = spec.ref
                 const sourceName = spec.sourceName
+                const source = possibleSources.get(sourceName)
 
-                if (spec.isNamespace || !isMochiIdentifier(sourceName)) return
-                identifiers.set(ref, sourceName)
+                if (spec.isNamespace || !source) continue
+                identifiers.set(ref, source)
             }
         }
     }, null)
 
     visit.module(ast, {
-        // mochi calls
+        // find calls of style sources and extract styles
         callExpression(node, { descend }) {
             if (node.callee.type !== "Identifier") {
                 descend(null)
@@ -111,24 +128,15 @@ function extractData(ast: SWC.Module) {
             }
 
             const calleeRef = idToRef(node.callee)
-            const mochiId = identifiers.get(calleeRef)
+            const source = identifiers.get(calleeRef)
 
-            switch (mochiId) {
-                case "css":
-                    node.arguments.forEach(a => styleExpressions.add(a.expression))
-                    break
-                case "styled":
-                    node.arguments.forEach((a, i) => {
-                        if (i === 0) return
-                        styleExpressions.add(a.expression)
-                    })
-                    break
-            }
+            if (source) source.extractor(node).forEach(style => styleExpressions.add(style))
 
             descend(null)
         }
     }, null)
 
+    //TODO: make better
     // locate sources of identifiers
     visit.module(ast, {
         declaration(_, { descend }) {
@@ -157,7 +165,8 @@ function extractData(ast: SWC.Module) {
 
             if (context) references.add(node)
             else identifierSources.set(ref, node)
-        }
+        },
+        tsType() {}
     }, false)
 
     return {
@@ -168,6 +177,18 @@ function extractData(ast: SWC.Module) {
     }
 }
 
+export const cssFunctionStyleSource = new StyleSource(
+    "@mochi-css/vanilla",
+    "css",
+    call => call.arguments.map(a => a.expression)
+)
+//TODO: move to react package
+export const styledFunctionStyleSource = new StyleSource(
+    "@mochi-css/vanilla",
+    "styled",
+    call => call.arguments.map(a => a.expression).slice(1)
+)
+
 export class ProjectIndex {
     private filesInfo: Map<string, FileInfo> = new Map()
 
@@ -175,11 +196,15 @@ export class ProjectIndex {
         return [...this.filesInfo.entries()]
     }
 
-    constructor(modules: Module[]) {
-        for (const module of modules) {
-            console.log(module.filePath)
+    constructor(modules: Module[], styleSources: StyleSource[]) {
+        const sourceLookup = new Map<string, Map<string, StyleSource>>()
+        for (const source of styleSources) {
+            const importScope = getOrInsert(sourceLookup, source.importPath, () => new Map<string, StyleSource>())
+            importScope.set(source.symbolName, source)
+        }
 
-            const data = extractData(module.ast)
+        for (const module of modules) {
+            const data = extractData(module.ast, sourceLookup)
 
             this.filesInfo.set(module.filePath, {
                 ...module,
@@ -239,7 +264,7 @@ export class ProjectIndex {
         if (!source) return
         let currentNode: AnyNode = source
         let parent: AnyNode | null = fileInfo.parentLookup.get(source) ?? null
-        while (parent !== null && parent.type !== "Module") {
+        while (parent !== null && (!("type" in parent) || parent.type !== "Module")) {
             currentNode = parent
             parent = fileInfo.parentLookup.get(currentNode) ?? null
         }

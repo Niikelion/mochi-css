@@ -1,9 +1,11 @@
-import {Properties, ObsoleteProperties, AtRules } from "csstype"
-import {asColor, asLength, CssLike, CssVar} from "@/values";
+import {Properties, ObsoleteProperties } from "csstype"
+import {asColor, asLength, CssLike, CssVar} from "@/values"
+import properties from "known-css-properties"
 
-function asEnum<E extends string>(v: CssLike<E>): string {
+function asEnum<E extends string | number>(v: CssLike<E>): string {
     if (typeof v === "string") return v
-    return v.value
+    if (typeof v === "number") return v.toString()
+    return v.value.toString()
 }
 
 type Props = Required<Omit<Properties, keyof ObsoleteProperties>>
@@ -26,6 +28,10 @@ const styles = {
     borderTopLeftRadius: asLength,
     borderTopRightRadius: asLength,
     borderTopWidth: asLength,
+    borderBlockWidth: asLength,
+    borderInlineWidth: asLength,
+    borderWidth: asLength,
+    gap: asLength,
     height: asLength,
     lineHeight: asLength,
     marginBottom: asLength,
@@ -37,12 +43,19 @@ const styles = {
     paddingRight: asLength,
     paddingTop: asLength,
     width: asLength,
-    borderBlockWidth: asLength,
-    borderInlineWidth: asLength,
-    borderWidth: asLength,
 } satisfies { [K in keyof Props]?: (v: any, n: string) => string }
 
-function asVar(value: CssLike<string | number>): string {
+const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
+
+function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
+    return value.startsWith(prefix)
+}
+
+export function isCssVariableName(key: string): key is CssVar {
+    return startsWith(key, '--')
+}
+
+export function asVar(value: CssLike<string | number>): string {
     switch (typeof value) {
         case 'string': return value
         case 'number': return `${value}`
@@ -50,63 +63,52 @@ function asVar(value: CssLike<string | number>): string {
     }
 }
 
-export type NestedSelector = `&${string}`
-export type MediaSelector = `${AtRules}${string}`
-type NestedStyleKeys = Exclude<string, keyof Props | CssVar>
+export function isKnownPropertyName(key: string): key is keyof Props {
+    return knownPropertySet.has(key)
+}
 
-export type StyleProps
+export function asKnownProp(value: any, key: keyof Props): string {
+    const parser: ((v: any, k: string) => string) | undefined = key in styles ? styles[key as keyof typeof styles] : undefined
+    if (!parser) return asEnum(value)
+    return parser(value, key)
+}
+
+//TODO: make better validation, provide human readable errors
+export function isNestedSelector(key: string): key is NestedCssSelector {
+    return key.includes("&")
+}
+
+//TODO: make better validation, provide human readable errors
+export function isMediaSelector(key: string): key is MediaSelector {
+    return key.startsWith("@")
+}
+
+export type NestedCssSelector = `${string}&${string}`
+export type MediaSelector = `@${string}`
+type NestedStyleKeys = MediaSelector | NestedCssSelector
+
+export type SimpleStyleProps
     = { [K in keyof typeof styles]?: Parameters<(typeof styles)[K]>[0] }
     & { [K in Exclude<keyof Props, keyof typeof styles>]?: CssLike<Props[K]> }
     & { [K in CssVar]?: Parameters<(typeof asVar)>[0] }
-    // & { [K in NestedStyleKeys]?: StyleProps }
 
-function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
-    return value.startsWith(prefix)
+export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProps | CssLike<string | number> }
+
+export function camelToKebab(str: string): string {
+    return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase())
 }
 
-function camelToKebab(str: string): string {
-    return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase());
+export function kebabToCamel(str: string): string {
+    return str.replace(/-[a-z]/g, m => m.substring(1).toUpperCase())
 }
 
-export function cssFromProps(props: StyleProps): Record<string, string> {
+export function cssFromProps(props: SimpleStyleProps): Record<string, string> {
     return Object.fromEntries(Object.entries(props).map(([key, value]) => {
+        if (value === undefined) return undefined
         // transform variable
-        if (startsWith(key, "--")) return [key, asVar(value as CssLike<string | number>)]
-        const parser = (styles as Record<string, (v: unknown, n: string) => string>)[key]
-        if (value === undefined || value === null) return undefined
-        const cssKey = camelToKebab(key)
-        if (!parser) return [cssKey, asEnum(`${value}`)]
-        return [cssKey, parser(value, key)]
+        if (isCssVariableName(key)) return [key, asVar(value as CssLike<string | number>)]
+        // transform CSS prop
+        if (isKnownPropertyName(key)) return [camelToKebab(key), asKnownProp(value, key)]
+        return undefined
     }).filter(v => v !== undefined))
-}
-
-const hashBase = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
-const base = hashBase.length
-
-function shortHash(input: string, length = 8): string {
-    // fast 32-bit integer hash (djb2 variant)
-    let h = 5381;
-    for (let i = 0; i < input.length; i++) {
-        h = (h * 33) ^ input.charCodeAt(i);
-    }
-    h >>>= 0; // force unsigned
-
-    // convert number to base
-    let out = "";
-    let num = h;
-
-    while (num > 0 && out.length < length) {
-        out = hashBase[num % base] + out;
-        num = Math.floor(num / base);
-    }
-    return out || "0";
-}
-
-export function hashCss(value: Record<string, string>): string {
-    const items = [...Object.entries(value)]
-    const stringified = items
-        .sort(([a], [b]) => a === b ? 0 : a > b ? 1 : -1)
-        .map(([key, value]) => `${key}: ${value};`)
-        .join('\n')
-    return `s${shortHash(stringified)}`
 }

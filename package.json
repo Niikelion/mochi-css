@@ -3,14 +3,15 @@
     "packageManager": "yarn@4.10.3",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "workspaces": [
-        "packages/**",
-        "examples/**"
+        "packages/*",
+        "examples/*"
     ],
     "scripts": {
         "build": "turbo build",
         "build.examples": "turbo build-example",
         "build.all": "yarn build && yarn build.examples",
         "test": "turbo test",
+        "coverage": "turbo coverage",
         "dev": "turbo dev"
     },
     "devDependencies": {
