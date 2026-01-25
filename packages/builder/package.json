@@ -1,37 +1,43 @@
 {
-  "name": "@mochi-css/builder",
-  "repository": "git@github.com:Niikelion/mochi-css.git",
-  "version": "0.0.3",
-  "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "files": [
-    "/dist"
-  ],
-  "exports": {
-    "import": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
+    "name": "@mochi-css/builder",
+    "repository": "git@github.com:Niikelion/mochi-css.git",
+    "version": "0.0.3",
+    "license": "MIT",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "exports": {
+        "import": {
+            "types": "./dist/index.d.mts",
+            "import": "./dist/index.mjs"
+        },
+        "require": {
+            "types": "./dist/index.d.ts",
+            "require": "./dist/index.js"
+        }
     },
-    "require": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js"
+    "scripts": {
+        "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage"
+    },
+    "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.2",
+        "@gamedev-sensei/ts-config": "^2.0.0",
+        "@gamedev-sensei/tsdown-config": "^2.0.0",
+        "@types/node": "^24.8.1",
+        "@vitest/coverage-v8": "^4.0.15",
+        "tsdown": "^0.15.7",
+        "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^4.0.15"
+    },
+    "dependencies": {
+        "@mochi-css/vanilla": "^0.0.3",
+        "@swc/core": "^1.15.2",
+        "dedent": "^1.7.1",
+        "rolldown": "1.0.0-beta.59"
     }
-  },
-  "scripts": {
-    "build": "tsdown && attw --pack ."
-  },
-  "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.2",
-    "@gamedev-sensei/ts-config": "^2.0.0",
-    "@gamedev-sensei/tsdown-config": "^2.0.0",
-    "@types/node": "^24.8.1",
-    "tsdown": "^0.15.7"
-  },
-  "dependencies": {
-    "@mochi-css/vanilla": "^0.0.3",
-    "@swc/core": "^1.15.2",
-    "rolldown": "1.0.0-beta.59"
-  }
 }

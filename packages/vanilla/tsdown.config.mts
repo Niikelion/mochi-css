@@ -1,3 +1,3 @@
 import {definePackageConfig} from "@gamedev-sensei/tsdown-config";
 
-export default definePackageConfig()
+export default definePackageConfig({ attw: true })

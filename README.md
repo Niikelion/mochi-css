@@ -20,8 +20,8 @@ Styles are statically extracted at build time through a PostCSS plugin, making y
 
 - **Near zero runtime** - no style injection logic in your final bundle
 - **Build-time CSS extraction** - using a PostCSS plugin
-- **Familiar API** - both `styled` and `css`, mirroring stitches.js syntax
 - **Style variants** - create variants for your styles with ease
+- **Nested selectors** - use sub-selectors in you styles
 - **Great type support** - TypeScript-first DX
 - **Minimal restrictions** - define styles anywhere your code allows
 - **Tooling agnostic** - works with anything that supports PostCSS
@@ -90,8 +90,6 @@ Benchmarks and performance comparisons will be released at a later stage.
 
 | Feature                     | Status         | Notes                                                                                                                            |
 |-----------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------|
-| **Nested selectors**        | 🚧 In Progress | Achieve stitches.js–style nested syntax                                                                                          |
-| **Cross-file symbol usage** | 🚧 In Progress | Use imported tokens/objects in extracted styles                                                                                  |
 | **Mochi-CSS/tsuki**         | 🕒 Queued      | Small CLI tool for adding Mochi-CSS to existing projects                                                                         |
 | **Better DX tooling**       | 🕒 Queued      | Better warnings and errors; more precise code extraction                                                                         |
 | **Benchmarks**              | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                       |
@@ -109,7 +107,7 @@ Status legend
 
 Contributions, feedback, and ideas are welcome! Please open issues and PRs to help shape Mochi-CSS.
 
-You can also support me on [my patreon](https://www.patreon.com/Niikelion).
+You can also support me on [my Patreon](https://www.patreon.com/Niikelion).
 
 ---
 

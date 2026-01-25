@@ -28,9 +28,9 @@ describe("MochiSelector", () => {
             expect(selector.mediaQuery).toEqual(undefined)
         })
 
-        it("should return conditions wrapped in parenthesis, separated by ',' and prefixed by @media when specified", () => {
+        it("should return conditions wrapped in parenthesis, separated by ' and ' and prefixed by @media when specified", () => {
             const selector = new MochiSelector([], ["width < 200px", "min-width: 1000px"])
-            expect(selector.mediaQuery).toEqual("@media (width < 200px), (min-width: 1000px)")
+            expect(selector.mediaQuery).toEqual("@media (width < 200px) and (min-width: 1000px)")
         })
     })
 
@@ -72,7 +72,7 @@ describe("MochiSelector", () => {
             const selector = new MochiSelector([], ["width >= 1024px"])
             const wrappedSelector = selector.wrap("@color")
 
-            expect(wrappedSelector.mediaQuery).toEqual("@media (width >= 1024px), (color)")
+            expect(wrappedSelector.mediaQuery).toEqual("@media (width >= 1024px) and (color)")
         })
 
         it("should return source without changes if condition is not valid", () => {

@@ -26,14 +26,35 @@ export interface ImportSpec {
     source: string
 }
 
+// Binding information for precise tracking
+export type BindingDeclarator =
+    | { type: 'variable', declarator: SWC.VariableDeclarator, declaration: SWC.VariableDeclaration }
+    | { type: 'function', declaration: SWC.FunctionDeclaration }
+    | { type: 'class', declaration: SWC.ClassDeclaration }
+    | { type: 'import', specifier: SWC.ImportSpecifier | SWC.ImportDefaultSpecifier, declaration: SWC.ImportDeclaration }
+
+export interface BindingInfo {
+    identifier: SWC.Identifier
+    ref: Ref
+    declarator: BindingDeclarator
+    moduleItem: SWC.ModuleItem
+}
+
+export interface LocalImport {
+    localRef: Ref
+    sourcePath: string  // resolved absolute path
+    exportName: string  // original export name
+}
+
 export interface FileInfo {
     filePath: string
     ast: SWC.Module
     styleExpressions: Set<SWC.Expression>
-    parentLookup: Map<AnyNode, AnyNode>
-    identifierSources: RefMap<SWC.Identifier>
     references: Set<SWC.Identifier>
-    usedNodes: Set<AnyNode>
+    moduleBindings: RefMap<BindingInfo>
+    localImports: RefMap<LocalImport>
+    usedBindings: Set<BindingInfo>
+    exports: Map<string, Ref>
 }
 
 export class RefMap<T> {
@@ -58,6 +79,28 @@ export class RefMap<T> {
     public get(ref: Ref): T | undefined {
         if (ref.id === undefined) return undefined
         return this.data.get(ref.name)?.get(ref.id)
+    }
+
+    // Get by name only (returns first match) - useful for module-level lookups
+    public getByName(name: string): T | undefined {
+        const map = this.data.get(name)
+        if (!map) return undefined
+        return map.values().next().value
+    }
+
+    // Iterate all values
+    public *values(): IterableIterator<T> {
+        for (const map of this.data.values()) {
+            yield* map.values()
+        }
+    }
+
+    // Find a value matching a predicate
+    public find(predicate: (value: T) => boolean): T | undefined {
+        for (const value of this.values()) {
+            if (predicate(value)) return value
+        }
+        return undefined
     }
 
     private requireName(name: string): Map<number, T> {
@@ -88,92 +131,261 @@ function getOrInsert<K, V>(target: Map<K, V>, key: K, compute: () => V): V
     return newValue
 }
 
-function extractData(ast: SWC.Module, styleSources: Map<string, Map<string, StyleSource>>) {
-    const parentLookup = new Map<AnyNode, AnyNode>()
-    const identifiers = new RefMap<StyleSource>()
-    const styleExpressions = new Set<SWC.Expression>()
-    const identifierSources = new RefMap<SWC.Identifier>
-    const references = new Set<SWC.Identifier>()
+function isLocalImport(source: string): boolean {
+    return source.startsWith('./') || source.startsWith('../')
+}
 
-    visit.module<AnyNode | null>(ast, {
-        // parent mapping
-        any(node, { descend, context }) {
-            if (context !== null) parentLookup.set(node, context)
-            descend(node)
-        },
-        // construct style source lookup by identifiers
-        importDeclaration(node: SWC.ImportDeclaration, { descend, context }) {
-            descend(context)
-
-            const possibleSources = styleSources.get(node.source.value)
-            if (!possibleSources) return
-
-            for (const spec of ProjectIndex.extractImportSpecs(node)) {
-                const ref = spec.ref
-                const sourceName = spec.sourceName
-                const source = possibleSources.get(sourceName)
-
-                if (spec.isNamespace || !source) continue
-                identifiers.set(ref, source)
-            }
+function collectBindingsFromPattern(
+    pattern: SWC.Pattern,
+    declarator: SWC.VariableDeclarator,
+    declaration: SWC.VariableDeclaration,
+    moduleItem: SWC.ModuleItem,
+    bindings: RefMap<BindingInfo>
+): void {
+    switch (pattern.type) {
+        case 'Identifier': {
+            const ref = idToRef(pattern)
+            bindings.set(ref, {
+                identifier: pattern,
+                ref,
+                declarator: { type: 'variable', declarator, declaration },
+                moduleItem
+            })
+            break
         }
-    }, null)
-
-    visit.module(ast, {
-        // find calls of style sources and extract styles
-        callExpression(node, { descend }) {
-            if (node.callee.type !== "Identifier") {
-                descend(null)
-                return
+        case 'ObjectPattern':
+            for (const prop of pattern.properties) {
+                if (prop.type === 'RestElement') {
+                    collectBindingsFromPattern(prop.argument, declarator, declaration, moduleItem, bindings)
+                } else if (prop.type === 'KeyValuePatternProperty') {
+                    collectBindingsFromPattern(prop.value, declarator, declaration, moduleItem, bindings)
+                } else if (prop.type === 'AssignmentPatternProperty') {
+                    const ref = idToRef(prop.key)
+                    bindings.set(ref, {
+                        identifier: prop.key,
+                        ref,
+                        declarator: { type: 'variable', declarator, declaration },
+                        moduleItem
+                    })
+                }
             }
+            break
+        case 'ArrayPattern':
+            for (const element of pattern.elements) {
+                if (element) {
+                    collectBindingsFromPattern(element, declarator, declaration, moduleItem, bindings)
+                }
+            }
+            break
+        case 'RestElement':
+            collectBindingsFromPattern(pattern.argument, declarator, declaration, moduleItem, bindings)
+            break
+        case 'AssignmentPattern':
+            collectBindingsFromPattern(pattern.left, declarator, declaration, moduleItem, bindings)
+            break
+    }
+}
 
-            const calleeRef = idToRef(node.callee)
-            const source = identifiers.get(calleeRef)
+type ExtractContext = {
+    scopeDepth: number
+    currentModuleItem: SWC.ModuleItem | null
+}
 
-            if (source) source.extractor(node).forEach(style => styleExpressions.add(style))
+function extractData(
+    ast: SWC.Module,
+    filePath: string,
+    styleSources: Map<string, Map<string, StyleSource>>,
+    resolveImport: (from: string, source: string) => string | null
+) {
+    const styleSourceIdentifiers = new RefMap<StyleSource>()
+    const styleExpressions = new Set<SWC.Expression>()
+    const moduleBindings = new RefMap<BindingInfo>()
+    const localImports = new RefMap<LocalImport>()
+    const references = new Set<SWC.Identifier>()
+    const exports = new Map<string, Ref>()
 
+    // Pass 1: Collect style source identifiers from imports
+    for (const item of ast.body) {
+        if (item.type !== 'ImportDeclaration') continue
+
+        const possibleSources = styleSources.get(item.source.value)
+        if (!possibleSources) continue
+
+        for (const spec of ProjectIndex.extractImportSpecs(item)) {
+            const source = possibleSources.get(spec.sourceName)
+            if (spec.isNamespace || !source) continue
+            styleSourceIdentifiers.set(spec.ref, source)
+        }
+    }
+
+    // Pass 2: Find style expressions
+    visit.module(ast, {
+        callExpression(node, { descend }) {
+            if (node.callee.type === "Identifier") {
+                const calleeRef = idToRef(node.callee)
+                const source = styleSourceIdentifiers.get(calleeRef)
+                if (source) {
+                    source.extractor(node).forEach(style => styleExpressions.add(style))
+                }
+            }
             descend(null)
         }
     }, null)
 
-    //TODO: make better
-    // locate sources of identifiers
-    visit.module(ast, {
-        declaration(_, { descend }) {
-            descend(false)
+    // Pass 3: Collect module-level bindings, local imports, and exports
+    for (const item of ast.body) {
+        switch (item.type) {
+            case 'ImportDeclaration': {
+                const sourcePath = isLocalImport(item.source.value)
+                    ? resolveImport(filePath, item.source.value)
+                    : null
+
+                for (const specifier of item.specifiers) {
+                    if (specifier.type === 'ImportNamespaceSpecifier') continue
+
+                    const ref = idToRef(specifier.local)
+                    const sourceName = specifier.type === 'ImportSpecifier'
+                        ? (specifier.imported?.value ?? ref.name)
+                        : ref.name  // default import
+
+                    if (sourcePath) {
+                        // Local import - track for cross-file analysis
+                        localImports.set(ref, {
+                            localRef: ref,
+                            sourcePath,
+                            exportName: sourceName
+                        })
+                    }
+
+                    // Track as a binding (imported identifiers are module-level)
+                    moduleBindings.set(ref, {
+                        identifier: specifier.local,
+                        ref,
+                        declarator: { type: 'import', specifier, declaration: item },
+                        moduleItem: item
+                    })
+                }
+                break
+            }
+
+            case 'VariableDeclaration':
+                for (const declarator of item.declarations) {
+                    collectBindingsFromPattern(declarator.id, declarator, item, item, moduleBindings)
+                }
+                break
+
+            case 'FunctionDeclaration':
+                if (item.identifier) {
+                    const ref = idToRef(item.identifier)
+                    moduleBindings.set(ref, {
+                        identifier: item.identifier,
+                        ref,
+                        declarator: { type: 'function', declaration: item },
+                        moduleItem: item
+                    })
+                }
+                break
+
+            case 'ClassDeclaration':
+                if (item.identifier) {
+                    const ref = idToRef(item.identifier)
+                    moduleBindings.set(ref, {
+                        identifier: item.identifier,
+                        ref,
+                        declarator: { type: 'class', declaration: item },
+                        moduleItem: item
+                    })
+                }
+                break
+
+            case 'ExportDeclaration': {
+                // Handle: export const x = ..., export function f() {}, export class C {}
+                const decl = item.declaration
+                if (decl.type === 'VariableDeclaration') {
+                    for (const declarator of decl.declarations) {
+                        collectBindingsFromPattern(declarator.id, declarator, decl, item, moduleBindings)
+                        if (declarator.id.type !== 'Identifier') continue
+                        const ref = idToRef(declarator.id)
+                        exports.set(ref.name, ref)
+                    }
+                    break
+                }
+                const identifier = decl.type === 'FunctionDeclaration' || decl.type === 'ClassDeclaration'
+                    ? decl.identifier
+                    : null
+                if (!identifier) break
+                const ref = idToRef(identifier)
+                const type = decl.type === 'FunctionDeclaration' ? 'function' : 'class'
+                moduleBindings.set(ref, {
+                    identifier,
+                    ref,
+                    declarator: { type, declaration: decl } as BindingDeclarator,
+                    moduleItem: item
+                })
+                exports.set(ref.name, ref)
+                break
+            }
+
+            case 'ExportNamedDeclaration':
+                // Handle: export { x, y as z }
+                for (const specifier of item.specifiers) {
+                    if (specifier.type !== 'ExportSpecifier') continue
+                    const localName = specifier.orig.type === 'Identifier' ? specifier.orig.value : specifier.orig.value
+                    const exportedName = specifier.exported?.value ?? localName
+                    const binding = moduleBindings.getByName(localName)
+                    if (binding) exports.set(exportedName, binding.ref)
+                }
+                break
+        }
+    }
+
+    // Pass 4: Collect references (identifiers used in expressions)
+    visit.module<ExtractContext>(ast, {
+        functionDeclaration(_, { descend, context }) {
+            descend({ ...context, scopeDepth: context.scopeDepth + 1 })
         },
-        param(_, { descend }) {
-            descend(false)
+        functionExpression(_, { descend, context }) {
+            descend({ ...context, scopeDepth: context.scopeDepth + 1 })
         },
-        expression(_, { descend }) {
-            descend(true)
+        arrowFunctionExpression(_, { descend, context }) {
+            descend({ ...context, scopeDepth: context.scopeDepth + 1 })
         },
-        pattern(_, { descend }) {
-            descend(false)
+        classMethod(_, { descend, context }) {
+            descend({ ...context, scopeDepth: context.scopeDepth + 1 })
         },
-        statement(_, { descend }) {
-            descend(false)
+        // Skip identifiers in declaration positions
+        variableDeclarator(node, { descend, context }) {
+            // Only visit the init expression, not the pattern
+            if (node.init) {
+                visit.expression(node.init, {
+                    identifier(id) {
+                        references.add(id)
+                    }
+                }, null)
+            }
         },
-        importDeclaration(_, { descend }) {
-            descend(false)
+        param() {
+            // Skip parameters - they introduce local bindings
+        },
+        pattern() {
+            // Skip patterns in declaration context
         },
         identifier(node, { context }) {
-            const ref = idToRef(node)
-
-            // skip invalid
-            if (ref.id === undefined) return
-
-            if (context) references.add(node)
-            else identifierSources.set(ref, node)
+            // Only collect references at module level (scopeDepth === 0)
+            // References inside functions are not relevant for extraction
+            if (context.scopeDepth === 0) {
+                references.add(node)
+            }
         },
         tsType() {}
-    }, false)
+    }, { scopeDepth: 0, currentModuleItem: null })
 
     return {
-        parentLookup,
         styleExpressions,
-        identifierSources,
-        references
+        moduleBindings,
+        localImports,
+        references,
+        exports
     }
 }
 
@@ -189,14 +401,17 @@ export const styledFunctionStyleSource = new StyleSource(
     call => call.arguments.map(a => a.expression).slice(1)
 )
 
+export type ResolveImport = (fromFile: string, importSource: string) => string | null
+
 export class ProjectIndex {
     private filesInfo: Map<string, FileInfo> = new Map()
+    private analyzedBindings = new Set<string>()
 
     public get files(): [string, FileInfo][] {
         return [...this.filesInfo.entries()]
     }
 
-    constructor(modules: Module[], styleSources: StyleSource[]) {
+    constructor(modules: Module[], styleSources: StyleSource[], resolveImport: ResolveImport) {
         const sourceLookup = new Map<string, Map<string, StyleSource>>()
         for (const source of styleSources) {
             const importScope = getOrInsert(sourceLookup, source.importPath, () => new Map<string, StyleSource>())
@@ -204,14 +419,18 @@ export class ProjectIndex {
         }
 
         for (const module of modules) {
-            const data = extractData(module.ast, sourceLookup)
+            const data = extractData(module.ast, module.filePath, sourceLookup, resolveImport)
 
             this.filesInfo.set(module.filePath, {
                 ...module,
                 ...data,
-                usedNodes: new Set<AnyNode>()
+                usedBindings: new Set<BindingInfo>()
             })
         }
+    }
+
+    private getBindingKey(filePath: string, ref: Ref): string {
+        return `${filePath}:${ref.name}:${ref.id}`
     }
 
     public propagateUsages() {
@@ -223,54 +442,58 @@ export class ProjectIndex {
     }
 
     public propagateUsagesFromExpr(fileInfo: FileInfo, expr: SWC.Expression) {
-        if (fileInfo.usedNodes.has(expr)) return
-
         const that = this
 
         visit.expression(expr, {
-            any(node, { descend }) {
-                if (node !== expr) {
-                    if (fileInfo.usedNodes.has(node)) return
-                    fileInfo.usedNodes.add(node)
-                }
-                descend(null)
-            },
             identifier(node) {
                 that.propagateUsagesFromRef(fileInfo, idToRef(node))
             }
         }, null)
     }
 
-    public propagateUsagesFromRootItem(fileInfo: FileInfo, item: SWC.ModuleItem) {
-        if (fileInfo.usedNodes.has(item)) return
+    public propagateUsagesFromBinding(fileInfo: FileInfo, binding: BindingInfo) {
+        if (fileInfo.usedBindings.has(binding)) return
+        fileInfo.usedBindings.add(binding)
 
         const that = this
-        visit.moduleItem(item, {
-            any(node, { descend }) {
-                if (fileInfo.usedNodes.has(node)) return
-                fileInfo.usedNodes.add(node)
-                descend(null)
-            },
-            identifier(node) {
-                that.propagateUsagesFromRef(fileInfo, idToRef(node))
-            }
-        }, null)
+
+        // For variable bindings, propagate through the initializer
+        if (binding.declarator.type === 'variable' && binding.declarator.declarator.init) {
+            visit.expression(binding.declarator.declarator.init, {
+                identifier(node) {
+                    that.propagateUsagesFromRef(fileInfo, idToRef(node))
+                }
+            }, null)
+        }
     }
 
     public propagateUsagesFromRef(fileInfo: FileInfo, ref: Ref) {
         if (ref.id === undefined) return
 
-        const source = fileInfo.identifierSources.get(ref)
-        if (!source) return
-        let currentNode: AnyNode = source
-        let parent: AnyNode | null = fileInfo.parentLookup.get(source) ?? null
-        while (parent !== null && (!("type" in parent) || parent.type !== "Module")) {
-            currentNode = parent
-            parent = fileInfo.parentLookup.get(currentNode) ?? null
+        // Deduplication check
+        const bindingKey = this.getBindingKey(fileInfo.filePath, ref)
+        if (this.analyzedBindings.has(bindingKey)) return
+        this.analyzedBindings.add(bindingKey)
+
+        // Check if it's a local import - follow recursively
+        const localImport = fileInfo.localImports.get(ref)
+        if (localImport) {
+            const importedFileInfo = this.filesInfo.get(localImport.sourcePath)
+            const exportedRef = importedFileInfo?.exports.get(localImport.exportName)
+            if (importedFileInfo && exportedRef) {
+                this.propagateUsagesFromRef(importedFileInfo, exportedRef)
+            }
+            // Also mark the import binding itself as used
+            const importBinding = fileInfo.moduleBindings.get(ref)
+            if (importBinding) fileInfo.usedBindings.add(importBinding)
+            return
         }
-        if (parent?.type !== "Module") return
-        const typedCurrentNode = currentNode as SWC.ModuleItem
-        this.propagateUsagesFromRootItem(fileInfo, typedCurrentNode)
+
+        // Check if it's a module-level binding
+        const binding = fileInfo.moduleBindings.get(ref)
+        if (!binding) return
+
+        this.propagateUsagesFromBinding(fileInfo, binding)
     }
 
     public static extractImportSpecs(node: SWC.ImportDeclaration): ImportSpec[] {
