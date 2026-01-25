@@ -1,5 +1,20 @@
 # @mochi-css/postcss
 
+## 0.1.0
+
+### Minor Changes
+
+- 7aa4d94: Made builder more modular and implemented cross-file usage
+- 2f7deed: Expanded tests and implemented nested selectors & media queries
+
+### Patch Changes
+
+- 7aa4d94: Improved documentation
+- Updated dependencies [7aa4d94]
+- Updated dependencies [7aa4d94]
+- Updated dependencies [2f7deed]
+  - @mochi-css/builder@0.1.0
+
 ## 0.0.3
 
 ### Patch Changes
