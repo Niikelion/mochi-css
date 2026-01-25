@@ -90,7 +90,7 @@ Benchmarks and performance comparisons will be released at a later stage.
 
 | Feature                     | Status         | Notes                                                                                                                            |
 |-----------------------------|----------------|----------------------------------------------------------------------------------------------------------------------------------|
-| **Mochi-CSS/tsuki**         | 🕒 Queued      | Small CLI tool for adding Mochi-CSS to existing projects                                                                         |
+| **Mochi-CSS/tsuki**         | 🚧 In Progress | Small CLI tool for adding Mochi-CSS to existing projects                                                                         |
 | **Better DX tooling**       | 🕒 Queued      | Better warnings and errors; more precise code extraction                                                                         |
 | **Benchmarks**              | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                       |
 | **Tree-shaking**            | 🕒 Queued      | Support injecting css outside globals.css file, making it possible for the frameworks like NextJS to tree-shake generated styles |
