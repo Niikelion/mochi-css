@@ -1,6 +1,6 @@
 # Mochi-CSS/vanilla
 
-This package is part of [Mochi-CSS project](https://github.com/Niikelion/mochi-css) that provides styling functions and type definitions.
+This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css). It provides type-safe CSS-in-JS styling functions with static extraction support, allowing you to write styles in TypeScript that get extracted to plain CSS at build time.
 
 ## Functions
 
@@ -9,15 +9,16 @@ This package is part of [Mochi-CSS project](https://github.com/Niikelion/mochi-c
 `css` is the fundamental styling function of Mochi-CSS.
 It takes style definitions as parameters, marks them for static extraction and returns class names to apply on elements.
 
-```ts
+```tsx
 import {css} from "@mochi-css/vanilla"
 
 const buttonStyles = css({
     borderRadius: 10,
-    border: "10px solid red"
+    border: "2px solid red"
 })
 
-console.log(`${buttonStyles}`)
+// Use in JSX
+<button className={buttonStyles}>Click me</button>
 ```
 
 Output of the `css` function is also a valid style definition, so you can split your styles:
@@ -29,38 +30,250 @@ const textStyles = css({
 
 const buttonStyles = css(textStyles, {
     borderRadius: 10,
-    border: "10px solid red"
+    border: "2px solid red"
 })
 ```
 
 ### `styled(component, ...styles)`
 
-`styled` is just a simple wrapper around `css` that takes a component as the first argument and applies all the class names for you.
+`styled` creates a styled component by combining a base element or component with style definitions. It automatically applies the generated class names and forwards variant props.
 
 ```tsx
 import {styled} from "@mochi-css/vanilla"
 
 const Button = styled("button", {
     borderRadius: 10,
-    border: "10px solid red"
+    border: "2px solid red"
 })
 ```
 
 ## Style definitions
 
-Now, that we know how to use our style definitions, we probably should learn how to write them, right?
-Style definition is either bundle of styles returned by `css` or object containing:
+A style definition is either a bundle of styles returned by `css`, or an object containing:
 
 * any number of valid CSS properties converted to camelCase, like in React's style property
-* any number of CSS variable assignments, more on that later
+* any number of CSS variable assignments (see [Tokens](#tokens))
 * optional variants definition
 * optional default variants definition
 
-In the future, nested CSS selectors and media queries will be available as parts of style definitions
+## Nested Selectors
+
+Mochi-CSS supports nested selectors, allowing you to define styles for child elements, pseudo-classes, and pseudo-elements directly within your style definitions.
+
+The `&` character represents the parent selector and must be included in every nested selector:
+
+```ts
+import { css } from "@mochi-css/vanilla"
+
+const buttonStyle = css({
+    backgroundColor: "blue",
+    color: "white",
+
+    // Pseudo-classes
+    "&:hover": {
+        backgroundColor: "darkblue"
+    },
+    "&:active": {
+        backgroundColor: "navy"
+    },
+    "&:disabled": {
+        backgroundColor: "gray",
+        cursor: "not-allowed"
+    },
+
+    // Pseudo-elements
+    "&::before": {
+        content: '""',
+        display: "block"
+    },
+
+    // Child selectors
+    "& > span": {
+        fontWeight: "bold"
+    },
+
+    // Descendant selectors
+    "& p": {
+        margin: 0
+    },
+
+    // Compound selectors (when element also has another class)
+    "&.active": {
+        borderColor: "green"
+    },
+
+    // Adjacent sibling
+    "& + &": {
+        marginTop: 8
+    }
+})
+```
+
+### Selector Position
+
+The `&` can appear anywhere in the selector, allowing for flexible parent-child relationships:
+
+```ts
+const linkStyle = css({
+    color: "blue",
+
+    // Parent context: style this element when inside .dark-mode
+    ".dark-mode &": {
+        color: "lightblue"
+    },
+
+    // Multiple parent contexts
+    "nav &, footer &": {
+        textDecoration: "underline"
+    }
+})
+```
+
+## Media Selectors
+
+Media selectors allow you to apply styles conditionally based on viewport size, color scheme preferences, and other media features. Media selectors start with the `@` symbol and are compiled into CSS media queries:
+
+```ts
+import { css } from "@mochi-css/vanilla"
+
+const responsiveContainer = css({
+    display: "flex",
+    flexDirection: "row",
+    padding: 32,
+
+    // Responsive breakpoints
+    "@max-width: 768px": {
+        flexDirection: "column",
+        padding: 16
+    },
+
+    "@max-width: 480px": {
+        padding: 8
+    },
+
+    // Modern range syntax
+    "@width <= 1024px": {
+        gap: 16
+    },
+
+    // Color scheme preferences
+    "@prefers-color-scheme: dark": {
+        backgroundColor: "#1a1a1a",
+        color: "white"
+    },
+
+    // Reduced motion
+    "@prefers-reduced-motion: reduce": {
+        transition: "none"
+    }
+})
+```
+
+### Combined Media Selectors
+
+You can combine multiple media conditions using `and` and `not` operators:
+
+```ts
+const responsiveLayout = css({
+    display: "grid",
+    gridTemplateColumns: "1fr",
+
+    // Screen media type with width condition
+    "@screen and (width > 1000px)": {
+        gridTemplateColumns: "1fr 1fr"
+    },
+
+    // Multiple conditions with 'and'
+    "@screen and (min-width: 768px) and (max-width: 1024px)": {
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16
+    },
+
+    // Print styles
+    "@print": {
+        display: "block"
+    },
+
+    // Combining media type with preference
+    "@screen and (not (prefers-color-scheme: dark))": {
+        backgroundColor: "#121212"
+    }
+})
+```
+
+### Combining Nested Selectors with Media Selectors
+
+Nested selectors and media selectors can be combined for fine-grained control:
+
+```ts
+const buttonStyle = css({
+    backgroundColor: "blue",
+
+    "&:hover": {
+        backgroundColor: "darkblue",
+
+        // Media selector inside nested selector
+        "@width <= 480px": {
+            // Disable hover effects on mobile (touch devices)
+            backgroundColor: "blue"
+        }
+    },
+
+    // Media selector with nested selectors inside
+    "@max-width: 768px": {
+        padding: 8,
+
+        "& > span": {
+            display: "none"
+        }
+    }
+})
+```
+
+### Using with Variants
+
+Nested selectors and media selectors work seamlessly inside variant definitions:
+
+```ts
+const cardStyle = css({
+    padding: 16,
+    borderRadius: 8,
+
+    variants: {
+        size: {
+            small: {
+                padding: 8,
+                "@max-width: 480px": {
+                    padding: 4
+                }
+            },
+            large: {
+                padding: 32,
+                "@max-width: 480px": {
+                    padding: 16
+                }
+            }
+        },
+        interactive: {
+            true: {
+                cursor: "pointer",
+                "&:hover": {
+                    transform: "translateY(-2px)"
+                }
+            },
+            false: {}
+        }
+    },
+    defaultVariants: {
+        size: "small",
+        interactive: false
+    }
+})
+```
 
 ## Variants
 
-You may want to create many variants of a button, with a shared set of css:
+You may want to create multiple variants of a button that share a common base style:
 
 ```ts
 import {css} from "@mochi-css/vanilla"
@@ -76,8 +289,8 @@ const redButtonStyle = css(baseButtonStyle, {
 })
 ```
 
-This works, but now, either you have to wrap your component manually and decide which style to apply or use different components.
-To make the code simpler and cleaner, Mochi-CSS allows you to specify variants inside the style definition, and even handles variant params for you!
+This works, but requires you to either manually select which style to apply in your component logic, or create separate components for each variant.
+Mochi-CSS allows you to define variants directly in your style definition and automatically generates the corresponding props for your component.
 
 ```tsx
 import {styled, css} from "@mochi-css/vanilla"
@@ -109,12 +322,13 @@ const SomeComponent = () => <div>
 </div>
 ```
 
-`defaultVariants` is optional, but we recommend that you specify defaults for all the variants.
+`defaultVariants` is optional, but specifying defaults for all variants ensures predictable styling when variant props are omitted.
 
 ## Tokens
 
-To help with type safety, Mochi-CSS provides typed wrappers around concept of css variables.
-Variables can be created using `createToken<T>(name)` function:
+Mochi-CSS provides typed wrappers around CSS variables to help with type safety. Tokens ensure that only valid values are assigned to your CSS variables.
+
+Create tokens using the `createToken<T>(name)` function, where `T` is a CSS value type like `CssColorLike`, `CssLengthLike`, or `string`:
 
 ```ts
 import {createToken, css, CssColorLike} from "@mochi-css/vanilla"
@@ -141,4 +355,6 @@ const buttonStyle = css({
 })
 ```
 
-As you can see, tokens can be used as css values and as keys in style definition objects.
+Tokens can be used in two ways:
+- **As values**: Use the token directly (e.g., `backgroundColor: buttonColor`) to reference the CSS variable
+- **As keys**: Use `token.variable` (e.g., `[buttonColor.variable]: primaryColor`) to assign a value to the CSS variable

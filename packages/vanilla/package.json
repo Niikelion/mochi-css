@@ -26,7 +26,7 @@
         }
     },
     "scripts": {
-        "build": "tsdown && attw --pack .",
+        "build": "tsc --noEmit && tsdown",
         "test": "vitest",
         "coverage": "vitest run --coverage"
     },

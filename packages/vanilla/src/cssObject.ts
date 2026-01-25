@@ -1,3 +1,10 @@
+/**
+ * CSS object model for representing and serializing styles.
+ * Converts JavaScript style objects into CSS blocks with proper
+ * selector handling, nesting support, and deterministic output.
+ * @module cssObject
+ */
+
 import {
     asKnownProp,
     asVar,
@@ -12,17 +19,36 @@ import {shortHash} from "@/hash";
 import {MochiSelector} from "@/selector";
 import {compareStringKey, stringPropComparator} from "@/compare";
 
+/**
+ * Represents a single CSS rule block with properties and a selector.
+ * Handles conversion to CSS string format and hash generation.
+ */
 export class CssObjectSubBlock {
+    /**
+     * Creates a new CSS sub-block.
+     * @param cssProps - Map of CSS property names (kebab-case) to values
+     * @param selector - The selector this block applies to
+     */
     constructor(
         public readonly cssProps: Record<string, string>,
         public readonly selector: MochiSelector
     ) {}
 
+    /**
+     * Computes a deterministic hash of this block's CSS content.
+     * Used for generating unique class names.
+     */
     get hash(): string {
         const str = this.asCssString("&")
         return shortHash(str)
     }
 
+    /**
+     * Converts this block to a CSS string.
+     * Handles media query wrapping if the selector has media conditions.
+     * @param root - The root selector to substitute for `&`
+     * @returns Formatted CSS string
+     */
     asCssString(root: string): string {
         const selector = this.selector.substitute(root)
         const mediaQuery = selector.mediaQuery
@@ -39,7 +65,15 @@ export class CssObjectSubBlock {
         return mediaQuery === undefined ? blockCss : `${mediaQuery} {\n${blockCss}\n}`
     }
 
-    // this is expected to yield list in a consistent, deterministic manner
+    /**
+     * Parses StyleProps into an array of CSS sub-blocks.
+     * Recursively processes nested selectors and media queries.
+     * Output order is deterministic for consistent hash generation.
+     *
+     * @param props - The style properties to parse
+     * @param selector - The parent selector context (defaults to `&`)
+     * @returns Non-empty array of sub-blocks (main block first, then nested)
+     */
     static fromProps(props: StyleProps, selector?: MochiSelector): [CssObjectSubBlock, ...CssObjectSubBlock[]] {
         selector ??= new MochiSelector(["&"])
 
@@ -93,10 +127,21 @@ export class CssObjectSubBlock {
     }
 }
 
+/**
+ * Represents an abstract CSS block definition.
+ * Contains one or more sub-blocks for nested selectors and media queries.
+ */
 export class CssObjectBlock {
+    /** The generated unique class name for this block */
     public readonly className: string
+    /** All sub-blocks (main styles and nested/media rules) */
     public readonly subBlocks: CssObjectSubBlock[] = []
 
+    /**
+     * Creates a new CSS block from style properties.
+     * Generates a unique class name based on the content hash.
+     * @param styles - The style properties to compile
+     */
     constructor(
         styles: StyleProps
     ) {
@@ -106,32 +151,89 @@ export class CssObjectBlock {
         this.subBlocks = blocks
     }
 
+    /**
+     * Gets the CSS class selector for this block.
+     */
     get selector(): string {
         return `.${this.className}`
     }
 
+    /**
+     * Converts style block to a CSS string.
+     * @param root - The root selector to scope styles to
+     * @returns Complete CSS string for this block
+     */
     asCssString(root: string): string {
         return this.subBlocks.map(b => b.asCssString(new MochiSelector([root]).extend(`&.${this.className}`).cssSelector)).join('\n\n')
     }
 }
 
+/** Default type for variant definitions: maps variant names to option names to styles */
 export type DefaultVariants = Record<string, Record<string, StyleProps>>
+
+/**
+ * Refines string literal types to their proper runtime types.
+ * Converts "true"/"false" strings to boolean literals.
+ */
 type RefineVariantType<T extends string> = T extends "true" ? true : T extends "false" ? false : T extends string ? T : string
+
+/**
+ * Props for defining variants in a style object.
+ * @template V - The variant definitions type
+ */
 export type VariantProps<V extends DefaultVariants> = {
+    /** Variant definitions mapping names to options to styles */
     variants?: V
+    /** Default variant selections for when not explicitly provided */
     defaultVariants?: { [K in keyof V]: (keyof V[K]) extends any ? RefineVariantType<keyof V[K] & string> : never }
 }
+
+/** Combined type for style props with optional variants */
 export type MochiCSSProps<V extends DefaultVariants> = StyleProps & VariantProps<V>
+
+/** Utility type to override properties of A with properties of B */
 type Override<A extends object, B extends object> = B & Omit<A, keyof B>
+
+/** Recursively merges variant types from a tuple, with later types overriding earlier */
 export type MergeCSSVariants<V extends DefaultVariants[]> = V extends [infer V1 extends DefaultVariants, ...infer VRest extends DefaultVariants[]] ? Override<V1, MergeCSSVariants<VRest>> : {}
+
+/** Refines all values in a string record to their proper variant types */
 type RefineVariantTypes<V extends Record<string, string>> = { [K in keyof V]: RefineVariantType<V[K]> }
+
+/** Extracts and refines variant option types from a DefaultVariants definition */
 export type RefineVariants<T extends DefaultVariants> = RefineVariantTypes<{ [K in keyof T]: keyof T[K] & string }>
 
+/**
+ * Complete CSS object representation with main and variant styles.
+ *
+ * @template V - The variant definitions type
+ *
+ * @example
+ * const obj = new CSSObject({
+ *   color: 'blue',
+ *   variants: {
+ *     size: {
+ *       small: { fontSize: 12 },
+ *       large: { fontSize: 18 }
+ *     }
+ *   },
+ *   defaultVariants: { size: 'small' }
+ * })
+ * obj.asCssString() // Returns complete CSS with all variants
+ */
 export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}> {
+    /** The main style block (non-variant styles) */
     public readonly mainBlock: CssObjectBlock
+    /** Compiled blocks for each variant option */
     public readonly variantBlocks: { [K in keyof V & string]: { [I in keyof V[K] & string]: CssObjectBlock } }
+    /** Default variant selections */
     public readonly variantDefaults: Partial<RefineVariants<V>>
 
+    /**
+     * Creates a new CSSObject from style props.
+     * Compiles main styles and all variant options into CSS blocks.
+     * @param props - Style properties with optional variants and defaults
+     */
     public constructor(
         {variants, defaultVariants, ...props}: MochiCSSProps<V>
     ) {
@@ -150,6 +252,11 @@ export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}
         this.variantDefaults = defaultVariants!
     }
 
+    /**
+     * Serializes the entire CSS object to a CSS string.
+     * Outputs main block first, then all variant blocks in sorted order.
+     * @returns Complete CSS string ready for injection into a stylesheet
+     */
     public asCssString(): string {
         return [
             this.mainBlock.asCssString(this.mainBlock.selector),

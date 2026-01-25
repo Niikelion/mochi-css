@@ -20,7 +20,7 @@
         }
     },
     "scripts": {
-        "build": "tsdown && attw --pack .",
+        "build": "tsc --noEmit && tsdown",
         "test": "vitest",
         "coverage": "vitest run --coverage"
     },
@@ -30,7 +30,6 @@
         "@gamedev-sensei/tsdown-config": "^2.0.0",
         "@types/node": "^24.8.1",
         "@vitest/coverage-v8": "^4.0.15",
-        "dedent": "^1.7.1",
         "tsdown": "^0.15.7",
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.0.15"
@@ -38,6 +37,7 @@
     "dependencies": {
         "@mochi-css/vanilla": "^0.0.3",
         "@swc/core": "^1.15.2",
+        "dedent": "^1.7.1",
         "rolldown": "1.0.0-beta.59"
     }
 }

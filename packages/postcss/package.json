@@ -20,7 +20,7 @@
         }
     },
     "scripts": {
-        "build": "tsdown && attw --pack ."
+        "build": "tsc --noEmit && tsdown"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
