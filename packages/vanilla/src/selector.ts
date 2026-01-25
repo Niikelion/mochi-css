@@ -42,7 +42,7 @@ export class MochiSelector {
      */
     get mediaQuery(): string | undefined {
         if (this.mediaSelectors.length === 0) return undefined
-        return `@media ${this.mediaSelectors.map(s => `(${s})`).join("and ")}`
+        return `@media ${this.mediaSelectors.map(s => `(${s})`).join(" and ")}`
     }
 
     /**

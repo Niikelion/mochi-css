@@ -87,7 +87,6 @@ describe("Builder", () => {
             const { color } = {
                 color: "blue"
             };
-            // @ts-ignore
             registerStyles("linkStyles.ts", {
                 textDecoration: "none",
                 color
