@@ -6,74 +6,50 @@
  */
 
 import {Properties, ObsoleteProperties } from "csstype"
-import {asColor, asLength, CssLike, CssVar} from "@/values"
+import {CssLike, CssVar} from "@/values"
 import properties from "known-css-properties"
-
-/**
- * Converts a CSS-like value to its string representation.
- * Handles strings, numbers, and wrapped values with a `.value` property.
- * @param v - The value to convert
- * @returns The string representation of the value
- */
-function asEnum<E extends string | number>(v: CssLike<E>): string {
-    if (typeof v === "string") return v
-    if (typeof v === "number") return v.toString()
-    return v.value.toString()
-}
+import {propertyUnits, type PropertyWithUnit} from "./propertyUnits.generated"
 
 /** All non-obsolete CSS properties from csstype */
 type Props = Required<Omit<Properties, keyof ObsoleteProperties>>
 
-const styles = {
-    borderBlockEndWidth: asLength,
-    borderBlockStartWidth: asLength,
-    borderBottomColor: asColor,
-    borderBottomLeftRadius: asLength,
-    borderBottomRightRadius: asLength,
-    borderBottomWidth: asLength,
-    borderEndEndRadius: asLength,
-    borderEndStartRadius: asLength,
-    borderInlineEndWidth: asLength,
-    borderInlineStartWidth: asLength,
-    borderLeftWidth: asLength,
-    borderRightWidth: asLength,
-    borderStartEndRadius: asLength,
-    borderStartStartRadius: asLength,
-    borderTopLeftRadius: asLength,
-    borderTopRightRadius: asLength,
-    borderTopWidth: asLength,
-    borderBlockWidth: asLength,
-    borderInlineWidth: asLength,
-    borderWidth: asLength,
-    gap: asLength,
-    height: asLength,
-    lineHeight: asLength,
-    marginBottom: asLength,
-    marginLeft: asLength,
-    marginRight: asLength,
-    marginTop: asLength,
-    paddingBottom: asLength,
-    paddingLeft: asLength,
-    paddingRight: asLength,
-    paddingTop: asLength,
-    width: asLength,
-} satisfies { [K in keyof Props]?: (v: any, n: string) => string }
-
-/** Set of all known CSS property names in camelCase format */
-const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
+/** Properties that have default units and are valid CSS properties */
+type PropsWithUnit = PropertyWithUnit & keyof Props
 
 /**
- * Type guard that checks if a string starts with a specific prefix.
+ * Converts a kebab-case string to camelCase.
  */
-function startsWith<P extends string>(value: string, prefix: P): value is `${P}${string}` {
-    return value.startsWith(prefix)
+function kebabToCamel(str: string): string {
+    return str.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 }
+
+/**
+ * Converts a camelCase string to kebab-case.
+ */
+function camelToKebab(str: string): string {
+    return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase())
+}
+
+/**
+ * Converts a CSS-like value to its string representation.
+ * For properties with known units, numbers are automatically suffixed.
+ */
+function formatValue(value: CssLike<string | number>, propertyName: string): string {
+    if (typeof value === "string") return value
+    if (typeof value === "number") {
+        const unit = propertyUnits[propertyName as PropertyWithUnit]
+        return unit ? `${value}${unit}` : value.toString()
+    }
+    return formatValue(value.value, propertyName)
+}
+
+const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
 
 /**
  * Checks if a property name is a CSS custom property (variable).
  */
 export function isCssVariableName(key: string): key is CssVar {
-    return startsWith(key, '--')
+    return key.startsWith('--')
 }
 
 /**
@@ -97,16 +73,14 @@ export function isKnownPropertyName(key: string): key is keyof Props {
 }
 
 /**
- * Converts a value to a CSS property string using the appropriate parser.
- * Uses specialized parsers for properties with unit requirements (lengths, colors).
+ * Converts a value to a CSS property string.
+ * Automatically appends units to numeric values for properties that require them.
  * @param value - The value to convert
  * @param key - The CSS property name
  * @returns The formatted CSS value string
  */
-export function asKnownProp(value: any, key: keyof Props): string {
-    const parser: ((v: any, k: string) => string) | undefined = key in styles ? styles[key as keyof typeof styles] : undefined
-    if (!parser) return asEnum(value)
-    return parser(value, key)
+export function asKnownProp(value: unknown, key: keyof Props): string {
+    return formatValue(value as CssLike<string | number>, key)
 }
 
 /**
@@ -137,11 +111,14 @@ type NestedStyleKeys = MediaSelector | NestedCssSelector
  * Style properties without nesting support.
  * Includes all standard CSS properties with type-safe value converters,
  * plus CSS custom properties (variables).
+ *
+ * Properties with known units (e.g., width, height, padding) accept numbers
+ * that are automatically converted with their default unit (e.g., px, ms).
  */
 export type SimpleStyleProps
-    = { [K in keyof typeof styles]?: Parameters<(typeof styles)[K]>[0] }
-    & { [K in Exclude<keyof Props, keyof typeof styles>]?: CssLike<Props[K]> }
-    & { [K in CssVar]?: Parameters<(typeof asVar)>[0] }
+    = { [K in PropsWithUnit]?: CssLike<number | Props[K]> }
+    & { [K in Exclude<keyof Props, PropsWithUnit>]?: CssLike<Props[K]> }
+    & { [K in CssVar]?: CssLike<string | number> }
 
 /**
  * Full style properties type with support for nested selectors and media queries.
@@ -157,19 +134,7 @@ export type SimpleStyleProps
  */
 export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProps | CssLike<string | number> }
 
-/**
- * Converts a camelCase string to kebab-case.
- */
-export function camelToKebab(str: string): string {
-    return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase())
-}
-
-/**
- * Converts a kebab-case string to camelCase.
- */
-export function kebabToCamel(str: string): string {
-    return str.replace(/-[a-z]/g, m => m.substring(1).toUpperCase())
-}
+export { camelToKebab, kebabToCamel }
 
 /**
  * Converts a SimpleStyleProps object to a CSS properties record.
