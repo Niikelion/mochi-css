@@ -13,11 +13,11 @@ import {
     isKnownPropertyName,
     isMediaSelector,
     isNestedSelector,
-    StyleProps
-} from "@/props";
-import {shortHash} from "@/hash";
-import {MochiSelector} from "@/selector";
-import {compareStringKey, stringPropComparator} from "@/compare";
+    StyleProps,
+} from "@/props"
+import { shortHash } from "@/hash"
+import { MochiSelector } from "@/selector"
+import { compareStringKey, stringPropComparator } from "@/compare"
 
 /**
  * Represents a single CSS rule block with properties and a selector.
@@ -31,7 +31,7 @@ export class CssObjectSubBlock {
      */
     constructor(
         public readonly cssProps: Record<string, string>,
-        public readonly selector: MochiSelector
+        public readonly selector: MochiSelector,
     ) {}
 
     /**
@@ -58,7 +58,7 @@ export class CssObjectSubBlock {
         const props = Object.entries(this.cssProps)
             .toSorted(compareStringKey)
             .map(([k, v]) => `${mediaIndent}    ${k}: ${v};\n`)
-            .join('')
+            .join("")
 
         const blockCss = `${mediaIndent}${selector.cssSelector} {\n${props}${mediaIndent}}`
 
@@ -78,7 +78,7 @@ export class CssObjectSubBlock {
         selector ??= new MochiSelector(["&"])
 
         const cssProps: Record<string, string> = {}
-        const propsToProcess: { key: string, selector: MochiSelector, props: StyleProps }[] = []
+        const propsToProcess: { key: string; selector: MochiSelector; props: StyleProps }[] = []
 
         for (const [key, value] of Object.entries(props)) {
             // skip undefined value
@@ -101,7 +101,7 @@ export class CssObjectSubBlock {
                 propsToProcess.push({
                     key,
                     props: value as StyleProps,
-                    selector: selector.extend(key)
+                    selector: selector.extend(key),
                 })
                 continue
             }
@@ -111,7 +111,7 @@ export class CssObjectSubBlock {
                 propsToProcess.push({
                     key,
                     props: value as StyleProps,
-                    selector: selector.wrap(key)
+                    selector: selector.wrap(key),
                 })
             }
         }
@@ -120,9 +120,7 @@ export class CssObjectSubBlock {
             new CssObjectSubBlock(cssProps, selector),
             ...propsToProcess
                 .toSorted(stringPropComparator("key"))
-                .flatMap(({ props, selector }) =>
-                    CssObjectSubBlock.fromProps(props, selector)
-                )
+                .flatMap(({ props, selector }) => CssObjectSubBlock.fromProps(props, selector)),
         ] as const
     }
 }
@@ -142,12 +140,10 @@ export class CssObjectBlock {
      * Generates a unique class name based on the content hash.
      * @param styles - The style properties to compile
      */
-    constructor(
-        styles: StyleProps
-    ) {
+    constructor(styles: StyleProps) {
         const blocks = CssObjectSubBlock.fromProps(styles)
 
-        this.className = "c" + shortHash(blocks.map(b => b.hash).join('+'))
+        this.className = "c" + shortHash(blocks.map((b) => b.hash).join("+"))
         this.subBlocks = blocks
     }
 
@@ -164,44 +160,57 @@ export class CssObjectBlock {
      * @returns Complete CSS string for this block
      */
     asCssString(root: string): string {
-        return this.subBlocks.map(b => b.asCssString(new MochiSelector([root]).extend(`&.${this.className}`).cssSelector)).join('\n\n')
+        return this.subBlocks
+            .map((b) => b.asCssString(new MochiSelector([root]).extend(`&.${this.className}`).cssSelector))
+            .join("\n\n")
     }
 }
 
-/** Default type for variant definitions: maps variant names to option names to styles */
-export type DefaultVariants = Record<string, Record<string, StyleProps>>
+export type AllVariants = Record<string, Record<string, StyleProps>>
+export type DefaultVariants = Record<never, Record<string, StyleProps>>
 
 /**
  * Refines string literal types to their proper runtime types.
  * Converts "true"/"false" strings to boolean literals.
  */
-type RefineVariantType<T extends string> = T extends "true" ? true : T extends "false" ? false : T extends string ? T : string
+type RefineVariantType<T extends string> = T extends "true"
+    ? true
+    : T extends "false"
+      ? false
+      : T extends string
+        ? T
+        : string
 
 /**
  * Props for defining variants in a style object.
  * @template V - The variant definitions type
  */
-export type VariantProps<V extends DefaultVariants> = {
+export type VariantProps<V extends AllVariants> = {
     /** Variant definitions mapping names to options to styles */
     variants?: V
     /** Default variant selections for when not explicitly provided */
-    defaultVariants?: { [K in keyof V]: (keyof V[K]) extends any ? RefineVariantType<keyof V[K] & string> : never }
+    defaultVariants?: { [K in keyof V]: keyof V[K] extends string ? RefineVariantType<keyof V[K] & string> : never }
 }
 
 /** Combined type for style props with optional variants */
-export type MochiCSSProps<V extends DefaultVariants> = StyleProps & VariantProps<V>
+export type MochiCSSProps<V extends AllVariants> = StyleProps & VariantProps<V>
 
 /** Utility type to override properties of A with properties of B */
 type Override<A extends object, B extends object> = B & Omit<A, keyof B>
 
 /** Recursively merges variant types from a tuple, with later types overriding earlier */
-export type MergeCSSVariants<V extends DefaultVariants[]> = V extends [infer V1 extends DefaultVariants, ...infer VRest extends DefaultVariants[]] ? Override<V1, MergeCSSVariants<VRest>> : {}
+export type MergeCSSVariants<V extends AllVariants[]> = V extends [
+    infer V1 extends AllVariants,
+    ...infer VRest extends AllVariants[],
+]
+    ? Override<V1, MergeCSSVariants<VRest>>
+    : DefaultVariants
 
 /** Refines all values in a string record to their proper variant types */
 type RefineVariantTypes<V extends Record<string, string>> = { [K in keyof V]: RefineVariantType<V[K]> }
 
 /** Extracts and refines variant option types from a DefaultVariants definition */
-export type RefineVariants<T extends DefaultVariants> = RefineVariantTypes<{ [K in keyof T]: keyof T[K] & string }>
+export type RefineVariants<T extends AllVariants> = RefineVariantTypes<{ [K in keyof T]: keyof T[K] & string }>
 
 /**
  * Complete CSS object representation with main and variant styles.
@@ -221,35 +230,33 @@ export type RefineVariants<T extends DefaultVariants> = RefineVariantTypes<{ [K 
  * })
  * obj.asCssString() // Returns complete CSS with all variants
  */
-export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}> {
+export class CSSObject<V extends AllVariants = DefaultVariants> {
     /** The main style block (non-variant styles) */
     public readonly mainBlock: CssObjectBlock
     /** Compiled blocks for each variant option */
-    public readonly variantBlocks: { [K in keyof V & string]: { [I in keyof V[K] & string]: CssObjectBlock } }
+    public readonly variantBlocks: { [K in keyof V & string]: Record<keyof V[K] & string, CssObjectBlock> }
     /** Default variant selections */
     public readonly variantDefaults: Partial<RefineVariants<V>>
 
     /**
      * Creates a new CSSObject from style props.
      * Compiles main styles and all variant options into CSS blocks.
-     * @param props - Style properties with optional variants and defaults
      */
-    public constructor(
-        {variants, defaultVariants, ...props}: MochiCSSProps<V>
-    ) {
+    public constructor({ variants, defaultVariants, ...props }: MochiCSSProps<V>) {
         this.mainBlock = new CssObjectBlock(props)
         this.variantBlocks = {} as typeof this.variantBlocks
-        this.variantDefaults = {} as typeof this.variantDefaults
+        this.variantDefaults = defaultVariants ?? {}
 
         if (!variants) return
         for (const variantGroupName in variants) {
-            this.variantBlocks[variantGroupName] = {} as typeof this.variantBlocks[keyof typeof this.variantBlocks]
+            this.variantBlocks[variantGroupName] = {} as (typeof this.variantBlocks)[keyof typeof this.variantBlocks]
             const variantGroup = variants[variantGroupName]
             for (const variantItemName in variantGroup) {
-                this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(variantGroup[variantItemName]!)
+                this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(
+                    variantGroup[variantItemName] ?? {},
+                )
             }
         }
-        this.variantDefaults = defaultVariants!
     }
 
     /**
@@ -263,7 +270,7 @@ export class CSSObject<V extends Record<string, Record<string, StyleProps>> = {}
             ...Object.entries(this.variantBlocks)
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))
-                .map(([_, b]) => b.asCssString(this.mainBlock.selector))
-        ].join('\n\n')
+                .map(([_, b]) => b.asCssString(this.mainBlock.selector)),
+        ].join("\n\n")
     }
 }

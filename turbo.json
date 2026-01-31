@@ -18,6 +18,14 @@
         "dev": {
             "persistent": true,
             "cache": false
+        },
+        "format": {
+            "cache": false
+        },
+        "format:check": {},
+        "lint": {},
+        "lint:fix": {
+            "cache": false
         }
     }
 }

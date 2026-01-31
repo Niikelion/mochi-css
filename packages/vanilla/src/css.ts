@@ -4,9 +4,8 @@
  * @module css
  */
 
-import {StyleProps} from "@/props";
-import clsx from "clsx";
-import {CSSObject, DefaultVariants, MergeCSSVariants, MochiCSSProps, RefineVariants} from "@/cssObject";
+import clsx from "clsx"
+import { CSSObject, AllVariants, DefaultVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@/cssObject"
 
 /**
  * Runtime representation of a CSS style definition with variant support.
@@ -22,7 +21,7 @@ import {CSSObject, DefaultVariants, MergeCSSVariants, MochiCSSProps, RefineVaria
  * }))
  * styles.variant({ size: 'large' }) // Returns combined class names
  */
-export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}> {
+export class MochiCSS<V extends AllVariants = DefaultVariants> {
     /**
      * Creates a new MochiCSS instance.
      * @param classNames - Base class names to always include
@@ -32,7 +31,7 @@ export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}>
     constructor(
         public readonly classNames: string[],
         public readonly variantClassNames: { [K in keyof V]: { [P in keyof V[K]]: string } },
-        public readonly defaultVariants: Partial<RefineVariants<V>>
+        public readonly defaultVariants: Partial<RefineVariants<V>>,
     ) {}
 
     /**
@@ -41,14 +40,17 @@ export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}>
      * @returns Combined className string for use in components
      */
     variant(props: Partial<RefineVariants<V>>): string {
-        const keys = new Set<keyof V & string>([
-            ...Object.keys(props),
-            ...Object.keys(this.defaultVariants)
-        ].filter(k => k in this.variantClassNames))
-        return clsx(this.classNames, ...keys.values().map(k => {
-            const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]!
-            return this.variantClassNames[k][`${variantKey}`]
-        }))
+        const keys = new Set<keyof V & string>(
+            [...Object.keys(props), ...Object.keys(this.defaultVariants)].filter((k) => k in this.variantClassNames),
+        )
+        return clsx(
+            this.classNames,
+            ...keys.values().map((k) => {
+                const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]
+                if (!variantKey) return false
+                return this.variantClassNames[k][variantKey.toString()]
+            }),
+        )
     }
 
     /**
@@ -58,15 +60,22 @@ export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}>
      * @param object - The compiled CSSObject to extract from
      * @returns A new MochiCSS instance with the extracted class names
      */
-    static from<V extends Record<string, Record<string, StyleProps>> = {}>(object: CSSObject<V>): MochiCSS<V> {
+    static from<V extends AllVariants = DefaultVariants>(object: CSSObject<V>): MochiCSS<V> {
         return new MochiCSS<V>(
             [object.mainBlock.className],
-            Object.fromEntries(Object.entries(object.variantBlocks).map(([key, variantOptions]) => {
-                return [key, Object.fromEntries(Object.entries(variantOptions).map(([optionKey, block]) => {
-                    return [optionKey, block.className]
-                }))]
-            })) as { [K in keyof V]: { [P in keyof V[K]]: string } },
-            object.variantDefaults ?? {}
+            Object.fromEntries(
+                Object.entries(object.variantBlocks).map(([key, variantOptions]) => {
+                    return [
+                        key,
+                        Object.fromEntries(
+                            Object.entries(variantOptions).map(([optionKey, block]) => {
+                                return [optionKey, block.className]
+                            }),
+                        ),
+                    ]
+                }),
+            ) as { [K in keyof V]: { [P in keyof V[K]]: string } },
+            object.variantDefaults,
         )
     }
 }
@@ -101,16 +110,17 @@ export class MochiCSS<V extends Record<string, Record<string, StyleProps>> = {}>
  * // Merging multiple styles
  * const combined = css(baseStyles, additionalStyles)
  */
-export function css<V extends DefaultVariants[]>(...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }): MochiCSS<MergeCSSVariants<V>>
-{
-    const cssToMerge: MochiCSS<DefaultVariants>[] = props.map(p => {
+export function css<V extends AllVariants[]>(
+    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+): MochiCSS<MergeCSSVariants<V>> {
+    const cssToMerge: MochiCSS<AllVariants>[] = props.map((p) => {
         if (p instanceof MochiCSS) return p
-        return MochiCSS.from(new CSSObject<DefaultVariants>(p))
+        return MochiCSS.from(new CSSObject<AllVariants>(p))
     })
 
-    return new MochiCSS<DefaultVariants>(
-        cssToMerge.flatMap(css => css.classNames),
+    return new MochiCSS<AllVariants>(
+        cssToMerge.flatMap((css) => css.classNames),
         cssToMerge.reduce((a, b) => Object.assign(a, b.variantClassNames), {}),
-        cssToMerge.reduce((a, b) => Object.assign(a, b.defaultVariants), {})
+        cssToMerge.reduce((a, b) => Object.assign(a, b.defaultVariants), {}),
     ) as MochiCSS<MergeCSSVariants<V>>
 }

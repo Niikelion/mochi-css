@@ -5,7 +5,7 @@
  */
 
 /** Characters used for base-62 encoding (css-name safe variant of base-64) */
-const hashBase = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+const hashBase = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
 const base = hashBase.length
 
 /**
@@ -17,7 +17,8 @@ const base = hashBase.length
 export function numberToBase62(num: number, maxLength?: number): string {
     let out = ""
     while (num > 0 && out.length < (maxLength ?? Infinity)) {
-        out = hashBase[num % base] + out
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        out = hashBase[num % base]! + out
         num = Math.floor(num / base)
     }
     return out.length > 0 ? out : "0"

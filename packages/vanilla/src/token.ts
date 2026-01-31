@@ -4,7 +4,7 @@
  * @module token
  */
 
-import {CssVar, CssVarVal} from "@/values";
+import { CssVar, CssVarVal } from "@/values"
 
 /**
  * Represents a CSS custom property (design token) with type information.
@@ -15,7 +15,7 @@ import {CssVar, CssVarVal} from "@/values";
  * primaryColor.variable // '--primary-color'
  * primaryColor.value    // 'var(--primary-color)'
  */
-export class Token<T> {
+export class Token {
     /**
      * Creates a new CSS token.
      * @param name - The token name (without the `--` prefix)
@@ -55,6 +55,6 @@ export class Token<T> {
  * const spacing = createToken<number>('spacing-md')
  * // Use in styles: { gap: spacing.value }
  */
-export function createToken<T>(name: string): Token<T> {
+export function createToken(name: string): Token {
     return new Token(name)
 }

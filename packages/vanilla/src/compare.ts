@@ -15,7 +15,7 @@ export function compareString<T extends string>(a: T, b: T) {
  * Compares two tuples by their first element (string key).
  * Useful for sorting Object.entries() results.
  */
-export function compareStringKey<T extends [string, any]>(a: T, b: T) {
+export function compareStringKey<T extends [string, unknown]>(a: T, b: T) {
     return compareString(a[0], b[0])
 }
 
@@ -28,5 +28,5 @@ export function compareStringKey<T extends [string, any]>(a: T, b: T) {
  * items.sort(stringPropComparator('key')) // [{ key: 'a' }, { key: 'b' }]
  */
 export function stringPropComparator<N extends string>(name: N) {
-    return <T extends { [K in N]: string }>(a: T, b: T) => compareString(a[name], b[name])
+    return <T extends Record<N, string>>(a: T, b: T) => compareString(a[name], b[name])
 }

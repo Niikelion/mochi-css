@@ -28,10 +28,14 @@
     "scripts": {
         "build": "tsc --noEmit && tsdown",
         "test": "vitest",
-        "coverage": "vitest run --coverage"
+        "coverage": "vitest run --coverage",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
+        "@eslint/js": "^9.18.0",
         "@gamedev-sensei/ts-config": "^2.0.0",
         "@gamedev-sensei/tsdown-config": "^2.0.0",
         "@types/css-tree": "^2.3.10",
@@ -41,7 +45,14 @@
         "@webref/css": "^8.2.3",
         "css-tree": "^3.1.0",
         "dedent": "^1.7.1",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.5",
+        "jiti": "^2.6.1",
+        "prettier": "^3.8.1",
         "tsdown": "^0.15.7",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.21.0",
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.0.15"
     },

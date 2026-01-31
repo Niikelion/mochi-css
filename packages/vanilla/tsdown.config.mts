@@ -91,7 +91,7 @@ function generateFileContent(units: Record<string, string>) {
         } as const
 
         export type PropertyWithUnit = keyof typeof propertyUnits
-    `
+    ` + "\n"
 }
 
 export default definePackageConfig({

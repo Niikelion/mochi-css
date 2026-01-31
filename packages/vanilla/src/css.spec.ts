@@ -1,22 +1,19 @@
-import {describe, it, expect} from "vitest"
-import {css, MochiCSS} from "@/css"
-import {CssColor} from "@/values"
-import {createToken} from "@/token"
-import {CSSObject} from "@/cssObject";
+import { describe, it, expect } from "vitest"
+import { css } from "@/css"
 
-describe('css', () => {
+describe("css", () => {
     it("should have a classname list that is deterministic and dependent on styles", () => {
         const css1 = css({
             border: "1px solid red",
-            color: "blue"
+            color: "blue",
         })
         const css2 = css({
             color: "blue",
-            border: "1px solid red"
+            border: "1px solid red",
         })
         const css3 = css({
             color: "red",
-            border: "1px solid red"
+            border: "1px solid red",
         })
 
         // order of properties in style definition does not matter
@@ -35,16 +32,16 @@ describe('css', () => {
             variants: {
                 width: {
                     default: {
-                        width: "auto"
+                        width: "auto",
                     },
                     wide: {
-                        width: "100%"
+                        width: "100%",
                     },
                     narrow: {
-                        width: 200
-                    }
-                }
-            }
+                        width: 200,
+                    },
+                },
+            },
         })
 
         // variants with different styles result in different classNames
@@ -62,16 +59,16 @@ describe('css', () => {
             variants: {
                 color: {
                     red: {
-                        color: "red"
+                        color: "red",
                     },
                     blue: {
-                        color: "blue"
-                    }
-                }
+                        color: "blue",
+                    },
+                },
             },
             defaultVariants: {
-                color: "red"
-            }
+                color: "red",
+            },
         })
 
         expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "red" }))

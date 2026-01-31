@@ -4,7 +4,7 @@
  * @module selector
  */
 
-import {isMediaSelector, isNestedSelector} from "@/props";
+import { isMediaSelector, isNestedSelector } from "@/props"
 
 /**
  * Immutable CSS selector builder that handles nested selectors and media queries.
@@ -23,7 +23,7 @@ export class MochiSelector {
      */
     constructor(
         private readonly cssSelectors: string[] = [],
-        private readonly mediaSelectors: string[] = []
+        private readonly mediaSelectors: string[] = [],
     ) {}
 
     /**
@@ -42,7 +42,7 @@ export class MochiSelector {
      */
     get mediaQuery(): string | undefined {
         if (this.mediaSelectors.length === 0) return undefined
-        return `@media ${this.mediaSelectors.map(s => `(${s})`).join(" and ")}`
+        return `@media ${this.mediaSelectors.map((s) => `(${s})`).join(" and ")}`
     }
 
     /**
@@ -52,8 +52,8 @@ export class MochiSelector {
      */
     substitute(root: string): MochiSelector {
         return new MochiSelector(
-            this.cssSelectors.map(selector => selector.replace(/&/g, root)),
-            this.mediaSelectors
+            this.cssSelectors.map((selector) => selector.replace(/&/g, root)),
+            this.mediaSelectors,
         )
     }
 
@@ -69,9 +69,11 @@ export class MochiSelector {
     extend(child: string): MochiSelector {
         if (!isNestedSelector(child)) return this
         const children = MochiSelector.split(child)
-        const selectors = this.cssSelectors.flatMap(parentSelector => children.map(childSelector => {
-            return childSelector.replace(/&/g, parentSelector)
-        }))
+        const selectors = this.cssSelectors.flatMap((parentSelector) =>
+            children.map((childSelector) => {
+                return childSelector.replace(/&/g, parentSelector)
+            }),
+        )
         return new MochiSelector(selectors, this.mediaSelectors)
     }
 

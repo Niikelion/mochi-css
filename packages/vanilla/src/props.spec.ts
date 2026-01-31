@@ -1,14 +1,17 @@
-import {describe, it, expect} from "vitest"
+import { describe, it, expect } from "vitest"
 import {
     asKnownProp,
-    asVar, camelToKebab,
+    asVar,
+    camelToKebab,
     cssFromProps,
     isCssVariableName,
     isKnownPropertyName,
     isMediaSelector,
-    isNestedSelector, kebabToCamel
-} from "@/props";
-import {createToken} from "@/token";
+    isNestedSelector,
+    kebabToCamel,
+    SimpleStyleProps,
+} from "@/props"
+import { createToken } from "@/token"
 
 describe("isCssVariableName", () => {
     it("returns true for variable names", () => {
@@ -64,13 +67,40 @@ describe("asKnownProp", () => {
     it("appends px suffix to number values in length properties", () => {
         expect(asKnownProp(200, "height")).toEqual("200px")
         expect(asKnownProp(48, "gap")).toEqual("48px")
+        expect(asKnownProp(16, "fontSize")).toEqual("16px")
+        expect(asKnownProp(10, "borderRadius")).toEqual("10px")
     })
-    it.skip("appends ms to number values in time properties", () => {
-        //TODO
+
+    it("appends ms suffix to number values in time properties", () => {
+        expect(asKnownProp(300, "animationDuration")).toEqual("300ms")
+        expect(asKnownProp(150, "transitionDelay")).toEqual("150ms")
+        expect(asKnownProp(200, "transitionDuration")).toEqual("200ms")
     })
+
+    it("appends % suffix to number values in percentage properties", () => {
+        expect(asKnownProp(50, "opacity")).toEqual("50%")
+        expect(asKnownProp(100, "fillOpacity")).toEqual("100%")
+    })
+
+    it("appends deg suffix to number values in angle properties", () => {
+        expect(asKnownProp(45, "rotate")).toEqual("45deg")
+        expect(asKnownProp(90, "imageOrientation")).toEqual("90deg")
+    })
+
     it("converts number values to strings without suffix for plain number properties", () => {
         expect(asKnownProp(100, "zIndex")).toEqual("100")
         expect(asKnownProp(700, "fontWeight")).toEqual("700")
+    })
+
+    it("passes string values through unchanged", () => {
+        expect(asKnownProp("100%", "width")).toEqual("100%")
+        expect(asKnownProp("auto", "height")).toEqual("auto")
+        expect(asKnownProp("1fr 2fr", "gridTemplateColumns")).toEqual("1fr 2fr")
+    })
+
+    it("extracts value from CssLikeObject", () => {
+        expect(asKnownProp({ value: 200 }, "height")).toEqual("200px")
+        expect(asKnownProp({ value: "auto" }, "width")).toEqual("auto")
     })
 })
 
@@ -115,7 +145,7 @@ describe("cssFromProps", () => {
         const props = cssFromProps({
             backgroundColor: "magenta",
             display: "block",
-            WebkitAlignContent: "center"
+            WebkitAlignContent: "center",
         })
 
         expect(props).toHaveProperty("background-color")
@@ -123,8 +153,8 @@ describe("cssFromProps", () => {
 
     it("skips properties with invalid names", () => {
         const props = cssFromProps({
-            someIncorrectlyNamedProperty: "value"
-        } as any)
+            someIncorrectlyNamedProperty: "value",
+        } as unknown as SimpleStyleProps)
 
         expect(props).not.toHaveProperty("some-incorrectly-named-property")
     })
@@ -136,7 +166,7 @@ describe("cssFromProps", () => {
         const props = cssFromProps({
             [backgroundToken.variable]: "red",
             width: widthToken,
-            [widthToken.variable]: "200px"
+            [widthToken.variable]: "200px",
         })
 
         expect(props).toHaveProperty("--background")
@@ -157,12 +187,12 @@ describe("cssFromProps", () => {
             color: {
                 get value() {
                     return "white"
-                }
+                },
             },
             [bgColor.variable]: "red",
             [opacity.variable]: 0.7,
             [bg.variable]: bgColor,
-            font: undefined
+            font: undefined,
         })
 
         expect(props).toEqual({

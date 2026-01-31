@@ -1,31 +1,44 @@
-import {describe, it, expect} from "vitest"
-import {createToken} from "@/token";
-import {CssColor} from "@/values";
-import {CSSObject, CssObjectSubBlock} from "@/cssObject";
-import {MochiCSS} from "@/css";
-import {MochiSelector} from "@/selector";
-import dedent from "dedent";
-import {StyleProps} from "@/props";
+import { describe, it, expect } from "vitest"
+import { createToken } from "@/token"
+import { CSSObject, CssObjectBlock, CssObjectSubBlock } from "@/cssObject"
+import { MochiSelector } from "@/selector"
+import dedent from "dedent"
+import { StyleProps } from "@/props"
 
 describe("CssObjectSubBlock", () => {
     describe("hash", () => {
         it("should return same hash for same properties and selector", () => {
             const blocks = [
-                new CssObjectSubBlock({
-                    color: "red"
-                }, new MochiSelector()),
-                new CssObjectSubBlock({
-                    color: "green"
-                }, new MochiSelector()),
-                new CssObjectSubBlock({
-                    backgroundColor: "red"
-                }, new MochiSelector()),
-                new CssObjectSubBlock({
-                    color: "red"
-                }, new MochiSelector(["& > button"])),
-                new CssObjectSubBlock({
-                    color: "red"
-                }, new MochiSelector(["& > button"], ["width > 100px"]))
+                new CssObjectSubBlock(
+                    {
+                        color: "red",
+                    },
+                    new MochiSelector(),
+                ),
+                new CssObjectSubBlock(
+                    {
+                        color: "green",
+                    },
+                    new MochiSelector(),
+                ),
+                new CssObjectSubBlock(
+                    {
+                        backgroundColor: "red",
+                    },
+                    new MochiSelector(),
+                ),
+                new CssObjectSubBlock(
+                    {
+                        color: "red",
+                    },
+                    new MochiSelector(["& > button"]),
+                ),
+                new CssObjectSubBlock(
+                    {
+                        color: "red",
+                    },
+                    new MochiSelector(["& > button"], ["width > 100px"]),
+                ),
             ] as const
 
             expect(blocks[0].hash).toEqual(blocks[0].hash)
@@ -42,15 +55,21 @@ describe("CssObjectSubBlock", () => {
         })
 
         it("should return the same value regardless of the properties order", () => {
-            const subBlock1 = new CssObjectSubBlock({
-                color: "red",
-                backgroundColor: "blue"
-            }, new MochiSelector())
+            const subBlock1 = new CssObjectSubBlock(
+                {
+                    color: "red",
+                    backgroundColor: "blue",
+                },
+                new MochiSelector(),
+            )
 
-            const subBlock2 = new CssObjectSubBlock({
-                backgroundColor: "blue",
-                color: "red"
-            }, new MochiSelector())
+            const subBlock2 = new CssObjectSubBlock(
+                {
+                    backgroundColor: "blue",
+                    color: "red",
+                },
+                new MochiSelector(),
+            )
 
             expect(subBlock1.hash).toEqual(subBlock2.hash)
         })
@@ -58,19 +77,29 @@ describe("CssObjectSubBlock", () => {
 
     describe("asCssString", () => {
         it("returns formatted css string including css selector with provided root and media queries with css properties sorted by name", () => {
-            expect(new CssObjectSubBlock({
-                color: "white",
-                backgroundColor: "gray"
-            }, new MochiSelector(["&:hover"])).asCssString(".button")).toEqual(dedent`
+            expect(
+                new CssObjectSubBlock(
+                    {
+                        color: "white",
+                        backgroundColor: "gray",
+                    },
+                    new MochiSelector(["&:hover"]),
+                ).asCssString(".button"),
+            ).toEqual(dedent`
                 .button:hover {
                     backgroundColor: gray;
                     color: white;
                 }
             `)
 
-            expect(new CssObjectSubBlock({
-                width: "100%"
-            }, new MochiSelector(["&"], ["width <= 480px"])).asCssString(".test")).toEqual(dedent`
+            expect(
+                new CssObjectSubBlock(
+                    {
+                        width: "100%",
+                    },
+                    new MochiSelector(["&"], ["width <= 480px"]),
+                ).asCssString(".test"),
+            ).toEqual(dedent`
                 @media (width <= 480px) {
                     .test {
                         width: 100%;
@@ -85,27 +114,29 @@ describe("CssObjectSubBlock", () => {
             const blocks = CssObjectSubBlock.fromProps({
                 "& > span": undefined,
                 "@max-width: 500px": undefined,
-                "color": undefined
+                color: undefined,
             })
 
-            expect(blocks.map(b => b.asCssString(".target"))).toEqual([
+            expect(blocks.map((b) => b.asCssString(".target"))).toEqual([
                 dedent`
                     .target {
                     }
-                `
+                `,
             ])
         })
 
         it("should properly construct single CssObjectSubBlock from props", () => {
             const blocks = CssObjectSubBlock.fromProps({
-                color: "black"
+                color: "black",
             })
 
-            expect(blocks.map(b => b.asCssString(".test"))).toEqual([dedent`
+            expect(blocks.map((b) => b.asCssString(".test"))).toEqual([
+                dedent`
                 .test {
                     color: black;
                 }
-            `])
+            `,
+            ])
         })
 
         it("should flatten the nested structure into the list of CssObjectSubBlock", () => {
@@ -114,12 +145,12 @@ describe("CssObjectSubBlock", () => {
                 "&:hover": {
                     color: "blue",
                     "@width <= 200px": {
-                        color: "green"
-                    }
-                }
+                        color: "green",
+                    },
+                },
             })
 
-            expect(blocks.map(b => b.asCssString(".button"))).toEqual([
+            expect(blocks.map((b) => b.asCssString(".button"))).toEqual([
                 dedent`
                     .button {
                         color: black;
@@ -136,33 +167,119 @@ describe("CssObjectSubBlock", () => {
                             color: green;
                         }
                     }
-                `
+                `,
             ])
         })
 
         it("skips unrecognized patterns", () => {
             const blocks = CssObjectSubBlock.fromProps({
-                "span": {
-                    color: "red"
-                }
+                span: {
+                    color: "red",
+                },
             } as StyleProps)
 
-            expect(blocks.map(b => b.asCssString(".target"))).toEqual([
+            expect(blocks.map((b) => b.asCssString(".target"))).toEqual([
                 dedent`
                     .target {
                     }
-                `
+                `,
             ])
         })
     })
 })
 
-//TODO: write tests for CssObjectBlock
+describe("CssObjectBlock", () => {
+    describe("className", () => {
+        it("should generate same className for same styles", () => {
+            const block1 = new CssObjectBlock({ color: "red" })
+            const block2 = new CssObjectBlock({ color: "red" })
 
-//TODO: it doesn't seem right to use MochiCSS type inside tests of CssObject, consider refactor
+            expect(block1.className).toEqual(block2.className)
+        })
+
+        it("should generate different className for different styles", () => {
+            const block1 = new CssObjectBlock({ color: "red" })
+            const block2 = new CssObjectBlock({ color: "blue" })
+
+            expect(block1.className).not.toEqual(block2.className)
+        })
+
+        it("should generate same className regardless of property order", () => {
+            const block1 = new CssObjectBlock({ color: "red", backgroundColor: "blue" })
+            const block2 = new CssObjectBlock({ backgroundColor: "blue", color: "red" })
+
+            expect(block1.className).toEqual(block2.className)
+        })
+    })
+
+    describe("selector", () => {
+        it("should return class selector for the block", () => {
+            const block = new CssObjectBlock({ color: "red" })
+
+            expect(block.selector).toEqual(`.${block.className}`)
+        })
+    })
+
+    describe("asCssString", () => {
+        it("should generate CSS with root selector combined with className", () => {
+            const block = new CssObjectBlock({ color: "red" })
+            const css = block.asCssString(".root")
+
+            expect(css).toContain(`.root.${block.className}`)
+            expect(css).toContain("color: red;")
+        })
+
+        it("should handle nested selectors", () => {
+            const block = new CssObjectBlock({
+                color: "red",
+                "&:hover": {
+                    color: "blue",
+                },
+            })
+            const css = block.asCssString(".btn")
+
+            expect(css).toContain(`.btn.${block.className}`)
+            expect(css).toContain(`:hover`)
+            expect(css).toContain("color: red;")
+            expect(css).toContain("color: blue;")
+        })
+
+        it("should handle media queries", () => {
+            const block = new CssObjectBlock({
+                width: "100%",
+                "@width <= 480px": {
+                    width: "auto",
+                },
+            })
+            const css = block.asCssString(".container")
+
+            expect(css).toContain("@media (width <= 480px)")
+            expect(css).toContain("width: 100%;")
+            expect(css).toContain("width: auto;")
+        })
+    })
+
+    describe("subBlocks", () => {
+        it("should contain parsed sub-blocks from styles", () => {
+            const block = new CssObjectBlock({
+                color: "red",
+                "&:hover": { color: "blue" },
+            })
+
+            expect(block.subBlocks).toHaveLength(2)
+        })
+
+        it("should always contain main block even for empty styles", () => {
+            const block = new CssObjectBlock({})
+
+            expect(block.subBlocks).toHaveLength(1)
+        })
+    })
+})
+
 describe("CssObject", () => {
     it("should generate css code that accurately reflects provided styles for base styles", () => {
-        const bg = createToken<CssColor>("background-color")
+        const bg = createToken("background-color")
 
         const obj = new CSSObject({
             width: 200,
@@ -171,11 +288,15 @@ describe("CssObject", () => {
             alignItems: "center",
             justifyContent: "end",
             background: bg,
-            [bg.variable]: "red"
+            [bg.variable]: "red",
         })
 
-        const styles = MochiCSS.from(obj)
+        const cssSource = obj.asCssString()
 
+        // main className appears in the source
+        expect(cssSource).toContain(`.${obj.mainBlock.className}`)
+
+        // all expected parts appear in the source
         const expectedParts: string[] = [
             "width: 200px;",
             "display: flex;",
@@ -183,54 +304,138 @@ describe("CssObject", () => {
             "align-items: center;",
             "justify-content: end;",
             `background: ${bg.value};`,
-            `${bg}: red;`
+            `${bg.variable}: red;`,
         ]
 
-        const cssSource = obj.asCssString()
-
-        // classnames appear in the source
-        for (const className of styles.classNames)
-            expect(cssSource).toContain(`.${className}`)
-
-        // all expected parts appear in the source
-        for (const part of expectedParts)
-            expect(cssSource).toContain(part)
+        for (const part of expectedParts) expect(cssSource).toContain(part)
     })
 
     it("should generate css code that accurately reflects provided styles for variant styles", () => {
         const obj = new CSSObject({
             variants: {
                 width: {
-                    default: {
-                        width: "auto"
-                    },
-                    wide: {
-                        width: "100%"
-                    },
-                    narrow: {
-                        width: 200
-                    }
-                }
+                    default: { width: "auto" },
+                    wide: { width: "100%" },
+                    narrow: { width: 200 },
+                },
             },
             defaultVariants: {
-                width: "default"
-            }
+                width: "default",
+            },
         })
 
-        const styles = MochiCSS.from(obj)
         const cssSource = obj.asCssString()
 
-        expect(cssSource).toContain(styles.variant({ width: "default" }).split(" ").map(c => `.${c}`).join(""))
-        expect(cssSource).toContain(styles.variant({ width: "wide" }).split(" ").map(c => `.${c}`).join(""))
-        expect(cssSource).toContain(styles.variant({ width: "narrow" }).split(" ").map(c => `.${c}`).join(""))
+        // variant classNames appear in the source
+        expect(cssSource).toContain(`.${obj.variantBlocks.width.default.className}`)
+        expect(cssSource).toContain(`.${obj.variantBlocks.width.wide.className}`)
+        expect(cssSource).toContain(`.${obj.variantBlocks.width.narrow.className}`)
 
-        const expectedParts: string[] = [
-            "width: auto;",
-            "width: 100%;",
-            "width: 200px;",
-        ]
+        const expectedParts: string[] = ["width: auto;", "width: 100%;", "width: 200px;"]
 
-        for (const expectedPart of expectedParts)
-            expect(cssSource).toContain(expectedPart)
+        for (const expectedPart of expectedParts) expect(cssSource).toContain(expectedPart)
+    })
+
+    it("should generate css code for base styles with nested selectors", () => {
+        const obj = new CSSObject({
+            color: "blue",
+            "&:hover": {
+                color: "red",
+            },
+            "& > span": {
+                fontWeight: "bold",
+            },
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(cssSource).toContain("color: blue;")
+        expect(cssSource).toContain(":hover")
+        expect(cssSource).toContain("color: red;")
+        expect(cssSource).toContain("> span")
+        expect(cssSource).toContain("font-weight: bold;")
+    })
+
+    it("should generate css code for variant styles with nested selectors", () => {
+        const obj = new CSSObject({
+            variants: {
+                intent: {
+                    primary: {
+                        color: "blue",
+                        "&:hover": {
+                            color: "darkblue",
+                        },
+                    },
+                    danger: {
+                        color: "red",
+                        "&:hover": {
+                            color: "darkred",
+                        },
+                    },
+                },
+            },
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(cssSource).toContain(`.${obj.variantBlocks.intent.primary.className}`)
+        expect(cssSource).toContain(`.${obj.variantBlocks.intent.danger.className}`)
+        expect(cssSource).toContain("color: blue;")
+        expect(cssSource).toContain("color: darkblue;")
+        expect(cssSource).toContain("color: red;")
+        expect(cssSource).toContain("color: darkred;")
+        expect(cssSource).toContain(":hover")
+    })
+
+    it("should generate css code for base styles with media selectors", () => {
+        const obj = new CSSObject({
+            width: "100%",
+            "@width <= 480px": {
+                width: "auto",
+            },
+            "@width >= 1024px": {
+                width: 800,
+            },
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(cssSource).toContain("width: 100%;")
+        expect(cssSource).toContain("@media (width <= 480px)")
+        expect(cssSource).toContain("width: auto;")
+        expect(cssSource).toContain("@media (width >= 1024px)")
+        expect(cssSource).toContain("width: 800px;")
+    })
+
+    it("should generate css code for variant styles with media selectors", () => {
+        const obj = new CSSObject({
+            variants: {
+                layout: {
+                    stack: {
+                        flexDirection: "column",
+                        "@width >= 768px": {
+                            flexDirection: "row",
+                        },
+                    },
+                    grid: {
+                        display: "grid",
+                        gridTemplateColumns: "1fr",
+                        "@width >= 768px": {
+                            gridTemplateColumns: "1fr 1fr",
+                        },
+                    },
+                },
+            },
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(cssSource).toContain(`.${obj.variantBlocks.layout.stack.className}`)
+        expect(cssSource).toContain(`.${obj.variantBlocks.layout.grid.className}`)
+        expect(cssSource).toContain("flex-direction: column;")
+        expect(cssSource).toContain("flex-direction: row;")
+        expect(cssSource).toContain("grid-template-columns: 1fr;")
+        expect(cssSource).toContain("grid-template-columns: 1fr 1fr;")
+        expect(cssSource).toContain("@media (width >= 768px)")
     })
 })

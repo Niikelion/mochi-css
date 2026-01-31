@@ -5,10 +5,10 @@
  * @module props
  */
 
-import {Properties, ObsoleteProperties } from "csstype"
-import {CssLike, CssVar} from "@/values"
+import { Properties, ObsoleteProperties } from "csstype"
+import { CssLike, CssVar } from "@/values"
 import properties from "known-css-properties"
-import {propertyUnits, type PropertyWithUnit} from "./propertyUnits.generated"
+import { propertyUnits, type PropertyWithUnit } from "./propertyUnits.generated"
 
 /** All non-obsolete CSS properties from csstype */
 type Props = Required<Omit<Properties, keyof ObsoleteProperties>>
@@ -19,15 +19,19 @@ type PropsWithUnit = PropertyWithUnit & keyof Props
 /**
  * Converts a kebab-case string to camelCase.
  */
-function kebabToCamel(str: string): string {
+export function kebabToCamel(str: string): string {
     return str.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 }
 
 /**
  * Converts a camelCase string to kebab-case.
  */
-function camelToKebab(str: string): string {
-    return str.replace(/[A-Z]/g, m => "-" + m.toLowerCase())
+export function camelToKebab(str: string): string {
+    return str.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())
+}
+
+function getUnitForProperty(propertyName: string): string | undefined {
+    return propertyName in propertyUnits ? propertyUnits[propertyName as PropertyWithUnit] : undefined
 }
 
 /**
@@ -37,8 +41,8 @@ function camelToKebab(str: string): string {
 function formatValue(value: CssLike<string | number>, propertyName: string): string {
     if (typeof value === "string") return value
     if (typeof value === "number") {
-        const unit = propertyUnits[propertyName as PropertyWithUnit]
-        return unit ? `${value}${unit}` : value.toString()
+        const unit = getUnitForProperty(propertyName)
+        return unit ? `${value.toString()}${unit}` : value.toString()
     }
     return formatValue(value.value, propertyName)
 }
@@ -49,7 +53,7 @@ const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
  * Checks if a property name is a CSS custom property (variable).
  */
 export function isCssVariableName(key: string): key is CssVar {
-    return key.startsWith('--')
+    return key.startsWith("--")
 }
 
 /**
@@ -59,9 +63,12 @@ export function isCssVariableName(key: string): key is CssVar {
  */
 export function asVar(value: CssLike<string | number>): string {
     switch (typeof value) {
-        case 'string': return value
-        case 'number': return `${value}`
-        default: return asVar(value.value)
+        case "string":
+            return value
+        case "number":
+            return value.toString()
+        default:
+            return asVar(value.value)
     }
 }
 
@@ -115,10 +122,9 @@ type NestedStyleKeys = MediaSelector | NestedCssSelector
  * Properties with known units (e.g., width, height, padding) accept numbers
  * that are automatically converted with their default unit (e.g., px, ms).
  */
-export type SimpleStyleProps
-    = { [K in PropsWithUnit]?: CssLike<number | Props[K]> }
-    & { [K in Exclude<keyof Props, PropsWithUnit>]?: CssLike<Props[K]> }
-    & { [K in CssVar]?: CssLike<string | number> }
+export type SimpleStyleProps = { [K in PropsWithUnit]?: CssLike<number | Props[K]> } & {
+    [K in Exclude<keyof Props, PropsWithUnit>]?: CssLike<Props[K]>
+} & Partial<Record<CssVar, CssLike<string | number>>>
 
 /**
  * Full style properties type with support for nested selectors and media queries.
@@ -134,8 +140,6 @@ export type SimpleStyleProps
  */
 export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProps | CssLike<string | number> }
 
-export { camelToKebab, kebabToCamel }
-
 /**
  * Converts a SimpleStyleProps object to a CSS properties record.
  * Transforms camelCase property names to kebab-case and applies value converters.
@@ -146,12 +150,16 @@ export { camelToKebab, kebabToCamel }
  * // { 'background-color': 'blue', 'padding': '16px' }
  */
 export function cssFromProps(props: SimpleStyleProps): Record<string, string> {
-    return Object.fromEntries(Object.entries(props).map(([key, value]) => {
-        if (value === undefined) return undefined
-        // transform variable
-        if (isCssVariableName(key)) return [key, asVar(value as CssLike<string | number>)]
-        // transform CSS prop
-        if (isKnownPropertyName(key)) return [camelToKebab(key), asKnownProp(value, key)]
-        return undefined
-    }).filter(v => v !== undefined))
+    return Object.fromEntries(
+        Object.entries(props)
+            .map(([key, value]): [string, string] | undefined => {
+                if (value === undefined) return undefined
+                // transform variable
+                if (isCssVariableName(key)) return [key, asVar(value as CssLike<string | number>)]
+                // transform CSS prop
+                if (isKnownPropertyName(key)) return [camelToKebab(key), asKnownProp(value, key)]
+                return undefined
+            })
+            .filter((v) => v !== undefined),
+    )
 }
