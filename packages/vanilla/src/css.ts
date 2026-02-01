@@ -46,9 +46,16 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
         return clsx(
             this.classNames,
             ...keys.values().map((k) => {
-                const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]
-                if (!variantKey) return false
-                return this.variantClassNames[k][variantKey.toString()]
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                const variantKey = ((k in props ? props[k] : undefined) ?? this.defaultVariants[k])!
+
+                const selectedClassname = this.variantClassNames[k][variantKey.toString()]
+                if (selectedClassname !== undefined) return selectedClassname
+
+                const defaultKey = this.defaultVariants[k]
+                if (defaultKey === undefined) return false
+
+                return this.variantClassNames[k][defaultKey.toString()]
             }),
         )
     }

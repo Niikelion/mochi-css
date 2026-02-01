@@ -1,11 +1,11 @@
-import {styled, css, createToken, CssLength} from "@mochi-css/vanilla";
+import {styled, css, createToken} from "@mochi-css/vanilla";
 
 function foo() {
     const css = (_: object) => {}
     css({ test: 4 })
 }
 
-const height = createToken<CssLength>("height")
+const height = createToken("height")
 
 function bar() {
     css({ height: height })

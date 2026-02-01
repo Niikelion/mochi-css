@@ -1,5 +1,6 @@
 import * as SWC from "@swc/core"
-import {visit, AnyNode} from "@/Visitor";
+import { visit } from "@/Visitor"
+import { StyleExtractor } from "@/extractors/StyleExtractor"
 
 //TODO: move to separate package
 
@@ -50,6 +51,7 @@ export interface FileInfo {
     filePath: string
     ast: SWC.Module
     styleExpressions: Set<SWC.Expression>
+    extractedExpressions: Map<StyleExtractor, SWC.Expression[]>
     references: Set<SWC.Identifier>
     moduleBindings: RefMap<BindingInfo>
     localImports: RefMap<LocalImport>
@@ -111,14 +113,6 @@ export class RefMap<T> {
         this.data.set(name, s)
         return s
     }
-}
-
-export class StyleSource {
-    constructor(
-        public readonly importPath: string,
-        public readonly symbolName: string,
-        public readonly extractor: (call: SWC.CallExpression) => SWC.Expression[]
-    ) {}
 }
 
 function getOrInsert<K, V>(target: Map<K, V>, key: K, compute: () => V): V
@@ -194,11 +188,12 @@ type ExtractContext = {
 function extractData(
     ast: SWC.Module,
     filePath: string,
-    styleSources: Map<string, Map<string, StyleSource>>,
+    styleExtractors: Map<string, Map<string, StyleExtractor>>,
     resolveImport: (from: string, source: string) => string | null
 ) {
-    const styleSourceIdentifiers = new RefMap<StyleSource>()
+    const styleExtractorIdentifiers = new RefMap<StyleExtractor>()
     const styleExpressions = new Set<SWC.Expression>()
+    const extractedExpressions = new Map<StyleExtractor, SWC.Expression[]>()
     const moduleBindings = new RefMap<BindingInfo>()
     const localImports = new RefMap<LocalImport>()
     const references = new Set<SWC.Identifier>()
@@ -208,13 +203,13 @@ function extractData(
     for (const item of ast.body) {
         if (item.type !== 'ImportDeclaration') continue
 
-        const possibleSources = styleSources.get(item.source.value)
-        if (!possibleSources) continue
+        const possibleExtractors = styleExtractors.get(item.source.value)
+        if (!possibleExtractors) continue
 
         for (const spec of ProjectIndex.extractImportSpecs(item)) {
-            const source = possibleSources.get(spec.sourceName)
+            const source = possibleExtractors.get(spec.sourceName)
             if (spec.isNamespace || !source) continue
-            styleSourceIdentifiers.set(spec.ref, source)
+            styleExtractorIdentifiers.set(spec.ref, source)
         }
     }
 
@@ -223,9 +218,18 @@ function extractData(
         callExpression(node, { descend }) {
             if (node.callee.type === "Identifier") {
                 const calleeRef = idToRef(node.callee)
-                const source = styleSourceIdentifiers.get(calleeRef)
-                if (source) {
-                    source.extractor(node).forEach(style => styleExpressions.add(style))
+                const styleExtractor = styleExtractorIdentifiers.get(calleeRef)
+                if (styleExtractor) {
+                    const staticArgs = styleExtractor.extractStaticArgs(node)
+                    staticArgs.forEach(style => styleExpressions.add(style))
+
+                    // Track expressions per extractor
+                    const existing = extractedExpressions.get(styleExtractor)
+                    if (existing) {
+                        existing.push(...staticArgs)
+                    } else {
+                        extractedExpressions.set(styleExtractor, [...staticArgs])
+                    }
                 }
             }
             descend(null)
@@ -382,6 +386,7 @@ function extractData(
 
     return {
         styleExpressions,
+        extractedExpressions,
         moduleBindings,
         localImports,
         references,
@@ -389,37 +394,28 @@ function extractData(
     }
 }
 
-export const cssFunctionStyleSource = new StyleSource(
-    "@mochi-css/vanilla",
-    "css",
-    call => call.arguments.map(a => a.expression)
-)
-//TODO: move to react package
-export const styledFunctionStyleSource = new StyleSource(
-    "@mochi-css/vanilla",
-    "styled",
-    call => call.arguments.map(a => a.expression).slice(1)
-)
-
 export type ResolveImport = (fromFile: string, importSource: string) => string | null
 
 export class ProjectIndex {
     private filesInfo: Map<string, FileInfo> = new Map()
     private analyzedBindings = new Set<string>()
+    public readonly extractors: StyleExtractor[]
 
     public get files(): [string, FileInfo][] {
         return [...this.filesInfo.entries()]
     }
 
-    constructor(modules: Module[], styleSources: StyleSource[], resolveImport: ResolveImport) {
-        const sourceLookup = new Map<string, Map<string, StyleSource>>()
-        for (const source of styleSources) {
-            const importScope = getOrInsert(sourceLookup, source.importPath, () => new Map<string, StyleSource>())
-            importScope.set(source.symbolName, source)
+    constructor(modules: Module[], extractors: StyleExtractor[], resolveImport: ResolveImport) {
+        this.extractors = extractors
+
+        const extractorLookup = new Map<string, Map<string, StyleExtractor>>()
+        for (const extractor of extractors) {
+            const importScope = getOrInsert(extractorLookup, extractor.importPath, () => new Map<string, StyleExtractor>())
+            importScope.set(extractor.symbolName, extractor)
         }
 
         for (const module of modules) {
-            const data = extractData(module.ast, module.filePath, sourceLookup, resolveImport)
+            const data = extractData(module.ast, module.filePath, extractorLookup, resolveImport)
 
             this.filesInfo.set(module.filePath, {
                 ...module,

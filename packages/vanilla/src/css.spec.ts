@@ -74,4 +74,33 @@ describe("css", () => {
         expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "red" }))
         expect(cssWithVariants.variant({})).not.toEqual(cssWithVariants.variant({ color: "blue" }))
     })
+
+    it("should silently skip invalid variant values", () => {
+        const cssWithVariants = css({
+            variants: {
+                color: {
+                    red: {
+                        color: "red",
+                    },
+                    blue: {
+                        color: "blue",
+                    },
+                },
+                bold: {
+                    true: {
+                        fontWeight: "bold",
+                    },
+                },
+            },
+            defaultVariants: {
+                color: "red",
+            },
+        })
+
+        expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "green" } as object))
+        expect(cssWithVariants.variant({ color: "red" })).toEqual(
+            cssWithVariants.variant({ color: "red", size: "large" } as { color: "red" }),
+        )
+        expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ bold: "yes" } as object))
+    })
 })

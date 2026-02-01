@@ -1,6 +1,6 @@
 import {PluginCreator, TransformCallback} from "postcss";
 import * as path from "path";
-import {Builder, defaultStyleSources, BuilderOptions, RolldownBundler, VmRunner} from "@mochi-css/builder";
+import {Builder, defaultExtractors, BuilderOptions, RolldownBundler, VmRunner} from "@mochi-css/builder";
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -14,9 +14,9 @@ type Options = Partial<BuilderOptions> & {
 const pluginName = "postcss-mochi-css"
 
 const defaultOptions: Required<Options> = {
-    globalCss: /^.*\/globals.css$/g,
+    globalCss: /\/globals\.css$/,
     rootDir: "src",
-    styleSources: defaultStyleSources,
+    extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner()
 }
@@ -34,18 +34,22 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
 
         const normalizedPath = filePath.replaceAll(path.win32.sep, path.posix.sep)
 
+        // Reset lastIndex to handle regexes with /g flag correctly
+        options.globalCss.lastIndex = 0
         if (!options.globalCss.test(normalizedPath)) return
 
-        const css = await builder.collectMochiCss(path => {
+        const css = await builder.collectMochiCss(filePath => {
             result.messages.push({
                 type: "dependency",
-                file: path,
+                file: filePath,
                 plugin: pluginName,
                 parent: result.opts.from
             })
         })
 
-        root.append(css.global)
+        if (css.global) {
+            root.append(css.global)
+        }
 
         root.walk(node => {
             if (node.source) return

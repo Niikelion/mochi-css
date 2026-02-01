@@ -189,7 +189,7 @@ export type VariantProps<V extends AllVariants> = {
     /** Variant definitions mapping names to options to styles */
     variants?: V
     /** Default variant selections for when not explicitly provided */
-    defaultVariants?: { [K in keyof V]: keyof V[K] extends string ? RefineVariantType<keyof V[K] & string> : never }
+    defaultVariants?: { [K in keyof V]?: keyof V[K] extends string ? RefineVariantType<keyof V[K] & string> : never }
 }
 
 /** Combined type for style props with optional variants */

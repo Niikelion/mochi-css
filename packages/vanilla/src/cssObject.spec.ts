@@ -430,12 +430,26 @@ describe("CssObject", () => {
 
         const cssSource = obj.asCssString()
 
-        expect(cssSource).toContain(`.${obj.variantBlocks.layout.stack.className}`)
-        expect(cssSource).toContain(`.${obj.variantBlocks.layout.grid.className}`)
+        expect(cssSource).toContain(obj.variantBlocks.layout.stack.selector)
+        expect(cssSource).toContain(obj.variantBlocks.layout.grid.selector)
         expect(cssSource).toContain("flex-direction: column;")
         expect(cssSource).toContain("flex-direction: row;")
         expect(cssSource).toContain("grid-template-columns: 1fr;")
         expect(cssSource).toContain("grid-template-columns: 1fr 1fr;")
         expect(cssSource).toContain("@media (width >= 768px)")
+    })
+
+    it("should silently ignore undefined variants", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: null as unknown as object,
+                },
+            },
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(cssSource).toContain(obj.variantBlocks.color.red.selector)
     })
 })
