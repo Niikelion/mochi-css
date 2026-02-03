@@ -1,6 +1,25 @@
 name: PR checks
 on: [ pull_request ]
 jobs:
+    lint:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   name: Enable Corepack
+                run: corepack enable
+            -   uses: actions/checkout@v4
+            -   name: Use Node.js 24.x
+                uses: actions/setup-node@v4
+                with:
+                    node-version: '24.x'
+                    registry-url: 'https://registry.npmjs.org'
+            -   name: Install dependencies
+                run: yarn install --frozen-lockfile
+            -   name: Build packages
+                run: yarn build
+            -   name: Lint packages
+                run: yarn lint
     test:
         runs-on: ubuntu-latest
         permissions:

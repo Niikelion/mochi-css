@@ -1331,6 +1331,7 @@ __metadata:
     commander: "npm:^13.1.0"
     fs-extra: "npm:^11.3.0"
     magicast: "npm:^0.5.1"
+    package-manager-detector: "npm:^1.6.0"
     picocolors: "npm:^1.1.1"
     tsdown: "npm:^0.15.7"
   bin:
@@ -5906,6 +5907,13 @@ __metadata:
   dependencies:
     quansync: "npm:^0.2.7"
   checksum: 10c0/247991de461b9e731f3463b7dae9ce187e53095b7b94d7d96eec039abf418b61ccf74464bec1d0c11d97311f33472e77baccd4c5898f77358da4b5b33395e0b1
+  languageName: node
+  linkType: hard
+
+"package-manager-detector@npm:^1.6.0":
+  version: 1.6.0
+  resolution: "package-manager-detector@npm:1.6.0"
+  checksum: 10c0/6419d0b840be64fd45bcdcb7a19f09b81b65456d5e7f7a3daac305a4c90643052122f6ac0308afe548ffee75e36148532a2002ea9d292754f1e385aa2e1ea03b
   languageName: node
   linkType: hard
 

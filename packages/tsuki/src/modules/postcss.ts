@@ -3,8 +3,7 @@ import fs from "fs/promises"
 import path from "path"
 import * as p from "@clack/prompts"
 import { parseModule, generateCode } from "magicast"
-
-export type PostCSSOption = boolean | string
+import type { Module, ModuleContext } from "../types"
 
 const postcssConfigNames = [
     "postcss.config.mts",
@@ -48,25 +47,6 @@ async function askForPath(): Promise<string | false> {
     return configPath
 }
 
-async function resolve(target?: PostCSSOption): Promise<string | false> {
-    switch (target) {
-        case true:
-            return askForPath()
-        case false:
-            return false
-        case undefined: {
-            const usePostcss = await p.confirm({
-                message: "Do you use PostCSS?",
-            })
-
-            if (p.isCancel(usePostcss) || !usePostcss) return false
-            return askForPath()
-        }
-        default:
-            return target
-    }
-}
-
 async function addPostcssPlugin(
     configPath: string,
     pluginName: string,
@@ -94,7 +74,7 @@ async function addPostcssPlugin(
 
 async function addToConfig(configPath: string): Promise<void> {
     if (!fsExtra.existsSync(configPath)) {
-        await fsExtra.writeFile("postcss.config.mts", defaultPostcssConfig);
+        await fsExtra.writeFile("postcss.config.mts", defaultPostcssConfig)
         return
     }
 
@@ -108,29 +88,29 @@ async function addToConfig(configPath: string): Promise<void> {
         return
     }
 
-    if (ext === "yml" || ext === "yaml") {
-        throw new Error("YAML PostCSS config is not supported yet");
-    }
+    if (ext === "yml" || ext === "yaml") throw new Error("YAML PostCSS config is not supported yet")
 
     // JS/TS config - use magicast
     await addPostcssPlugin(configPath, "@mochi-css/postcss")
 }
 
-export const postcss = {
-    parseOption(value: string): boolean | string {
-        switch (value) {
-            case "true":
-                return true
-            case "false":
-                return false
-            default:
-                return value
-        }
-    },
+export const postcssModule: Module = {
+    id: "postcss",
+    name: "PostCSS",
 
-    async handle(target?: PostCSSOption): Promise<void> {
-        const configPath = await resolve(target)
+    async run(ctx: ModuleContext): Promise<void> {
+        const usePostcss = await p.confirm({
+            message: "Do you use PostCSS?"
+        })
+
+        if (p.isCancel(usePostcss) || !usePostcss) return
+
+        const configPath = await askForPath()
         if (configPath === false) return
+
         await addToConfig(configPath)
+        p.log.step("Added mochi plugin to the postcss config")
+
+        ctx.requirePackage("@mochi-css/postcss")
     }
 }

@@ -1,0 +1,1 @@
+export { postcssModule } from "./postcss"
