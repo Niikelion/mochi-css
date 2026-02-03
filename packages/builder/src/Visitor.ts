@@ -682,7 +682,7 @@ const defaultVisitors = {
         if (node.identifier) visit.identifier(node.identifier, context.visitors, context.context)
     },
     unaryExpression<C>(node: SWC.UnaryExpression, context: VisitorContext<C>): void {
-        visit.expression(node, context.visitors, context.context)
+        visit.expression(node.argument, context.visitors, context.context)
     },
     updateExpression<C>(node: SWC.UpdateExpression, context: VisitorContext<C>): void {
         visit.expression(node.argument, context.visitors, context.context)

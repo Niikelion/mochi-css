@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest"
-import {createToken} from "@/token";
+import { describe, it, expect } from "vitest"
+import { createToken } from "@/token"
 
 describe("Token", () => {
     it("should correctly generate css variable name from token name", () => {
@@ -16,5 +16,13 @@ describe("Token", () => {
 
         const token2 = createToken("some_other_token_name")
         expect(token2.value).toEqual(`var(--${token2.name})`)
+    })
+
+    it("should return variable name when converted to string", () => {
+        const token = createToken("some-token-name")
+        expect(token.toString()).toEqual(token.variable)
+
+        const token2 = createToken("some_other_token_name")
+        expect(token2.toString()).toEqual(token2.variable)
     })
 })

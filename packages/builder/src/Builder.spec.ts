@@ -2,9 +2,9 @@ import {describe, it, expect} from "vitest"
 import {parseSource} from "@/parse";
 import dedent from "dedent";
 import {Builder} from "@/Builder";
-import {cssFunctionStyleSource} from "@/ProjectIndex";
 import {RolldownBundler} from "@/Bundler";
 import {VmRunner} from "@/Runner";
+import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
 
 describe("Builder", () => {
     it("extracts style expressions from css calls", async () => {
@@ -22,24 +22,17 @@ describe("Builder", () => {
 
         const builder = new Builder({
             rootDir: "./",
-            styleSources: [cssFunctionStyleSource],
+            extractors: [mochiCssFunctionExtractor],
             bundler: new RolldownBundler(),
             runner: new VmRunner()
         })
 
-        const result = await builder.collectStylesFromModules([module])
+        const generators = await builder.collectStylesFromModules([module])
+        const generator = generators.get("@mochi-css/vanilla:css")!
+        const result = await generator.generateStyles()
 
-        expect(result).toEqual([{
-            styles: [
-                {
-                    backgroundColor: "gray",
-                    "&:hover": {
-                        backgroundColor: "white"
-                    }
-                }
-            ],
-            path: "buttonStyles.ts"
-        }])
+        expect(result.global).toContain("background-color: gray")
+        expect(result.global).toContain("background-color: white")
     })
 
     it("strips unused module-level symbols", async () => {
@@ -61,7 +54,7 @@ describe("Builder", () => {
 
         const builder = new Builder({
             rootDir: "./",
-            styleSources: [cssFunctionStyleSource],
+            extractors: [mochiCssFunctionExtractor],
             bundler: {
                 async bundle(rootFilePath, files) {
                     const bundler = new RolldownBundler()
@@ -87,7 +80,7 @@ describe("Builder", () => {
             const { color } = {
                 color: "blue"
             };
-            registerStyles("linkStyles.ts", {
+            registerStyles("@mochi-css/vanilla:css", "linkStyles.ts", {
                 textDecoration: "none",
                 color
             });\n

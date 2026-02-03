@@ -1,18 +1,11 @@
-import {describe, it, expect} from "vitest"
-import {compareString, compareStringKey, stringPropComparator} from "@/compare";
+import { describe, it, expect } from "vitest"
+import { compareString, compareStringKey, stringPropComparator } from "@/compare"
 
 describe("compareString", () => {
     it("should return 0 for equals strings", () => {
-        const values = [
-            "abcde",
-            "some text",
-            "some more text",
-            "another random input",
-            "Lorem ipsum dolor sit amet"
-        ]
+        const values = ["abcde", "some text", "some more text", "another random input", "Lorem ipsum dolor sit amet"]
 
-        for (const value of values)
-            expect(compareString(value, value)).toEqual(0)
+        for (const value of values) expect(compareString(value, value)).toEqual(0)
     })
 
     it("should return -1 when a is lexicographically smaller than b", () => {
@@ -26,7 +19,7 @@ describe("compareString", () => {
 
 describe("compareStringKey", () => {
     it("should compare based not first elements in tuples", () => {
-        const table: { a: [string, any], b: [string, any], r: ReturnType<typeof compareStringKey> }[] = [
+        const table: { a: [string, unknown]; b: [string, unknown]; r: ReturnType<typeof compareStringKey> }[] = [
             { a: ["a", 5], b: ["a", 6], r: 0 },
             { a: ["a", 5], b: ["a", 5], r: 0 },
             { a: ["a", 6], b: ["a", 5], r: 0 },
@@ -34,8 +27,7 @@ describe("compareStringKey", () => {
             { a: ["a", 6], b: ["b", 5], r: -1 },
         ]
 
-        for (const entry of table)
-            expect(compareStringKey(entry.a, entry.b)).toEqual(entry.r)
+        for (const entry of table) expect(compareStringKey(entry.a, entry.b)).toEqual(entry.r)
     })
 })
 

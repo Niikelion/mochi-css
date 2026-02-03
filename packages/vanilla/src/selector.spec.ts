@@ -1,5 +1,5 @@
-import {describe, it, expect} from "vitest"
-import {MochiSelector} from "@/selector";
+import { describe, it, expect } from "vitest"
+import { MochiSelector } from "@/selector"
 
 describe("MochiSelector", () => {
     it("should have no media query and catch-all selector by default", () => {

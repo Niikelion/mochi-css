@@ -12,7 +12,9 @@
         "build.all": "yarn build && yarn build.examples",
         "test": "turbo test",
         "coverage": "turbo coverage",
-        "dev": "turbo dev"
+        "dev": "turbo dev",
+        "format": "turbo format",
+        "lint": "turbo lint"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",

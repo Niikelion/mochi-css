@@ -1,22 +1,19 @@
-import {describe, it, expect} from "vitest"
-import {css, MochiCSS} from "@/css"
-import {CssColor} from "@/values"
-import {createToken} from "@/token"
-import {CSSObject} from "@/cssObject";
+import { describe, it, expect } from "vitest"
+import { css, MochiCSS } from "@/css"
 
-describe('css', () => {
+describe("css", () => {
     it("should have a classname list that is deterministic and dependent on styles", () => {
         const css1 = css({
             border: "1px solid red",
-            color: "blue"
+            color: "blue",
         })
         const css2 = css({
             color: "blue",
-            border: "1px solid red"
+            border: "1px solid red",
         })
         const css3 = css({
             color: "red",
-            border: "1px solid red"
+            border: "1px solid red",
         })
 
         // order of properties in style definition does not matter
@@ -35,16 +32,16 @@ describe('css', () => {
             variants: {
                 width: {
                     default: {
-                        width: "auto"
+                        width: "auto",
                     },
                     wide: {
-                        width: "100%"
+                        width: "100%",
                     },
                     narrow: {
-                        width: 200
-                    }
-                }
-            }
+                        width: 200,
+                    },
+                },
+            },
         })
 
         // variants with different styles result in different classNames
@@ -62,19 +59,73 @@ describe('css', () => {
             variants: {
                 color: {
                     red: {
-                        color: "red"
+                        color: "red",
                     },
                     blue: {
-                        color: "blue"
-                    }
-                }
+                        color: "blue",
+                    },
+                },
             },
             defaultVariants: {
-                color: "red"
-            }
+                color: "red",
+            },
         })
 
         expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "red" }))
         expect(cssWithVariants.variant({})).not.toEqual(cssWithVariants.variant({ color: "blue" }))
+    })
+
+    it("should silently skip invalid variant values", () => {
+        const cssWithVariants = css({
+            variants: {
+                color: {
+                    red: {
+                        color: "red",
+                    },
+                    blue: {
+                        color: "blue",
+                    },
+                },
+                bold: {
+                    true: {
+                        fontWeight: "bold",
+                    },
+                },
+            },
+            defaultVariants: {
+                color: "red",
+            },
+        })
+
+        expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ color: "green" } as object))
+        expect(cssWithVariants.variant({ color: "red" })).toEqual(
+            cssWithVariants.variant({ color: "red", size: "large" } as { color: "red" }),
+        )
+        expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ bold: "yes" } as object))
+    })
+
+    it("should skip null and non-object props", () => {
+        const result = css(null as never, undefined as never, 42 as never, { color: "red" })
+        expect(result.classNames).toHaveLength(1)
+
+        const empty = css(null as never)
+        expect(empty.classNames).toHaveLength(0)
+        expect(empty.variant({})).toEqual("")
+    })
+
+    it("should handle variant() with missing variant group gracefully", () => {
+        const mochi = new MochiCSS<{ broken: { value: object } }>(["base"], { broken: undefined } as never, {})
+        expect(mochi.variant({ broken: "value" })).toEqual("base")
+    })
+
+    it("should handle variant() when variantKey resolves to null", () => {
+        const styles = css({
+            variants: {
+                size: {
+                    small: { fontSize: 12 },
+                },
+            },
+        })
+        expect(styles.variant({ size: undefined })).toEqual(styles.classNames.join(" "))
     })
 })

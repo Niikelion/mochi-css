@@ -1,18 +1,26 @@
 import fs from "fs/promises";
+import { Dirent } from "fs";
 import path from "path";
 import * as SWC from "@swc/core";
-import {ProjectIndex, StyleSource, FileInfo, ResolveImport, Module} from "@/ProjectIndex";
-import {CSSObject, StyleProps} from "@mochi-css/vanilla";
+import {ProjectIndex, ResolveImport, Module} from "@/ProjectIndex";
 import {parseFile} from "@/parse";
 import {Bundler, FileLookup} from "@/Bundler";
 import {Runner, VmRunner} from "@/Runner";
 import dedent from "dedent";
+import { StyleExtractor } from "@/extractors/StyleExtractor"
+import { StyleGenerator } from "@/generators/StyleGenerator"
+import { generateMinimalModuleItem } from "@/moduleMinimizer"
+import { MochiError, OnDiagnostic } from "@/diagnostics"
 
 const rootFileSuffix = dedent`
     declare global {
-        function registerStyles(...args: any[]): void
+        function registerStyles(extractorId: string, source: string, ...args: any[]): void
     }
 `
+
+export function getExtractorId(extractor: StyleExtractor): string {
+    return `${extractor.importPath}:${extractor.symbolName}`
+}
 
 const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
 
@@ -20,7 +28,12 @@ const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
  * Recursively finds all TypeScript/TSX files in a directory.
  */
 export async function findAllFiles(dir: string): Promise<string[]> {
-    const entries = await fs.readdir(dir, { withFileTypes: true })
+    let entries: Dirent[] = []
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true })
+    } catch (err) {
+        throw new MochiError('MOCHI_FILE_READ', `Cannot read directory`, dir, err)
+    }
     const results = await Promise.all(entries.map(async entry => {
         const res = path.resolve(dir, entry.name)
         if (entry.isDirectory()) {
@@ -32,193 +45,6 @@ export async function findAllFiles(dir: string): Promise<string[]> {
         return []
     }))
     return results.flat()
-}
-
-/**
- * Checks if a pattern (destructuring) contains a specific identifier.
- */
-export function patternContainsIdentifier(pattern: SWC.Pattern, identifier: SWC.Identifier): boolean {
-    switch (pattern.type) {
-        case "Identifier":
-            return pattern === identifier
-        case "ObjectPattern":
-            return pattern.properties.some(prop => {
-                switch (prop.type) {
-                    case "AssignmentPatternProperty":
-                        return prop.key === identifier
-                    case "KeyValuePatternProperty":
-                        return patternContainsIdentifier(prop.value, identifier)
-                    case "RestElement":
-                        return patternContainsIdentifier(prop.argument, identifier)
-                    default:
-                        return false
-                }
-            })
-        case 'ArrayPattern':
-            return pattern.elements.some(elem => elem && patternContainsIdentifier(elem, identifier))
-        case 'RestElement':
-            return patternContainsIdentifier(pattern.argument, identifier)
-        case 'AssignmentPattern':
-            return patternContainsIdentifier(pattern.left, identifier)
-        default:
-            return false
-    }
-}
-
-/**
- * Checks if an object pattern property is used by any binding in the file.
- */
-export function isPatternPropertyUsed(prop: SWC.ObjectPatternProperty, declarator: SWC.VariableDeclarator, info: FileInfo): boolean {
-    for (const binding of info.usedBindings) {
-        if (binding.declarator.type !== 'variable') continue
-        if (binding.declarator.declarator !== declarator) continue
-
-        // Check if this binding's identifier is within this property
-        if (prop.type === 'AssignmentPatternProperty' && binding.identifier === prop.key) return true
-        if (prop.type === 'KeyValuePatternProperty' && patternContainsIdentifier(prop.value, binding.identifier)) return true
-        if (prop.type === 'RestElement' && patternContainsIdentifier(prop.argument, binding.identifier)) return true
-    }
-    return false
-}
-
-/**
- * Checks if an array pattern element is used by any binding in the file.
- */
-export function isPatternElementUsed(elem: SWC.Pattern, declarator: SWC.VariableDeclarator, info: FileInfo): boolean {
-    for (const binding of info.usedBindings) {
-        if (binding.declarator.type !== 'variable') continue
-        if (binding.declarator.declarator !== declarator) continue
-
-        if (patternContainsIdentifier(elem, binding.identifier)) return true
-    }
-    return false
-}
-
-/**
- * Prunes unused parts from destructuring patterns in a variable declarator.
- */
-export function pruneUnusedPatternParts(declarator: SWC.VariableDeclarator, info: FileInfo): SWC.VariableDeclarator | null {
-    // Check if any binding from this declarator is used
-    const hasUsedBinding = [...info.usedBindings].some(binding =>
-        binding.declarator.type === 'variable' &&
-        binding.declarator.declarator === declarator
-    )
-
-    if (!hasUsedBinding) return null
-
-    switch (declarator.id.type) {
-        // For simple identifiers, return as-is
-        case "Identifier":
-            return declarator
-        // For object patterns, prune unused properties
-        case "ObjectPattern": {
-            const usedProperties = declarator.id.properties.filter(prop => {
-                return isPatternPropertyUsed(prop, declarator, info)
-            })
-
-            if (usedProperties.length === 0) return null
-
-            return {
-                ...declarator,
-                id: {
-                    ...declarator.id,
-                    properties: usedProperties
-                }
-            }
-        }
-        // For array patterns, prune unused elements (but keep holes for indices)
-        case "ArrayPattern": {
-            let lastUsedIndex = -1
-            const usedElements = declarator.id.elements.map((elem, index) => {
-                if (!elem) return undefined
-                if (isPatternElementUsed(elem, declarator, info)) {
-                    lastUsedIndex = index
-                    return elem
-                }
-                return undefined
-            })
-
-            // Trim trailing undefines
-            const trimmedElements = usedElements.slice(0, lastUsedIndex + 1)
-            if (trimmedElements.length === 0) return null
-
-            return {
-                ...declarator,
-                id: {
-                    ...declarator.id,
-                    elements: trimmedElements
-                }
-            }
-        }
-        // For other patterns, return as-is
-        default:
-            return declarator
-    }
-}
-
-/**
- * Generates a minimal version of a module item, keeping only used bindings.
- */
-export function generateMinimalModuleItem(item: SWC.ModuleItem, info: FileInfo): SWC.ModuleItem | null {
-    // For imports, generate minimal import declaration
-    if (item.type === 'ImportDeclaration') {
-        const usedSpecifiers = item.specifiers.filter(spec => {
-            for (const binding of info.usedBindings) {
-                if (binding.declarator.type === 'import' &&
-                    binding.declarator.declaration === item &&
-                    binding.identifier.value === spec.local.value) {
-                    return true
-                }
-            }
-            return false
-        })
-
-        if (usedSpecifiers.length === 0) return null
-
-        return {
-            ...item,
-            specifiers: usedSpecifiers
-        }
-    }
-
-    // For variable declarations, prune unused bindings from patterns
-    if (item.type === 'VariableDeclaration') {
-        const minimalDeclarators = item.declarations
-            .map(declarator => pruneUnusedPatternParts(declarator, info))
-            .filter((d): d is SWC.VariableDeclarator => d !== null)
-
-        if (minimalDeclarators.length === 0) return null
-
-        return {
-            ...item,
-            declarations: minimalDeclarators
-        }
-    }
-
-    // For function/class declarations, include as-is
-    if (item.type !== 'ExportDeclaration') {
-        return item
-    }
-
-    // For export declarations, handle the inner declaration
-
-    if (item.declaration.type === 'VariableDeclaration') {
-        const minimalDeclarators = item.declaration.declarations
-            .map(declarator => pruneUnusedPatternParts(declarator, info))
-            .filter((d): d is SWC.VariableDeclarator => d !== null)
-
-        if (minimalDeclarators.length === 0) return null
-
-        return {
-            ...item,
-            declaration: {
-                ...item.declaration,
-                declarations: minimalDeclarators
-            }
-        }
-    }
-    // For function/class exports, include as-is if any binding is used
-    return item
 }
 
 /**
@@ -269,19 +95,35 @@ export function extractRelevantSymbols(index: ProjectIndex): Record<string, stri
             return [filePath, code]
         }
 
-        const args = [...styles.values()].map(expression => ({ expression }))
-        const registerExpression: SWC.CallExpression & { ctxt: number } = {
-            type: "CallExpression",
-            span: emptySpan,
-            arguments: [{ expression: { type: "StringLiteral", span: emptySpan, value: filePath } }, ...args],
-            ctxt: 0,
-            callee: {
-                type: "Identifier",
+        // Generate a register call for each extractor
+        const registerStatements: SWC.ExpressionStatement[] = []
+        for (const [extractor, expressions] of info.extractedExpressions) {
+            if (expressions.length === 0) continue
+
+            const extractorId = getExtractorId(extractor)
+            const args = expressions.map(expression => ({ expression }))
+            const registerExpression: SWC.CallExpression & { ctxt: number } = {
+                type: "CallExpression",
                 span: emptySpan,
-                ctxt: 1,
-                value: "registerStyles",
-                optional: false
+                ctxt: 0,
+                arguments: [
+                    { expression: { type: "StringLiteral", span: emptySpan, value: extractorId } },
+                    { expression: { type: "StringLiteral", span: emptySpan, value: filePath } },
+                    ...args
+                ],
+                callee: {
+                    type: "Identifier",
+                    span: emptySpan,
+                    ctxt: 1,
+                    value: "registerStyles",
+                    optional: false
+                }
             }
+            registerStatements.push({
+                type: "ExpressionStatement",
+                span: emptySpan,
+                expression: registerExpression
+            })
         }
 
         const code = SWC.printSync({
@@ -289,11 +131,7 @@ export function extractRelevantSymbols(index: ProjectIndex): Record<string, stri
             span: emptySpan,
             body: [
                 ...moduleBody,
-                {
-                    type: "ExpressionStatement",
-                    span: emptySpan,
-                    expression: registerExpression
-                }
+                ...registerStatements
             ],
             interpreter: ""
         }).code
@@ -304,9 +142,10 @@ export function extractRelevantSymbols(index: ProjectIndex): Record<string, stri
 
 export type BuilderOptions = {
     rootDir: string
-    styleSources: StyleSource[]
+    extractors: StyleExtractor[]
     bundler: Bundler
     runner: Runner
+    onDiagnostic?: OnDiagnostic
 }
 
 export class Builder {
@@ -333,16 +172,39 @@ export class Builder {
         fileLookup[rootPath] = [rootImports, rootFileSuffix].join("\n\n")
 
         // Bundle into single file
-        return await this.options.bundler.bundle(rootPath, fileLookup)
+        try {
+            return await this.options.bundler.bundle(rootPath, fileLookup)
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+            throw new MochiError('MOCHI_BUNDLE', message, undefined, err)
+        }
     }
 
-    private async executeCode(code: string, onStyleRegistered: (source: string, styles: StyleProps[]) => void) {
+    private async executeCode(code: string, generators: Map<string, StyleGenerator>) {
+        const onDiagnostic = this.options.onDiagnostic
         const runner = new VmRunner()
-        await runner.execute(code, {
-            registerStyles(source: string, ...registeredStyles: StyleProps[]) {
-                onStyleRegistered(source, registeredStyles)
-            }
-        })
+        try {
+            await runner.execute(code, {
+                registerStyles(extractorId: string, source: string, ...args: unknown[]) {
+                    const generator = generators.get(extractorId)
+                    if (!generator) return
+                    try {
+                        generator.collectArgs(source, args)
+                    } catch (err) {
+                        const message = err instanceof Error ? err.message : String(err)
+                        onDiagnostic?.({
+                            code: 'MOCHI_EXEC',
+                            message: `Failed to collect styles: ${message}`,
+                            severity: 'warning',
+                            file: source,
+                        })
+                    }
+                }
+            })
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+            throw new MochiError('MOCHI_EXEC', message, undefined, err)
+        }
     }
 
     public async collectStylesFromModules(modules: Module[]) {
@@ -369,39 +231,59 @@ export class Builder {
             return null
         }
 
-        const index = new ProjectIndex(modules, this.options.styleSources, resolveImport)
+        const onDiagnostic = this.options.onDiagnostic
+        const index = new ProjectIndex(modules, this.options.extractors, resolveImport, onDiagnostic)
         index.propagateUsages()
         const resultingFiles = extractRelevantSymbols(index)
-        const collectedStyles: { path: string, styles: StyleProps[] }[] = []
+
+        // Create a generator for each extractor
+        const generators = new Map<string, StyleGenerator>()
+        for (const extractor of this.options.extractors) {
+            const id = getExtractorId(extractor)
+            generators.set(id, extractor.startGeneration(onDiagnostic))
+        }
 
         const code = await this.bundleFiles(resultingFiles)
-        await this.executeCode(code, (path, styles) => collectedStyles.push({ path, styles }))
+        await this.executeCode(code, generators)
 
-        return collectedStyles
+        return generators
     }
 
-    public async collectMochiStyles() {
+    public async collectMochiStyles(onDep?: (path: string) => void) {
         const files = await findAllFiles(this.options.rootDir)
+
+        if (onDep) {
+            for (const file of files) {
+                onDep(file)
+            }
+        }
+
         const modules = await Promise.all(files.map(parseFile))
 
         return await this.collectStylesFromModules(modules)
     }
 
     //TODO: Allow tree-shaking
-    public async collectMochiCss(onDep?: (path: string) => void): Promise<{ global: string, files: Record<string, string> }> {
-        const collectedStyles = await this.collectMochiStyles()
-        const css = new Set<string>()
-        for (const {path, styles} of collectedStyles) {
-            onDep?.(path)
-            for (const style of styles) {
-                const styleCss = new CSSObject(style).asCssString()
-                css.add(styleCss)
+    public async collectMochiCss(onDep?: (path: string) => void): Promise<{ global?: string, files?: Record<string, string> }> {
+        const generators = await this.collectMochiStyles(onDep)
+
+        // Collect and merge results from all generators
+        const globalCss: string[] = []
+        const files: Record<string, string> = {}
+
+        for (const generator of generators.values()) {
+            const result = await generator.generateStyles()
+            if (result.global) {
+                globalCss.push(result.global)
+            }
+            if (result.files) {
+                Object.assign(files, result.files)
             }
         }
-        const sortedCss = [...css.values()].sort()
+
         return {
-            global: sortedCss.join("\n\n"),
-            files: {}
+            global: globalCss.length > 0 ? globalCss.join("\n\n") : undefined,
+            files: Object.keys(files).length > 0 ? files : undefined
         }
     }
 }

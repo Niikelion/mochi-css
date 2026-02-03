@@ -1,6 +1,6 @@
-import {PluginCreator, TransformCallback} from "postcss";
+import {PluginCreator, Result, TransformCallback} from "postcss";
 import * as path from "path";
-import {Builder, defaultStyleSources, BuilderOptions, RolldownBundler, VmRunner} from "@mochi-css/builder";
+import {Builder, defaultExtractors, BuilderOptions, RolldownBundler, VmRunner, OnDiagnostic} from "@mochi-css/builder";
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -13,10 +13,10 @@ type Options = Partial<BuilderOptions> & {
 
 const pluginName = "postcss-mochi-css"
 
-const defaultOptions: Required<Options> = {
-    globalCss: /^.*\/globals.css$/g,
+const defaultOptions: Required<Omit<Options, 'onDiagnostic'>> = {
+    globalCss: /\/globals\.css$/,
     rootDir: "src",
-    styleSources: defaultStyleSources,
+    extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner()
 }
@@ -24,28 +24,42 @@ const defaultOptions: Required<Options> = {
 const creator: PluginCreator<Options> = (opts?: Options) => {
     const options = Object.assign({}, defaultOptions, opts)
 
-    const builder = new Builder(options)
+    let currentResult: Result | undefined
+    const onDiagnostic: OnDiagnostic = (diagnostic) => {
+        options.onDiagnostic?.(diagnostic)
+        currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
+            plugin: pluginName,
+        })
+    }
+
+    const builder = new Builder({ ...options, onDiagnostic })
     let builderGuard: Promise<void> | undefined
 
     const postcssProcess: TransformCallback = async (root, result) => {
+        currentResult = result
+
         const filePath = result.opts.from
 
         if (!filePath || !isValidCssFilePath(filePath)) return
 
         const normalizedPath = filePath.replaceAll(path.win32.sep, path.posix.sep)
 
+        // Reset lastIndex to handle regexes with /g flag correctly
+        options.globalCss.lastIndex = 0
         if (!options.globalCss.test(normalizedPath)) return
 
-        const css = await builder.collectMochiCss(path => {
+        const css = await builder.collectMochiCss(filePath => {
             result.messages.push({
                 type: "dependency",
-                file: path,
+                file: filePath,
                 plugin: pluginName,
                 parent: result.opts.from
             })
         })
 
-        root.append(css.global)
+        if (css.global) {
+            root.append(css.global)
+        }
 
         root.walk(node => {
             if (node.source) return
@@ -58,7 +72,9 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         plugins: [
             (...args) => {
                 builderGuard = Promise.resolve(builderGuard)
-                    .catch(() => {})
+                    .catch(err => {
+                        console.error(`[${pluginName}]`, err instanceof Error ? err.message : err)
+                    })
                     .then(() => postcssProcess(...args))
                 return builderGuard
             }

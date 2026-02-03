@@ -22,6 +22,7 @@ Styles are statically extracted at build time through a PostCSS plugin, making y
 - **Build-time CSS extraction** - using a PostCSS plugin
 - **Style variants** - create variants for your styles with ease
 - **Nested selectors** - use sub-selectors in you styles
+- **Media queries** - make your styles responsive
 - **Great type support** - TypeScript-first DX
 - **Minimal restrictions** - define styles anywhere your code allows
 - **Tooling agnostic** - works with anything that supports PostCSS
@@ -80,7 +81,7 @@ Detailed documentation about different parts of Mochi-CSS can be found here:
 
 ## 🚧 Project Status
 
-**Alpha** - APIs may change, but core concepts are stable.
+**Beta** - media query syntax and builder APIs may change. Rest of the features is stable.
 
 Benchmarks and performance comparisons will be released at a later stage.
 
