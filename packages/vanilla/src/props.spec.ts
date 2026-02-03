@@ -48,6 +48,14 @@ describe("asVar", () => {
         expect(asVar({ value: 7 })).toEqual("7")
         expect(asVar({ value: "some value" })).toEqual("some value")
     })
+    it("returns empty string when max depth is exceeded", () => {
+        const circular: { value: unknown } = {
+            get value(): unknown {
+                return circular
+            },
+        }
+        expect(asVar(circular as never)).toEqual("")
+    })
 })
 
 describe("isKnownPropertyName", () => {
@@ -101,6 +109,15 @@ describe("asKnownProp", () => {
     it("extracts value from CssLikeObject", () => {
         expect(asKnownProp({ value: 200 }, "height")).toEqual("200px")
         expect(asKnownProp({ value: "auto" }, "width")).toEqual("auto")
+    })
+
+    it("returns empty string when max depth is exceeded", () => {
+        const circular: { value: unknown } = {
+            get value(): unknown {
+                return circular
+            },
+        }
+        expect(asKnownProp(circular as never, "width")).toEqual("")
     })
 })
 

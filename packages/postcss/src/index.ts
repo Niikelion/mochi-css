@@ -1,6 +1,6 @@
-import {PluginCreator, TransformCallback} from "postcss";
+import {PluginCreator, Result, TransformCallback} from "postcss";
 import * as path from "path";
-import {Builder, defaultExtractors, BuilderOptions, RolldownBundler, VmRunner} from "@mochi-css/builder";
+import {Builder, defaultExtractors, BuilderOptions, RolldownBundler, VmRunner, OnDiagnostic} from "@mochi-css/builder";
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -13,7 +13,7 @@ type Options = Partial<BuilderOptions> & {
 
 const pluginName = "postcss-mochi-css"
 
-const defaultOptions: Required<Options> = {
+const defaultOptions: Required<Omit<Options, 'onDiagnostic'>> = {
     globalCss: /\/globals\.css$/,
     rootDir: "src",
     extractors: defaultExtractors,
@@ -24,10 +24,20 @@ const defaultOptions: Required<Options> = {
 const creator: PluginCreator<Options> = (opts?: Options) => {
     const options = Object.assign({}, defaultOptions, opts)
 
-    const builder = new Builder(options)
+    let currentResult: Result | undefined
+    const onDiagnostic: OnDiagnostic = (diagnostic) => {
+        options.onDiagnostic?.(diagnostic)
+        currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
+            plugin: pluginName,
+        })
+    }
+
+    const builder = new Builder({ ...options, onDiagnostic })
     let builderGuard: Promise<void> | undefined
 
     const postcssProcess: TransformCallback = async (root, result) => {
+        currentResult = result
+
         const filePath = result.opts.from
 
         if (!filePath || !isValidCssFilePath(filePath)) return
@@ -62,7 +72,9 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         plugins: [
             (...args) => {
                 builderGuard = Promise.resolve(builderGuard)
-                    .catch(() => {})
+                    .catch(err => {
+                        console.error(`[${pluginName}]`, err instanceof Error ? err.message : err)
+                    })
                     .then(() => postcssProcess(...args))
                 return builderGuard
             }

@@ -46,16 +46,20 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
         return clsx(
             this.classNames,
             ...keys.values().map((k) => {
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                const variantKey = ((k in props ? props[k] : undefined) ?? this.defaultVariants[k])!
+                const variantGroup = this.variantClassNames[k]
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                if (!variantGroup) return false
 
-                const selectedClassname = this.variantClassNames[k][variantKey.toString()]
+                const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]
+                if (variantKey == null) return false
+
+                const selectedClassname = variantGroup[variantKey.toString()]
                 if (selectedClassname !== undefined) return selectedClassname
 
                 const defaultKey = this.defaultVariants[k]
-                if (defaultKey === undefined) return false
+                if (defaultKey == null) return false
 
-                return this.variantClassNames[k][defaultKey.toString()]
+                return variantGroup[defaultKey.toString()]
             }),
         )
     }
@@ -117,13 +121,23 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
  * // Merging multiple styles
  * const combined = css(baseStyles, additionalStyles)
  */
+const emptyMochiCSS = new MochiCSS<AllVariants>([], {}, {})
+
 export function css<V extends AllVariants[]>(
     ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
 ): MochiCSS<MergeCSSVariants<V>> {
-    const cssToMerge: MochiCSS<AllVariants>[] = props.map((p) => {
-        if (p instanceof MochiCSS) return p
-        return MochiCSS.from(new CSSObject<AllVariants>(p))
-    })
+    const cssToMerge: MochiCSS<AllVariants>[] = []
+    for (const p of props) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (p == null || typeof p !== "object") continue
+        if (p instanceof MochiCSS) {
+            cssToMerge.push(p)
+        } else {
+            cssToMerge.push(MochiCSS.from(new CSSObject<AllVariants>(p)))
+        }
+    }
+
+    if (cssToMerge.length === 0) return emptyMochiCSS as MochiCSS<MergeCSSVariants<V>>
 
     return new MochiCSS<AllVariants>(
         cssToMerge.flatMap((css) => css.classNames),

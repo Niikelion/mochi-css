@@ -6,6 +6,7 @@ export * from "./Builder"
 export * from "./moduleMinimizer"
 export * from "./extractors"
 export * from "./generators"
+export * from "./diagnostics"
 
 export const defaultExtractors = [
     mochiCssFunctionExtractor,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { css } from "@/css"
+import { css, MochiCSS } from "@/css"
 
 describe("css", () => {
     it("should have a classname list that is deterministic and dependent on styles", () => {
@@ -102,5 +102,30 @@ describe("css", () => {
             cssWithVariants.variant({ color: "red", size: "large" } as { color: "red" }),
         )
         expect(cssWithVariants.variant({})).toEqual(cssWithVariants.variant({ bold: "yes" } as object))
+    })
+
+    it("should skip null and non-object props", () => {
+        const result = css(null as never, undefined as never, 42 as never, { color: "red" })
+        expect(result.classNames).toHaveLength(1)
+
+        const empty = css(null as never)
+        expect(empty.classNames).toHaveLength(0)
+        expect(empty.variant({})).toEqual("")
+    })
+
+    it("should handle variant() with missing variant group gracefully", () => {
+        const mochi = new MochiCSS<{ broken: { value: object } }>(["base"], { broken: undefined } as never, {})
+        expect(mochi.variant({ broken: "value" })).toEqual("base")
+    })
+
+    it("should handle variant() when variantKey resolves to null", () => {
+        const styles = css({
+            variants: {
+                size: {
+                    small: { fontSize: 12 },
+                },
+            },
+        })
+        expect(styles.variant({ size: undefined })).toEqual(styles.classNames.join(" "))
     })
 })

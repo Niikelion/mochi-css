@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { createToken } from "@/token"
 import { CSSObject, CssObjectBlock, CssObjectSubBlock } from "@/cssObject"
 import { MochiSelector } from "@/selector"
@@ -171,7 +171,9 @@ describe("CssObjectSubBlock", () => {
             ])
         })
 
-        it("skips unrecognized patterns", () => {
+        it("skips unrecognized patterns and warns in dev mode", () => {
+            const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+
             const blocks = CssObjectSubBlock.fromProps({
                 span: {
                     color: "red",
@@ -184,6 +186,21 @@ describe("CssObjectSubBlock", () => {
                     }
                 `,
             ])
+
+            expect(warnSpy).toHaveBeenCalledWith('[mochi-css] Unknown style property "span" will be ignored')
+            warnSpy.mockRestore()
+        })
+
+        it("skips unrecognized patterns without warning in production", () => {
+            const origEnv = process.env["NODE_ENV"]
+            process.env["NODE_ENV"] = "production"
+            const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+
+            CssObjectSubBlock.fromProps({ span: { color: "red" } } as StyleProps)
+
+            expect(warnSpy).not.toHaveBeenCalled()
+            warnSpy.mockRestore()
+            process.env["NODE_ENV"] = origEnv
         })
     })
 })

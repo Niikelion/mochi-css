@@ -38,13 +38,14 @@ function getUnitForProperty(propertyName: string): string | undefined {
  * Converts a CSS-like value to its string representation.
  * For properties with known units, numbers are automatically suffixed.
  */
-function formatValue(value: CssLike<string | number>, propertyName: string): string {
+function formatValue(value: CssLike<string | number>, propertyName: string, maxDepth = 10): string {
+    if (maxDepth <= 0) return ""
     if (typeof value === "string") return value
     if (typeof value === "number") {
         const unit = getUnitForProperty(propertyName)
         return unit ? `${value.toString()}${unit}` : value.toString()
     }
-    return formatValue(value.value, propertyName)
+    return formatValue(value.value, propertyName, maxDepth - 1)
 }
 
 const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
@@ -61,14 +62,15 @@ export function isCssVariableName(key: string): key is CssVar {
  * @param value - The value to convert (string, number, or wrapped value)
  * @returns The string representation
  */
-export function asVar(value: CssLike<string | number>): string {
+export function asVar(value: CssLike<string | number>, maxDepth = 10): string {
+    if (maxDepth <= 0) return ""
     switch (typeof value) {
         case "string":
             return value
         case "number":
             return value.toString()
         default:
-            return asVar(value.value)
+            return asVar(value.value, maxDepth - 1)
     }
 }
 

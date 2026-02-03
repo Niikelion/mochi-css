@@ -113,6 +113,11 @@ export class CssObjectSubBlock {
                     props: value as StyleProps,
                     selector: selector.wrap(key),
                 })
+                continue
+            }
+
+            if (process.env["NODE_ENV"] !== "production") {
+                console.warn(`[mochi-css] Unknown style property "${key}" will be ignored`)
             }
         }
 

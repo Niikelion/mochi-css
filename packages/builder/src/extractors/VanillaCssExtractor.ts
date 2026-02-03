@@ -1,6 +1,7 @@
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { CallExpression, Expression } from "@swc/core"
 import { StyleGenerator, VanillaCssGenerator } from "@/generators"
+import { OnDiagnostic } from "@/diagnostics"
 
 export class VanillaCssExtractor implements StyleExtractor {
     public readonly importPath: string
@@ -19,8 +20,8 @@ export class VanillaCssExtractor implements StyleExtractor {
         return this.extractor(call)
     }
 
-    startGeneration(): StyleGenerator {
-        return new VanillaCssGenerator()
+    startGeneration(onDiagnostic?: OnDiagnostic): StyleGenerator {
+        return new VanillaCssGenerator(onDiagnostic)
     }
 }
 

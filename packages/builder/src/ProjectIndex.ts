@@ -1,6 +1,7 @@
 import * as SWC from "@swc/core"
 import { visit } from "@/Visitor"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
+import { OnDiagnostic } from "@/diagnostics"
 
 //TODO: move to separate package
 
@@ -189,7 +190,8 @@ function extractData(
     ast: SWC.Module,
     filePath: string,
     styleExtractors: Map<string, Map<string, StyleExtractor>>,
-    resolveImport: (from: string, source: string) => string | null
+    resolveImport: (from: string, source: string) => string | null,
+    onDiagnostic?: OnDiagnostic
 ) {
     const styleExtractorIdentifiers = new RefMap<StyleExtractor>()
     const styleExpressions = new Set<SWC.Expression>()
@@ -240,9 +242,20 @@ function extractData(
     for (const item of ast.body) {
         switch (item.type) {
             case 'ImportDeclaration': {
-                const sourcePath = isLocalImport(item.source.value)
+                const isLocal = isLocalImport(item.source.value)
+                const sourcePath = isLocal
                     ? resolveImport(filePath, item.source.value)
                     : null
+
+                if (isLocal && sourcePath === null) {
+                    onDiagnostic?.({
+                        code: 'MOCHI_UNRESOLVED_IMPORT',
+                        message: `Cannot resolve local import "${item.source.value}"`,
+                        severity: 'warning',
+                        file: filePath,
+                        line: item.source.span.start,
+                    })
+                }
 
                 for (const specifier of item.specifiers) {
                     if (specifier.type === 'ImportNamespaceSpecifier') continue
@@ -405,7 +418,7 @@ export class ProjectIndex {
         return [...this.filesInfo.entries()]
     }
 
-    constructor(modules: Module[], extractors: StyleExtractor[], resolveImport: ResolveImport) {
+    constructor(modules: Module[], extractors: StyleExtractor[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) {
         this.extractors = extractors
 
         const extractorLookup = new Map<string, Map<string, StyleExtractor>>()
@@ -415,7 +428,7 @@ export class ProjectIndex {
         }
 
         for (const module of modules) {
-            const data = extractData(module.ast, module.filePath, extractorLookup, resolveImport)
+            const data = extractData(module.ast, module.filePath, extractorLookup, resolveImport, onDiagnostic)
 
             this.filesInfo.set(module.filePath, {
                 ...module,

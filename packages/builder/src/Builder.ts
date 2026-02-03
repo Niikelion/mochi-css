@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import { Dirent } from "fs";
 import path from "path";
 import * as SWC from "@swc/core";
 import {ProjectIndex, ResolveImport, Module} from "@/ProjectIndex";
@@ -9,6 +10,7 @@ import dedent from "dedent";
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { generateMinimalModuleItem } from "@/moduleMinimizer"
+import { MochiError, OnDiagnostic } from "@/diagnostics"
 
 const rootFileSuffix = dedent`
     declare global {
@@ -26,7 +28,12 @@ const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
  * Recursively finds all TypeScript/TSX files in a directory.
  */
 export async function findAllFiles(dir: string): Promise<string[]> {
-    const entries = await fs.readdir(dir, { withFileTypes: true })
+    let entries: Dirent[] = []
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true })
+    } catch (err) {
+        throw new MochiError('MOCHI_FILE_READ', `Cannot read directory`, dir, err)
+    }
     const results = await Promise.all(entries.map(async entry => {
         const res = path.resolve(dir, entry.name)
         if (entry.isDirectory()) {
@@ -138,6 +145,7 @@ export type BuilderOptions = {
     extractors: StyleExtractor[]
     bundler: Bundler
     runner: Runner
+    onDiagnostic?: OnDiagnostic
 }
 
 export class Builder {
@@ -164,19 +172,39 @@ export class Builder {
         fileLookup[rootPath] = [rootImports, rootFileSuffix].join("\n\n")
 
         // Bundle into single file
-        return await this.options.bundler.bundle(rootPath, fileLookup)
+        try {
+            return await this.options.bundler.bundle(rootPath, fileLookup)
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+            throw new MochiError('MOCHI_BUNDLE', message, undefined, err)
+        }
     }
 
     private async executeCode(code: string, generators: Map<string, StyleGenerator>) {
+        const onDiagnostic = this.options.onDiagnostic
         const runner = new VmRunner()
-        await runner.execute(code, {
-            registerStyles(extractorId: string, source: string, ...args: unknown[]) {
-                const generator = generators.get(extractorId)
-                if (generator) {
-                    generator.collectArgs(source, args)
+        try {
+            await runner.execute(code, {
+                registerStyles(extractorId: string, source: string, ...args: unknown[]) {
+                    const generator = generators.get(extractorId)
+                    if (!generator) return
+                    try {
+                        generator.collectArgs(source, args)
+                    } catch (err) {
+                        const message = err instanceof Error ? err.message : String(err)
+                        onDiagnostic?.({
+                            code: 'MOCHI_EXEC',
+                            message: `Failed to collect styles: ${message}`,
+                            severity: 'warning',
+                            file: source,
+                        })
+                    }
                 }
-            }
-        })
+            })
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+            throw new MochiError('MOCHI_EXEC', message, undefined, err)
+        }
     }
 
     public async collectStylesFromModules(modules: Module[]) {
@@ -203,7 +231,8 @@ export class Builder {
             return null
         }
 
-        const index = new ProjectIndex(modules, this.options.extractors, resolveImport)
+        const onDiagnostic = this.options.onDiagnostic
+        const index = new ProjectIndex(modules, this.options.extractors, resolveImport, onDiagnostic)
         index.propagateUsages()
         const resultingFiles = extractRelevantSymbols(index)
 
@@ -211,7 +240,7 @@ export class Builder {
         const generators = new Map<string, StyleGenerator>()
         for (const extractor of this.options.extractors) {
             const id = getExtractorId(extractor)
-            generators.set(id, extractor.startGeneration())
+            generators.set(id, extractor.startGeneration(onDiagnostic))
         }
 
         const code = await this.bundleFiles(resultingFiles)

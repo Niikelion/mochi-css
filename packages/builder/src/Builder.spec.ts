@@ -80,7 +80,6 @@ describe("Builder", () => {
             const { color } = {
                 color: "blue"
             };
-            // @ts-ignore
             registerStyles("@mochi-css/vanilla:css", "linkStyles.ts", {
                 textDecoration: "none",
                 color
