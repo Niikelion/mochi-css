@@ -60,6 +60,7 @@ export function isCssVariableName(key: string): key is CssVar {
 /**
  * Converts a CSS-like value to a string for use as a CSS variable value.
  * @param value - The value to convert (string, number, or wrapped value)
+ * @param maxDepth - Maximum recursion depth for evaluating the value
  * @returns The string representation
  */
 export function asVar(value: CssLike<string | number>, maxDepth = 10): string {
