@@ -86,13 +86,21 @@ describe("asKnownProp", () => {
     })
 
     it("appends % suffix to number values in percentage properties", () => {
-        expect(asKnownProp(50, "opacity")).toEqual("50%")
-        expect(asKnownProp(100, "fillOpacity")).toEqual("100%")
+        expect(asKnownProp(0.5, "opacity")).toEqual("50%")
+        expect(asKnownProp(1, "fillOpacity")).toEqual("100%")
     })
 
     it("appends deg suffix to number values in angle properties", () => {
         expect(asKnownProp(45, "rotate")).toEqual("45deg")
         expect(asKnownProp(90, "imageOrientation")).toEqual("90deg")
+    })
+
+    it("returns '0' without any unit suffix for zero values except for percentages", () => {
+        expect(asKnownProp(0, "width")).toEqual("0")
+        expect(asKnownProp(0, "opacity")).toEqual("0%")
+        expect(asKnownProp(0, "animationDuration")).toEqual("0")
+        expect(asKnownProp(0, "rotate")).toEqual("0")
+        expect(asKnownProp(0, "zIndex")).toEqual("0")
     })
 
     it("converts number values to strings without suffix for plain number properties", () => {

@@ -21,8 +21,7 @@ program
 
             p.outro(pc.green("Done!"))
         } catch (e) {
-            if (e instanceof Error)
-                p.outro(pc.red(e.message))
+            if (e instanceof Error) p.outro(pc.red(e.message))
         }
     })
 

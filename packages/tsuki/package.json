@@ -8,13 +8,24 @@
         "/dist"
     ],
     "scripts": {
-        "build": "tsc --noEmit && tsdown"
+        "build": "tsc --noEmit && tsdown",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write"
     },
     "devDependencies": {
+        "@eslint/js": "^9.18.0",
         "@gamedev-sensei/ts-config": "^2.0.0",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "^24.8.1",
-        "tsdown": "^0.15.7"
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.5",
+        "jiti": "^2.6.1",
+        "prettier": "^3.8.1",
+        "tsdown": "^0.15.7",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.21.0"
     },
     "dependencies": {
         "@clack/prompts": "^0.10.0",

@@ -43,11 +43,14 @@ function formatValue(value: CssLike<string | number>, propertyName: string, maxD
     if (typeof value === "string") return value
     if (typeof value === "number") {
         const unit = getUnitForProperty(propertyName)
-        return unit ? `${value.toString()}${unit}` : value.toString()
+        if (unit === "%") return `${value * 100}${unit}`
+        if (value === 0) return "0"
+        return unit ? `${value}${unit}` : value.toString()
     }
     return formatValue(value.value, propertyName, maxDepth - 1)
 }
 
+//TODO: generate this list and drop known-css-properties package
 const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
 
 /**

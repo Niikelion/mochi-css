@@ -19,7 +19,7 @@ export class ModuleRunner {
                 for (const pkg of packages) {
                     this.packages.push({ name: pkg.name, dev: pkg.dev ?? true })
                 }
-            }
+            },
         }
 
         // Run all modules
