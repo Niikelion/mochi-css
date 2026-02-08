@@ -3,8 +3,6 @@ import { visit } from "@/Visitor"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { OnDiagnostic } from "@/diagnostics"
 
-//TODO: move to separate package
-
 declare module '@swc/core' {
     interface Identifier {
         ctxt?: number
@@ -371,7 +369,7 @@ function extractData(
             descend({ ...context, scopeDepth: context.scopeDepth + 1 })
         },
         // Skip identifiers in declaration positions
-        variableDeclarator(node, { descend, context }) {
+        variableDeclarator(node) {
             // Only visit the init expression, not the pattern
             if (node.init) {
                 visit.expression(node.init, {

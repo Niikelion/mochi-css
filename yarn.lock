@@ -1325,15 +1325,23 @@ __metadata:
   resolution: "@mochi-css/tsuki@workspace:packages/tsuki"
   dependencies:
     "@clack/prompts": "npm:^0.10.0"
+    "@eslint/js": "npm:^9.18.0"
     "@gamedev-sensei/ts-config": "npm:^2.0.0"
     "@types/fs-extra": "npm:^11.0.4"
     "@types/node": "npm:^24.8.1"
     commander: "npm:^13.1.0"
+    eslint: "npm:^9.39.2"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-prettier: "npm:^5.5.5"
     fs-extra: "npm:^11.3.0"
+    jiti: "npm:^2.6.1"
     magicast: "npm:^0.5.1"
     package-manager-detector: "npm:^1.6.0"
     picocolors: "npm:^1.1.1"
+    prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.21.0"
   bin:
     tsuki: ./dist/index.js
   languageName: unknown

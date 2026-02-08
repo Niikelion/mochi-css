@@ -3,15 +3,11 @@ import { spawn } from "node:child_process"
 import * as p from "@clack/prompts"
 import type { PackageRequest } from "./types"
 
-async function runInstall(
-    command: string,
-    args: string[],
-    packages: string[]
-): Promise<void> {
+async function runInstall(command: string, args: string[], packages: string[]): Promise<void> {
     return new Promise((resolve, reject) => {
         const child = spawn(command, args, {
             stdio: "inherit",
-            shell: true
+            shell: true,
         })
 
         child.on("close", (code) => {
@@ -31,7 +27,7 @@ export async function installPackages(packages: PackageRequest[]): Promise<void>
 
     // Detect package manager
     const packageManager = await detect({
-        strategies: ["packageManager-field", "devEngines-field", "lockfile", "install-metadata"]
+        strategies: ["packageManager-field", "devEngines-field", "lockfile", "install-metadata"],
     })
 
     if (packageManager === null) {
@@ -48,7 +44,7 @@ export async function installPackages(packages: PackageRequest[]): Promise<void>
     // Build display list
     const allPackages = [
         ...devPackages.map((name) => ({ name, label: `${name} (dev)` })),
-        ...prodPackages.map((name) => ({ name, label: name }))
+        ...prodPackages.map((name) => ({ name, label: name })),
     ]
 
     // Ask user for permission with multiselect
@@ -56,10 +52,10 @@ export async function installPackages(packages: PackageRequest[]): Promise<void>
         message: "The following packages will be installed:",
         options: allPackages.map((pkg) => ({
             value: pkg.name,
-            label: pkg.label
+            label: pkg.label,
         })),
         initialValues: allPackages.map((pkg) => pkg.name),
-        required: false
+        required: false,
     })
 
     if (p.isCancel(selected) || selected.length === 0) {
