@@ -175,6 +175,20 @@ export type AllVariants = Record<string, Record<string, StyleProps>>
 export type DefaultVariants = Record<never, Record<string, StyleProps>>
 
 /**
+ * A compound variant entry that applies styles when multiple variant conditions match.
+ * Each entry specifies a set of variant conditions and a `css` property with styles
+ * that apply only when all conditions are satisfied simultaneously.
+ *
+ * @template V - The variant definitions type
+ *
+ * @example
+ * { color: 'red', size: 'large', css: { fontWeight: 'bold' } }
+ */
+export type CompoundVariant<V extends AllVariants> = {
+    [K in keyof V]?: keyof V[K]
+} & { css: StyleProps }
+
+/**
  * Refines string literal types to their proper runtime types.
  * Converts "true"/"false" strings to boolean literals.
  */
@@ -195,6 +209,8 @@ export type VariantProps<V extends AllVariants> = {
     variants?: V
     /** Default variant selections for when not explicitly provided */
     defaultVariants?: { [K in keyof V]?: keyof V[K] extends string ? RefineVariantType<keyof V[K] & string> : never }
+    /** Compound variant definitions that apply when multiple variant conditions match */
+    compoundVariants?: CompoundVariant<V>[]
 }
 
 /** Combined type for style props with optional variants */
@@ -242,24 +258,39 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
     public readonly variantBlocks: { [K in keyof V & string]: Record<keyof V[K] & string, CssObjectBlock> }
     /** Default variant selections */
     public readonly variantDefaults: Partial<RefineVariants<V>>
+    /** Compiled blocks for compound variants with their conditions */
+    public readonly compoundVariantBlocks: { conditions: Record<string, string>; block: CssObjectBlock }[]
 
     /**
      * Creates a new CSSObject from style props.
      * Compiles main styles and all variant options into CSS blocks.
      */
-    public constructor({ variants, defaultVariants, ...props }: MochiCSSProps<V>) {
+    public constructor({ variants, defaultVariants, compoundVariants, ...props }: MochiCSSProps<V>) {
         this.mainBlock = new CssObjectBlock(props)
         this.variantBlocks = {} as typeof this.variantBlocks
         this.variantDefaults = defaultVariants ?? {}
+        this.compoundVariantBlocks = []
 
-        if (!variants) return
-        for (const variantGroupName in variants) {
-            this.variantBlocks[variantGroupName] = {} as (typeof this.variantBlocks)[keyof typeof this.variantBlocks]
-            const variantGroup = variants[variantGroupName]
-            for (const variantItemName in variantGroup) {
-                this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(
-                    variantGroup[variantItemName] ?? {},
-                )
+        if (variants) {
+            for (const variantGroupName in variants) {
+                this.variantBlocks[variantGroupName] =
+                    {} as (typeof this.variantBlocks)[keyof typeof this.variantBlocks]
+                const variantGroup = variants[variantGroupName]
+                for (const variantItemName in variantGroup) {
+                    this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(
+                        variantGroup[variantItemName] ?? {},
+                    )
+                }
+            }
+        }
+
+        if (compoundVariants) {
+            for (const compound of compoundVariants) {
+                const { css: styles, ...conditions } = compound
+                this.compoundVariantBlocks.push({
+                    conditions: conditions as Record<string, string>,
+                    block: new CssObjectBlock(styles),
+                })
             }
         }
     }
@@ -276,6 +307,7 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))
                 .map(([_, b]) => b.asCssString(this.mainBlock.selector)),
+            ...this.compoundVariantBlocks.map(({ block }) => block.asCssString(this.mainBlock.selector)),
         ].join("\n\n")
     }
 }
