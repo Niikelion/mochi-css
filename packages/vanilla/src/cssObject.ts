@@ -258,8 +258,8 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
     public readonly variantBlocks: { [K in keyof V & string]: Record<keyof V[K] & string, CssObjectBlock> }
     /** Default variant selections */
     public readonly variantDefaults: Partial<RefineVariants<V>>
-    /** Compiled blocks for compound variants with their conditions */
-    public readonly compoundVariantBlocks: { conditions: Record<string, string>; block: CssObjectBlock }[]
+    /** Compound variant conditions and their parsed sub-blocks */
+    public readonly compoundVariants: { conditions: Record<string, string>; subBlocks: CssObjectSubBlock[] }[]
 
     /**
      * Creates a new CSSObject from style props.
@@ -269,7 +269,7 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
         this.mainBlock = new CssObjectBlock(props)
         this.variantBlocks = {} as typeof this.variantBlocks
         this.variantDefaults = defaultVariants ?? {}
-        this.compoundVariantBlocks = []
+        this.compoundVariants = []
 
         if (variants) {
             for (const variantGroupName in variants) {
@@ -287,9 +287,9 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
         if (compoundVariants) {
             for (const compound of compoundVariants) {
                 const { css: styles, ...conditions } = compound
-                this.compoundVariantBlocks.push({
+                this.compoundVariants.push({
                     conditions: conditions as Record<string, string>,
-                    block: new CssObjectBlock(styles),
+                    subBlocks: CssObjectSubBlock.fromProps(styles),
                 })
             }
         }
@@ -307,7 +307,18 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))
                 .map(([_, b]) => b.asCssString(this.mainBlock.selector)),
-            ...this.compoundVariantBlocks.map(({ block }) => block.asCssString(this.mainBlock.selector)),
+            ...this.compoundVariants.map(({ conditions, subBlocks }) => {
+                const variantSelectors = Object.entries(conditions)
+                    .toSorted(compareStringKey)
+                    .map(([variantName, optionName]) => {
+                        const block = this.variantBlocks[variantName]?.[optionName]
+                        return block?.selector ?? ""
+                    })
+                    .filter(Boolean)
+                    .join("")
+                const combinedSelector = `${this.mainBlock.selector}${variantSelectors}`
+                return subBlocks.map((b) => b.asCssString(combinedSelector)).join("\n\n")
+            }),
         ].join("\n\n")
     }
 }

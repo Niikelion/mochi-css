@@ -113,7 +113,7 @@ describe("css", () => {
         expect(empty.variant({})).toEqual("")
     })
 
-    it("should apply compound variant class only when all conditions match", () => {
+    it("should not add compound variant classes at runtime (handled by CSS)", () => {
         const styles = css({
             variants: {
                 color: {
@@ -128,27 +128,17 @@ describe("css", () => {
             compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
         })
 
-        const bothMatch = styles.variant({ color: "red", size: "large" })
-        const onlyColorMatch = styles.variant({ color: "red", size: "small" })
-        const onlySizeMatch = styles.variant({ color: "blue", size: "large" })
-        const neitherMatch = styles.variant({ color: "blue", size: "small" })
+        // variant() output only contains base + variant classes, no compound-specific class
+        const redLarge = styles.variant({ color: "red", size: "large" })
+        const redSmall = styles.variant({ color: "red", size: "small" })
+        const blueLarge = styles.variant({ color: "blue", size: "large" })
 
-        // compound class should be present only when both conditions match
-        expect(bothMatch).not.toEqual(onlyColorMatch)
-        expect(bothMatch).not.toEqual(onlySizeMatch)
-        expect(bothMatch).not.toEqual(neitherMatch)
-
-        // the compound class name is accessible from compoundVariantClassNames
-        const compoundClassName = styles.compoundVariantClassNames[0]?.className
-        expect(compoundClassName).toBeDefined()
-
-        expect(bothMatch).toContain(compoundClassName)
-        expect(onlyColorMatch).not.toContain(compoundClassName)
-        expect(onlySizeMatch).not.toContain(compoundClassName)
-        expect(neitherMatch).not.toContain(compoundClassName)
+        // same number of classes regardless of compound match — compound is CSS-level
+        expect(redLarge.split(" ").length).toEqual(redSmall.split(" ").length)
+        expect(redLarge.split(" ").length).toEqual(blueLarge.split(" ").length)
     })
 
-    it("should apply compound variant with default variants", () => {
+    it("should still resolve default variants correctly with compound variants present", () => {
         const styles = css({
             variants: {
                 color: {
@@ -167,98 +157,11 @@ describe("css", () => {
             compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
         })
 
-        // default variants match the compound condition
+        // default variants still resolve correctly
         expect(styles.variant({})).toEqual(styles.variant({ color: "red", size: "large" }))
 
-        // overriding one variant should break the compound match
+        // overriding one variant changes the output
         expect(styles.variant({ color: "blue" })).not.toEqual(styles.variant({}))
-    })
-
-    it("should support multiple compound variants", () => {
-        const styles = css({
-            variants: {
-                color: {
-                    red: { color: "red" },
-                    blue: { color: "blue" },
-                },
-                size: {
-                    small: { fontSize: 12 },
-                    large: { fontSize: 18 },
-                },
-            },
-            compoundVariants: [
-                { color: "red", size: "large", css: { fontWeight: "bold" } },
-                { color: "blue", size: "small", css: { textDecoration: "underline" } },
-            ],
-        })
-
-        const redLarge = styles.variant({ color: "red", size: "large" })
-        const blueSmall = styles.variant({ color: "blue", size: "small" })
-        const redSmall = styles.variant({ color: "red", size: "small" })
-
-        // each compound variant applies to its own combination
-        expect(redLarge).not.toEqual(redSmall)
-        expect(blueSmall).not.toEqual(redSmall)
-
-        // redSmall matches neither compound variant, so it has fewer classes
-        const redLargeClasses = redLarge.split(" ")
-        const redSmallClasses = redSmall.split(" ")
-        expect(redLargeClasses.length).toBeGreaterThan(redSmallClasses.length)
-    })
-
-    it("should merge compound variants when composing css objects", () => {
-        const base = css({
-            variants: {
-                color: {
-                    red: { color: "red" },
-                    blue: { color: "blue" },
-                },
-                size: {
-                    small: { fontSize: 12 },
-                    large: { fontSize: 18 },
-                },
-            },
-            compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
-        })
-
-        const extended = css(base, {
-            padding: 8,
-        })
-
-        expect(extended.compoundVariantClassNames).toHaveLength(1)
-        expect(extended.compoundVariantClassNames).toEqual(base.compoundVariantClassNames)
-    })
-
-    it("should handle compound variant with partial conditions", () => {
-        const styles = css({
-            variants: {
-                color: {
-                    red: { color: "red" },
-                    blue: { color: "blue" },
-                },
-                size: {
-                    small: { fontSize: 12 },
-                    large: { fontSize: 18 },
-                },
-            },
-            compoundVariants: [{ color: "red", css: { fontWeight: "bold" } }],
-        })
-
-        // compound with only color: red should match whenever color is red, regardless of size
-        const redLarge = styles.variant({ color: "red", size: "large" })
-        const redSmall = styles.variant({ color: "red", size: "small" })
-        const blueLarge = styles.variant({ color: "blue", size: "large" })
-
-        // both red variants should have the compound class
-        const redLargeClasses = new Set(redLarge.split(" "))
-        const redSmallClasses = new Set(redSmall.split(" "))
-        const blueLargeClasses = new Set(blueLarge.split(" "))
-
-        // find compound class (present in both red variants but not in blue)
-        const compoundClass = [...redLargeClasses].find(
-            (c) => redSmallClasses.has(c) && !blueLargeClasses.has(c) && c !== "",
-        )
-        expect(compoundClass).toBeDefined()
     })
 
     it("should handle variant() with missing variant group gracefully", () => {

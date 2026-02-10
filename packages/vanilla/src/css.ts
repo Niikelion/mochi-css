@@ -27,17 +27,17 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
      * @param classNames - Base class names to always include
      * @param variantClassNames - Mapping of variant names to option class names
      * @param defaultVariants - Default variant selections when not specified
-     * @param compoundVariantClassNames - Compound variant conditions and their class names
      */
     constructor(
         public readonly classNames: string[],
         public readonly variantClassNames: { [K in keyof V]: { [P in keyof V[K]]: string } },
         public readonly defaultVariants: Partial<RefineVariants<V>>,
-        public readonly compoundVariantClassNames: { conditions: Record<string, string>; className: string }[] = [],
     ) {}
 
     /**
      * Computes the final className string based on variant selections.
+     * Compound variants are handled purely via CSS combined selectors,
+     * so no runtime matching is needed here.
      * @param props - Variant selections
      * @returns Combined className string for use in components
      */
@@ -46,15 +46,6 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
             [...Object.keys(props), ...Object.keys(this.defaultVariants)].filter((k) => k in this.variantClassNames),
         )
 
-        // Resolve effective variant values for compound variant matching
-        const resolved: Record<string, string> = {}
-        for (const k of keys) {
-            const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]
-            if (variantKey != null) {
-                resolved[k] = variantKey.toString()
-            }
-        }
-
         return clsx(
             this.classNames,
             ...keys.values().map((k) => {
@@ -62,7 +53,7 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 if (!variantGroup) return false
 
-                const variantKey = resolved[k]
+                const variantKey = ((k in props ? props[k] : undefined) ?? this.defaultVariants[k])?.toString()
                 if (variantKey == null) return false
 
                 const selectedClassname = variantGroup[variantKey]
@@ -73,9 +64,6 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
 
                 return variantGroup[defaultKey.toString()]
             }),
-            ...this.compoundVariantClassNames
-                .filter(({ conditions }) => Object.entries(conditions).every(([k, v]) => resolved[k] === v))
-                .map(({ className }) => className),
         )
     }
 
@@ -102,10 +90,6 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
                 }),
             ) as { [K in keyof V]: { [P in keyof V[K]]: string } },
             object.variantDefaults,
-            object.compoundVariantBlocks.map(({ conditions, block }) => ({
-                conditions,
-                className: block.className,
-            })),
         )
     }
 }
@@ -140,7 +124,7 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
  * // Merging multiple styles
  * const combined = css(baseStyles, additionalStyles)
  */
-const emptyMochiCSS = new MochiCSS<AllVariants>([], {}, {}, [])
+const emptyMochiCSS = new MochiCSS<AllVariants>([], {}, {})
 
 export function css<V extends AllVariants[]>(
     ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
@@ -162,6 +146,5 @@ export function css<V extends AllVariants[]>(
         cssToMerge.flatMap((css) => css.classNames),
         cssToMerge.reduce((a, b) => Object.assign(a, b.variantClassNames), {}),
         cssToMerge.reduce((a, b) => Object.assign(a, b.defaultVariants), {}),
-        cssToMerge.flatMap((css) => css.compoundVariantClassNames),
     ) as MochiCSS<MergeCSSVariants<V>>
 }
