@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { createToken } from "@/token"
-import { CSSObject, CssObjectBlock, CssObjectSubBlock } from "@/cssObject"
+import { CSSObject, CssObjectBlock, CssObjectSubBlock, CompoundVariant } from "@/cssObject"
 import { MochiSelector } from "@/selector"
 import dedent from "dedent"
 import { StyleProps } from "@/props"
@@ -454,6 +454,157 @@ describe("CssObject", () => {
         expect(cssSource).toContain("grid-template-columns: 1fr;")
         expect(cssSource).toContain("grid-template-columns: 1fr 1fr;")
         expect(cssSource).toContain("@media (width >= 768px)")
+    })
+
+    it("should generate css code for compound variants using combined selectors", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                    blue: { color: "blue" },
+                },
+                size: {
+                    small: { fontSize: 12 },
+                    large: { fontSize: 18 },
+                },
+            },
+            compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(obj.compoundVariants).toHaveLength(1)
+        // compound variant should use combined variant selectors instead of its own class
+        const colorRedSelector = obj.variantBlocks.color.red.selector
+        const sizeLargeSelector = obj.variantBlocks.size.large.selector
+        expect(cssSource).toContain(`${obj.mainBlock.selector}${colorRedSelector}${sizeLargeSelector}`)
+        expect(cssSource).toContain("font-weight: bold;")
+    })
+
+    it("should store compound variant conditions correctly", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                },
+                size: {
+                    large: { fontSize: 18 },
+                },
+            },
+            compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
+        })
+
+        expect(obj.compoundVariants[0]?.conditions).toEqual({ color: "red", size: "large" })
+    })
+
+    it("should handle multiple compound variants", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                    blue: { color: "blue" },
+                },
+                size: {
+                    small: { fontSize: 12 },
+                    large: { fontSize: 18 },
+                },
+            },
+            compoundVariants: [
+                { color: "red", size: "large", css: { fontWeight: "bold" } },
+                { color: "blue", size: "small", css: { textDecoration: "underline" } },
+            ],
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(obj.compoundVariants).toHaveLength(2)
+        expect(cssSource).toContain("font-weight: bold;")
+        expect(cssSource).toContain("text-decoration: underline;")
+    })
+
+    it("should handle compound variants with nested selectors", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                },
+                size: {
+                    large: { fontSize: 18 },
+                },
+            },
+            compoundVariants: [
+                {
+                    color: "red",
+                    size: "large",
+                    css: {
+                        fontWeight: "bold",
+                        "&:hover": { fontWeight: 900 },
+                    },
+                },
+            ],
+        })
+
+        const cssSource = obj.asCssString()
+
+        expect(cssSource).toContain("font-weight: bold;")
+        expect(cssSource).toContain(":hover")
+        expect(cssSource).toContain("font-weight: 900;")
+    })
+
+    it("should have empty compoundVariants when none specified", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                },
+            },
+        })
+
+        expect(obj.compoundVariants).toEqual([])
+    })
+
+    it("should generate compound variant with partial conditions using single variant selector", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                    blue: { color: "blue" },
+                },
+                size: {
+                    small: { fontSize: 12 },
+                    large: { fontSize: 18 },
+                },
+            },
+            compoundVariants: [{ color: "red", css: { fontWeight: "bold" } }],
+        })
+
+        const cssSource = obj.asCssString()
+
+        const colorRedSelector = obj.variantBlocks.color.red.selector
+        expect(cssSource).toContain(`${obj.mainBlock.selector}${colorRedSelector}`)
+        expect(cssSource).toContain("font-weight: bold;")
+    })
+
+    it("should skip unknown variant names in compound variant conditions", () => {
+        const obj = new CSSObject({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                },
+            },
+            compoundVariants: [
+                { color: "red", size: "large", css: { fontWeight: "bold" } } as CompoundVariant<{
+                    color: { red: object }
+                }>,
+            ],
+        })
+
+        const cssSource = obj.asCssString()
+
+        // only the known variant selector should appear, unknown "size" is skipped
+        const colorRedSelector = obj.variantBlocks.color.red.selector
+        expect(cssSource).toContain(`${obj.mainBlock.selector}${colorRedSelector}`)
+        expect(cssSource).toContain("font-weight: bold;")
     })
 
     it("should silently ignore undefined variants", () => {

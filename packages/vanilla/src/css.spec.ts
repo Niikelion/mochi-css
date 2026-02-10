@@ -113,6 +113,57 @@ describe("css", () => {
         expect(empty.variant({})).toEqual("")
     })
 
+    it("should not add compound variant classes at runtime (handled by CSS)", () => {
+        const styles = css({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                    blue: { color: "blue" },
+                },
+                size: {
+                    small: { fontSize: 12 },
+                    large: { fontSize: 18 },
+                },
+            },
+            compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
+        })
+
+        // variant() output only contains base + variant classes, no compound-specific class
+        const redLarge = styles.variant({ color: "red", size: "large" })
+        const redSmall = styles.variant({ color: "red", size: "small" })
+        const blueLarge = styles.variant({ color: "blue", size: "large" })
+
+        // same number of classes regardless of compound match — compound is CSS-level
+        expect(redLarge.split(" ").length).toEqual(redSmall.split(" ").length)
+        expect(redLarge.split(" ").length).toEqual(blueLarge.split(" ").length)
+    })
+
+    it("should still resolve default variants correctly with compound variants present", () => {
+        const styles = css({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                    blue: { color: "blue" },
+                },
+                size: {
+                    small: { fontSize: 12 },
+                    large: { fontSize: 18 },
+                },
+            },
+            defaultVariants: {
+                color: "red",
+                size: "large",
+            },
+            compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
+        })
+
+        // default variants still resolve correctly
+        expect(styles.variant({})).toEqual(styles.variant({ color: "red", size: "large" }))
+
+        // overriding one variant changes the output
+        expect(styles.variant({ color: "blue" })).not.toEqual(styles.variant({}))
+    })
+
     it("should handle variant() with missing variant group gracefully", () => {
         const mochi = new MochiCSS<{ broken: { value: object } }>(["base"], { broken: undefined } as never, {})
         expect(mochi.variant({ broken: "value" })).toEqual("base")

@@ -36,6 +36,8 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
 
     /**
      * Computes the final className string based on variant selections.
+     * Compound variants are handled purely via CSS combined selectors,
+     * so no runtime matching is needed here.
      * @param props - Variant selections
      * @returns Combined className string for use in components
      */
@@ -43,6 +45,7 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
         const keys = new Set<keyof V & string>(
             [...Object.keys(props), ...Object.keys(this.defaultVariants)].filter((k) => k in this.variantClassNames),
         )
+
         return clsx(
             this.classNames,
             ...keys.values().map((k) => {
@@ -50,10 +53,10 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 if (!variantGroup) return false
 
-                const variantKey = (k in props ? props[k] : undefined) ?? this.defaultVariants[k]
+                const variantKey = ((k in props ? props[k] : undefined) ?? this.defaultVariants[k])?.toString()
                 if (variantKey == null) return false
 
-                const selectedClassname = variantGroup[variantKey.toString()]
+                const selectedClassname = variantGroup[variantKey]
                 if (selectedClassname !== undefined) return selectedClassname
 
                 const defaultKey = this.defaultVariants[k]
