@@ -26,6 +26,7 @@ Styles are statically extracted at build time through a PostCSS plugin, making y
 - **Great type support** - TypeScript-first DX
 - **Minimal restrictions** - define styles anywhere your code allows
 - **Tooling agnostic** - works with anything that supports PostCSS
+- **CSS splitting** - improve your load times utilizing tree-shaking
 
 ---
 
@@ -93,7 +94,6 @@ Benchmarks and performance comparisons will be released at a later stage.
 | Feature                        | Status         | Notes                                                                                                                                                  |
 |--------------------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Benchmarks**                 | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                                             |
-| **Tree-shaking**               | 🚧 In Progress | Support injecting css outside globals.css file, making it possible for the frameworks like NextJS to tree-shake generated styles                       |
 | **Mochi-CSS/mango**            | 🕒 Queued      | Theming library built on top of Mochi-CSS/vanilla                                                                                                      |
 | **Stitches.js feature parity** | 🚧 In Progress | Implement all of the features of stitches.js to allow for seamless transition                                                                          |
 | **Stitches.js adapter**        | 🕒 Queued      | Drop-in replacement for `css`, `styled`, `globalCss` and `createTheme` from Stiches.js that runs on Mochi-CSS                                          |
