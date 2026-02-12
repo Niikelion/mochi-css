@@ -1,5 +1,21 @@
 # @mochi-css/builder
 
+## 1.0.0
+
+### Major Changes
+
+- ba15ebe: Refactored builder & implemented tsuki
+
+### Minor Changes
+
+- 82f71b2: Implemented treeshaking and added vite & next plugins
+
+### Patch Changes
+
+- Updated dependencies [ba15ebe]
+- Updated dependencies [742b4b2]
+  - @mochi-css/vanilla@1.0.0
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,5 +1,21 @@
 # @mochi-css/postcss
 
+## 1.0.0
+
+### Major Changes
+
+- ba15ebe: Refactored builder & implemented tsuki
+
+### Minor Changes
+
+- 82f71b2: Implemented treeshaking and added vite & next plugins
+
+### Patch Changes
+
+- Updated dependencies [82f71b2]
+- Updated dependencies [ba15ebe]
+  - @mochi-css/builder@1.0.0
+
 ## 0.1.0
 
 ### Minor Changes

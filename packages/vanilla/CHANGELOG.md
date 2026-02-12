@@ -1,5 +1,15 @@
 # @mochi-css/vanilla
 
+## 1.0.0
+
+### Major Changes
+
+- ba15ebe: Refactored builder & implemented tsuki
+
+### Minor Changes
+
+- 742b4b2: Implemented compound variants
+
 ## 0.1.0
 
 ### Minor Changes

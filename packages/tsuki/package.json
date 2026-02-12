@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/tsuki",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "license": "MIT",
     "bin": "./dist/index.js",
     "files": [
