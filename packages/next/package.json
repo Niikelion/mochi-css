@@ -2,7 +2,7 @@
     "name": "@mochi-css/next",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "private": true,
-    "version": "1.0.0",
+    "version": "1.0.1",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",

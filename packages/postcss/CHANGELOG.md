@@ -1,5 +1,11 @@
 # @mochi-css/postcss
 
+## 1.0.1
+
+### Patch Changes
+
+- @mochi-css/builder@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
