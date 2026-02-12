@@ -93,13 +93,14 @@ Benchmarks and performance comparisons will be released at a later stage.
 | Feature                        | Status         | Notes                                                                                                                                                  |
 |--------------------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Benchmarks**                 | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                                             |
-| **Tree-shaking**               | 🕒 Queued      | Support injecting css outside globals.css file, making it possible for the frameworks like NextJS to tree-shake generated styles                       |
+| **Tree-shaking**               | 🚧 In Progress | Support injecting css outside globals.css file, making it possible for the frameworks like NextJS to tree-shake generated styles                       |
 | **Mochi-CSS/mango**            | 🕒 Queued      | Theming library built on top of Mochi-CSS/vanilla                                                                                                      |
 | **Stitches.js feature parity** | 🚧 In Progress | Implement all of the features of stitches.js to allow for seamless transition                                                                          |
 | **Stitches.js adapter**        | 🕒 Queued      | Drop-in replacement for `css`, `styled`, `globalCss` and `createTheme` from Stiches.js that runs on Mochi-CSS                                          |
 | **Partial PandaCSS adapter**   | 🕒 Queued      | Drop-in replacement for `styled` and `cva` from PandaCSS. Other features may not be supported due to different architectures of PandaCSS and Mochi-CSS |
 | **Standalone css building**    | 🕒 Queued      | Extract and bundle static styles from a library                                                                                                        |
 | **CSS optimization**           | 🕒 Queued      | Perform simple optimizations on the generated code                                                                                                     |
+| **Derived extractors**         | 🕒 Queued      | Support functions like `createTheme` from stitches.js that return `styled` function and other style extractors                                         |
 
 Status legend
 
