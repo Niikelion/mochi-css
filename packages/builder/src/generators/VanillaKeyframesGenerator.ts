@@ -26,9 +26,14 @@ export class VanillaKeyframesGenerator implements StyleGenerator {
         }
     }
 
-    async generateStyles(): Promise<{ global: string }> {
-        const css = new Set<string>()
+    async generateStyles(): Promise<{ files: Record<string, string> }> {
+        const filesCss = new Map<string, Set<string>>()
         for (const { source, args } of this.collectedKeyframes) {
+            let css = filesCss.get(source)
+            if (!css) {
+                css = new Set<string>()
+                filesCss.set(source, css)
+            }
             for (const stops of args) {
                 try {
                     const kf = new KeyframesObject(stops)
@@ -44,9 +49,11 @@ export class VanillaKeyframesGenerator implements StyleGenerator {
                 }
             }
         }
-        const sortedCss = [...css.values()].sort()
-        return {
-            global: sortedCss.join("\n\n"),
+        const files: Record<string, string> = {}
+        for (const [source, css] of filesCss) {
+            const sortedCss = [...css.values()].sort()
+            files[source] = sortedCss.join("\n\n")
         }
+        return { files }
     }
 }

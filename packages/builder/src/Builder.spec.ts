@@ -5,6 +5,7 @@ import {Builder} from "@/Builder";
 import {RolldownBundler} from "@/Bundler";
 import {VmRunner} from "@/Runner";
 import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
+import { mochiKeyframesFunctionExtractor } from "@/extractors/VanillaKeyframesExtractor"
 
 describe("Builder", () => {
     it("extracts style expressions from css calls", async () => {
@@ -31,8 +32,9 @@ describe("Builder", () => {
         const generator = generators.get("@mochi-css/vanilla:css")!
         const result = await generator.generateStyles()
 
-        expect(result.global).toContain("background-color: gray")
-        expect(result.global).toContain("background-color: white")
+        const fileCss = Object.values(result.files!).join("\n\n")
+        expect(fileCss).toContain("background-color: gray")
+        expect(fileCss).toContain("background-color: white")
     })
 
     it("strips unused module-level symbols", async () => {
@@ -85,5 +87,55 @@ describe("Builder", () => {
                 color
             });\n
         `)
+    })
+
+    it("VanillaCssGenerator returns per-file CSS keyed by source", async () => {
+        const moduleA = await parseSource(/* language=typescript */ dedent`
+            import { css } from "@mochi-css/vanilla"
+            export const a = css({ color: "red" })
+        `, "a.ts")
+
+        const moduleB = await parseSource(/* language=typescript */ dedent`
+            import { css } from "@mochi-css/vanilla"
+            export const b = css({ color: "blue" })
+        `, "b.ts")
+
+        const builder = new Builder({
+            rootDir: "./",
+            extractors: [mochiCssFunctionExtractor],
+            bundler: new RolldownBundler(),
+            runner: new VmRunner()
+        })
+
+        const generators = await builder.collectStylesFromModules([moduleA, moduleB])
+        const generator = generators.get("@mochi-css/vanilla:css")!
+        const result = await generator.generateStyles()
+
+        expect(result.files).toBeDefined()
+        expect(result.files!["a.ts"]).toContain("color: red")
+        expect(result.files!["b.ts"]).toContain("color: blue")
+        expect(result.files!["a.ts"]).not.toContain("color: blue")
+    })
+
+    it("VanillaKeyframesGenerator returns per-file CSS", async () => {
+        const module = await parseSource(/* language=typescript */ dedent`
+            import { keyframes } from "@mochi-css/vanilla"
+            export const fade = keyframes({ from: { opacity: "0" }, to: { opacity: "1" } })
+        `, "anim.ts")
+
+        const builder = new Builder({
+            rootDir: "./",
+            extractors: [mochiKeyframesFunctionExtractor],
+            bundler: new RolldownBundler(),
+            runner: new VmRunner()
+        })
+
+        const generators = await builder.collectStylesFromModules([module])
+        const generator = generators.get("@mochi-css/vanilla:keyframes")!
+        const result = await generator.generateStyles()
+
+        expect(result.files).toBeDefined()
+        expect(result.files!["anim.ts"]).toContain("@keyframes")
+        expect(result.global).toBeUndefined()
     })
 })

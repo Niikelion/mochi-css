@@ -1,16 +1,14 @@
-import fs from "fs/promises";
-import { Dirent } from "fs";
-import path from "path";
-import * as SWC from "@swc/core";
-import {ProjectIndex, ResolveImport, Module} from "@/ProjectIndex";
-import {parseFile} from "@/parse";
-import {Bundler, FileLookup} from "@/Bundler";
-import {Runner, VmRunner} from "@/Runner";
-import dedent from "dedent";
+import path from "path"
+import {ProjectIndex, ResolveImport, Module} from "@/ProjectIndex"
+import {parseFile} from "@/parse"
+import {Bundler, FileLookup} from "@/Bundler"
+import {Runner, VmRunner} from "@/Runner"
+import dedent from "dedent"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
-import { generateMinimalModuleItem } from "@/moduleMinimizer"
 import { MochiError, OnDiagnostic } from "@/diagnostics"
+import { findAllFiles } from "@/findAllFiles"
+import { getExtractorId, extractRelevantSymbols } from "@/extractRelevantSymbols"
 
 const rootFileSuffix = dedent`
     declare global {
@@ -18,126 +16,8 @@ const rootFileSuffix = dedent`
     }
 `
 
-export function getExtractorId(extractor: StyleExtractor): string {
-    return `${extractor.importPath}:${extractor.symbolName}`
-}
-
-const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
-
-/**
- * Recursively finds all TypeScript/TSX files in a directory.
- */
-export async function findAllFiles(dir: string): Promise<string[]> {
-    let entries: Dirent[] = []
-    try {
-        entries = await fs.readdir(dir, { withFileTypes: true })
-    } catch (err) {
-        throw new MochiError('MOCHI_FILE_READ', `Cannot read directory`, dir, err)
-    }
-    const results = await Promise.all(entries.map(async entry => {
-        const res = path.resolve(dir, entry.name)
-        if (entry.isDirectory()) {
-            return await findAllFiles(res)
-        }
-        if (/\.(ts|tsx)$/.test(entry.name)) {
-            return [res]
-        }
-        return []
-    }))
-    return results.flat()
-}
-
-/**
- * Extracts relevant symbols from a project index, generating minimal code for each file.
- */
-export function extractRelevantSymbols(index: ProjectIndex): Record<string, string | null> {
-    return Object.fromEntries(index.files.map(([filePath, info]) => {
-        const styles = info.styleExpressions
-
-        if (styles.size === 0 && info.usedBindings.size === 0) return [filePath, null]
-
-        // Build the module body from used bindings, sorted by original source position
-        const moduleBody: SWC.ModuleItem[] = []
-        const processedItems = new Set<SWC.ModuleItem>()
-
-        // Collect unique module items
-        const usedItems: SWC.ModuleItem[] = []
-        for (const binding of info.usedBindings) {
-            const item = binding.moduleItem
-            if (processedItems.has(item)) continue
-            processedItems.add(item)
-            usedItems.push(item)
-        }
-
-        // Sort by original position in source file
-        usedItems.sort((a, b) => a.span.start - b.span.start)
-
-        // Generate minimal declarations
-        for (const item of usedItems) {
-            const minimalItem = generateMinimalModuleItem(item, info)
-            if (minimalItem) {
-                moduleBody.push(minimalItem)
-            }
-        }
-
-        // Only include style expressions if this file has them
-        if (styles.size === 0) {
-            // This file only has dependencies needed by other files
-            if (moduleBody.length === 0) return [filePath, null]
-
-            const code = SWC.printSync({
-                type: "Module",
-                span: emptySpan,
-                body: moduleBody,
-                interpreter: ""
-            }).code
-
-            return [filePath, code]
-        }
-
-        // Generate a register call for each extractor
-        const registerStatements: SWC.ExpressionStatement[] = []
-        for (const [extractor, expressions] of info.extractedExpressions) {
-            if (expressions.length === 0) continue
-
-            const extractorId = getExtractorId(extractor)
-            const args = expressions.map(expression => ({ expression }))
-            const registerExpression: SWC.CallExpression & { ctxt: number } = {
-                type: "CallExpression",
-                span: emptySpan,
-                ctxt: 0,
-                arguments: [
-                    { expression: { type: "StringLiteral", span: emptySpan, value: extractorId } },
-                    { expression: { type: "StringLiteral", span: emptySpan, value: filePath } },
-                    ...args
-                ],
-                callee: {
-                    type: "Identifier",
-                    span: emptySpan,
-                    ctxt: 1,
-                    value: "registerStyles",
-                    optional: false
-                }
-            }
-            registerStatements.push({
-                type: "ExpressionStatement",
-                span: emptySpan,
-                expression: registerExpression
-            })
-        }
-
-        const code = SWC.printSync({
-            type: "Module",
-            span: emptySpan,
-            body: [
-                ...moduleBody,
-                ...registerStatements
-            ],
-            interpreter: ""
-        }).code
-
-        return [filePath, code]
-    }))
+export type CollectCssOptions = {
+    onDep?: (path: string) => void
 }
 
 export type BuilderOptions = {
@@ -145,6 +25,7 @@ export type BuilderOptions = {
     extractors: StyleExtractor[]
     bundler: Bundler
     runner: Runner
+    splitBySource?: boolean
     onDiagnostic?: OnDiagnostic
 }
 
@@ -263,9 +144,8 @@ export class Builder {
         return await this.collectStylesFromModules(modules)
     }
 
-    //TODO: Allow tree-shaking
-    public async collectMochiCss(onDep?: (path: string) => void): Promise<{ global?: string, files?: Record<string, string> }> {
-        const generators = await this.collectMochiStyles(onDep)
+    public async collectMochiCss(options?: CollectCssOptions): Promise<{ global?: string, files?: Record<string, string> }> {
+        const generators = await this.collectMochiStyles(options?.onDep)
 
         // Collect and merge results from all generators
         const globalCss: string[] = []
@@ -277,7 +157,22 @@ export class Builder {
                 globalCss.push(result.global)
             }
             if (result.files) {
-                Object.assign(files, result.files)
+                for (const [source, css] of Object.entries(result.files)) {
+                    files[source] = files[source] ? `${files[source]}\n\n${css}` : css
+                }
+            }
+        }
+
+        if (!this.options.splitBySource) {
+            // Merge files into global CSS
+            const allCss = [...globalCss]
+            const sortedFiles = Object.keys(files).sort()
+            for (const key of sortedFiles) {
+                const css = files[key]
+                if (css) allCss.push(css)
+            }
+            return {
+                global: allCss.length > 0 ? allCss.join("\n\n") : undefined,
             }
         }
 
