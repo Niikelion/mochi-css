@@ -100,11 +100,10 @@ Benchmarks and performance comparisons will be released at a later stage.
 | **Partial PandaCSS adapter**   | 🕒 Queued      | Drop-in replacement for `styled` and `cva` from PandaCSS. Other features may not be supported due to different architectures of PandaCSS and Mochi-CSS |
 | **Standalone css building**    | 🕒 Queued      | Extract and bundle static styles from a library                                                                                                        |
 | **CSS optimization**           | 🕒 Queued      | Perform simple optimizations on the generated code                                                                                                     |
-| **Derived extractors**         | 🕒 Queued      | Support functions like `createTheme` from stitches.js that return `styled` function and other style extractors                                         |
 
 Status legend
 
-🚧 In Progress — actively being worked on  
+🚧 In Progress — actively being worked on
 🕒 Queued — planned, not yet in development
 
 ---
