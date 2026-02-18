@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { MochiError } from "@/diagnostics"
+import { MochiError, getErrorMessage } from "@/diagnostics"
 
 describe("MochiError", () => {
     it("stores code and message", () => {
@@ -19,5 +19,16 @@ describe("MochiError", () => {
     it("is an instance of Error", () => {
         const err = new MochiError("MOCHI_TEST", "msg")
         expect(err).toBeInstanceOf(Error)
+    })
+})
+
+describe("getErrorMessage", () => {
+    it("returns message from Error instances", () => {
+        expect(getErrorMessage(new Error("boom"))).toBe("boom")
+    })
+
+    it("stringifies non-Error values", () => {
+        expect(getErrorMessage("raw string")).toBe("raw string")
+        expect(getErrorMessage(42)).toBe("42")
     })
 })

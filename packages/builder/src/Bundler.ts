@@ -20,6 +20,15 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
         }
     }
 
+    const tryResolve = (resolvedPath: string): string | null => {
+        if (normalizedFiles.has(resolvedPath)) return resolvedPath
+        for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
+            const withExt = resolvedPath + ext
+            if (normalizedFiles.has(withExt)) return withExt
+        }
+        return null
+    }
+
     return {
         name: "virtual-fs",
         resolveId(source, importer = rootFilePath) {
@@ -28,9 +37,7 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
                 : path.resolve(path.dirname(importer), source)
             )
 
-            if (!normalizedFiles.has(resolvedPath)) return null
-
-            return resolvedPath
+            return tryResolve(resolvedPath)
         },
         load(id) {
             const normalizedId = normalizeFilePath(id)

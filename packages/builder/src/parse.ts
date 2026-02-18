@@ -1,7 +1,7 @@
 import {Module} from "@/ProjectIndex";
 import fs from "fs/promises";
 import * as SWC from "@swc/core";
-import {MochiError} from "@/diagnostics";
+import {MochiError, getErrorMessage} from "@/diagnostics";
 
 export async function parseSource(source: string, filePath: string): Promise<Module> {
     try {
@@ -14,7 +14,7 @@ export async function parseSource(source: string, filePath: string): Promise<Mod
             filePath
         }
     } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
+        const message = getErrorMessage(err)
         throw new MochiError('MOCHI_PARSE', message, filePath, err)
     }
 }
@@ -24,7 +24,7 @@ export async function parseFile(filePath: string): Promise<Module> {
     try {
         source = await fs.readFile(filePath, "utf8")
     } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
+        const message = getErrorMessage(err)
         throw new MochiError('MOCHI_FILE_READ', message, filePath, err)
     }
     return await parseSource(source, filePath)

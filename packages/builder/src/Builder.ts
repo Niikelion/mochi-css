@@ -6,13 +6,13 @@ import {Runner, VmRunner} from "@/Runner"
 import dedent from "dedent"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
-import { MochiError, OnDiagnostic } from "@/diagnostics"
+import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
 import { getExtractorId, extractRelevantSymbols } from "@/extractRelevantSymbols"
 
 const rootFileSuffix = dedent`
     declare global {
-        function registerStyles(extractorId: string, source: string, ...args: any[]): void
+        const extractors: Record<string, (source: string, ...args: any[]) => Record<string, any>>
     }
 `
 
@@ -56,7 +56,7 @@ export class Builder {
         try {
             return await this.options.bundler.bundle(rootPath, fileLookup)
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err)
+            const message = getErrorMessage(err)
             throw new MochiError('MOCHI_BUNDLE', message, undefined, err)
         }
     }
@@ -64,26 +64,38 @@ export class Builder {
     private async executeCode(code: string, generators: Map<string, StyleGenerator>) {
         const onDiagnostic = this.options.onDiagnostic
         const runner = new VmRunner()
-        try {
-            await runner.execute(code, {
-                registerStyles(extractorId: string, source: string, ...args: unknown[]) {
-                    const generator = generators.get(extractorId)
-                    if (!generator) return
-                    try {
-                        generator.collectArgs(source, args)
-                    } catch (err) {
-                        const message = err instanceof Error ? err.message : String(err)
-                        onDiagnostic?.({
-                            code: 'MOCHI_EXEC',
-                            message: `Failed to collect styles: ${message}`,
-                            severity: 'warning',
-                            file: source,
-                        })
+
+        const wrapGenerator = (generator: StyleGenerator): ((source: string, ...args: unknown[]) => Record<string, unknown>) => {
+            return (source: string, ...args: unknown[]) => {
+                try {
+                    const subGenerators = generator.collectArgs(source, args)
+                    const result: Record<string, unknown> = {}
+                    for (const [name, subGen] of Object.entries(subGenerators ?? {})) {
+                        result[name] = wrapGenerator(subGen)
                     }
+                    return result
+                } catch (err) {
+                    const message = getErrorMessage(err)
+                    onDiagnostic?.({
+                        code: 'MOCHI_EXEC',
+                        message: `Failed to collect styles: ${message}`,
+                        severity: 'warning',
+                        file: source,
+                    })
+                    return {}
                 }
-            })
+            }
+        }
+
+        const extractorsObj: Record<string, (source: string, ...args: unknown[]) => Record<string, unknown>> = {}
+        for (const [id, generator] of generators) {
+            extractorsObj[id] = wrapGenerator(generator)
+        }
+
+        try {
+            await runner.execute(code, { extractors: extractorsObj })
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err)
+            const message = getErrorMessage(err)
             throw new MochiError('MOCHI_EXEC', message, undefined, err)
         }
     }
@@ -114,6 +126,7 @@ export class Builder {
 
         const onDiagnostic = this.options.onDiagnostic
         const index = new ProjectIndex(modules, this.options.extractors, resolveImport, onDiagnostic)
+        index.discoverCrossFileDerivedExtractors()
         index.propagateUsages()
         const resultingFiles = extractRelevantSymbols(index)
 
