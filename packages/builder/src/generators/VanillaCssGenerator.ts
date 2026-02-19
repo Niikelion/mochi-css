@@ -1,6 +1,6 @@
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { CSSObject, StyleProps } from "@mochi-css/vanilla"
-import { OnDiagnostic } from "@/diagnostics"
+import { OnDiagnostic, getErrorMessage } from "@/diagnostics"
 
 export class VanillaCssGenerator implements StyleGenerator {
     private readonly collectedStyles: { source: string, args: StyleProps[] }[] = []
@@ -39,7 +39,7 @@ export class VanillaCssGenerator implements StyleGenerator {
                     const styleCss = new CSSObject(style).asCssString()
                     css.add(styleCss)
                 } catch (err) {
-                    const message = err instanceof Error ? err.message : String(err)
+                    const message = getErrorMessage(err)
                     this.onDiagnostic?.({
                         code: 'MOCHI_STYLE_GENERATION',
                         message: `Failed to generate CSS: ${message}`,

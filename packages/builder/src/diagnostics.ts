@@ -9,6 +9,10 @@ export type Diagnostic = {
 
 export type OnDiagnostic = (diagnostic: Diagnostic) => void
 
+export function getErrorMessage(err: unknown): string {
+    return err instanceof Error ? err.message : String(err)
+}
+
 export class MochiError extends Error {
     constructor(
         public readonly code: string,

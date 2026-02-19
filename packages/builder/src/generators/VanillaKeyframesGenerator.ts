@@ -1,6 +1,6 @@
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { KeyframesObject, KeyframeStops } from "@mochi-css/vanilla"
-import { OnDiagnostic } from "@/diagnostics"
+import { OnDiagnostic, getErrorMessage } from "@/diagnostics"
 
 export class VanillaKeyframesGenerator implements StyleGenerator {
     private readonly collectedKeyframes: { source: string; args: KeyframeStops[] }[] = []
@@ -39,7 +39,7 @@ export class VanillaKeyframesGenerator implements StyleGenerator {
                     const kf = new KeyframesObject(stops)
                     css.add(kf.asCssString())
                 } catch (err) {
-                    const message = err instanceof Error ? err.message : String(err)
+                    const message = getErrorMessage(err)
                     this.onDiagnostic?.({
                         code: "MOCHI_KEYFRAMES_GENERATION",
                         message: `Failed to generate keyframes CSS: ${message}`,

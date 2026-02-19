@@ -386,6 +386,8 @@ const fadeInStyle = css({
 For more control over animation timing, use percentage-based stops:
 
 ```ts
+import { keyframes, css } from "@mochi-css/vanilla"
+
 const bounce = keyframes({
     "0%": { transform: "translateY(0)" },
     "50%": { transform: "translateY(-20px)" },
@@ -402,6 +404,8 @@ const bouncingElement = css({
 Each stop can contain multiple CSS properties with auto-units:
 
 ```ts
+import { keyframes } from "@mochi-css/vanilla"
+
 const grow = keyframes({
     from: {
         opacity: 0,
@@ -414,3 +418,4 @@ const grow = keyframes({
         fontSize: 24  // becomes 24px
     }
 })
+```

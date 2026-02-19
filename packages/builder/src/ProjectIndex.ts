@@ -46,6 +46,14 @@ export interface LocalImport {
     exportName: string  // original export name
 }
 
+export interface DerivedExtractorBinding {
+    extractor: StyleExtractor
+    parentExtractor: StyleExtractor
+    parentCallExpression: SWC.CallExpression
+    propertyName: string
+    localIdentifier: SWC.Identifier
+}
+
 export interface FileInfo {
     filePath: string
     ast: SWC.Module
@@ -56,6 +64,8 @@ export interface FileInfo {
     localImports: RefMap<LocalImport>
     usedBindings: Set<BindingInfo>
     exports: Map<string, Ref>
+    derivedExtractorBindings: RefMap<DerivedExtractorBinding>
+    exportedDerivedExtractors: Map<string, DerivedExtractorBinding>
 }
 
 export class RefMap<T> {
@@ -80,6 +90,14 @@ export class RefMap<T> {
     public get(ref: Ref): T | undefined {
         if (ref.id === undefined) return undefined
         return this.data.get(ref.name)?.get(ref.id)
+    }
+
+    public get size(): number {
+        let count = 0
+        for (const map of this.data.values()) {
+            count += map.size
+        }
+        return count
     }
 
     // Get by name only (returns first match) - useful for module-level lookups
@@ -179,6 +197,81 @@ function collectBindingsFromPattern(
     }
 }
 
+function discoverDerivedFromDeclarator(
+    declarator: SWC.VariableDeclarator,
+    styleExtractorIdentifiers: RefMap<StyleExtractor>,
+    derivedExtractorBindings: RefMap<DerivedExtractorBinding>,
+    parentCallsWithDerived: Set<SWC.CallExpression>,
+    filePath: string,
+    onDiagnostic?: OnDiagnostic,
+): void {
+    if (declarator.init?.type !== 'CallExpression') return
+    if (declarator.init.callee.type !== 'Identifier') return
+
+    const calleeRef = idToRef(declarator.init.callee)
+    const parentExtractor = styleExtractorIdentifiers.get(calleeRef)
+    if (!parentExtractor?.derivedExtractors) return
+
+    const extractorName = `${parentExtractor.importPath}:${parentExtractor.symbolName}`
+
+    if (declarator.id.type !== 'ObjectPattern') {
+        onDiagnostic?.({
+            code: 'MOCHI_INVALID_EXTRACTOR_USAGE',
+            message: `Return value of "${extractorName}" must be destructured with an object pattern ` +
+                `(e.g. \`const { css } = ${parentExtractor.symbolName}(...)\`), ` +
+                `but was assigned to a ${declarator.id.type === 'Identifier' ? 'variable' : 'non-object pattern'}. ` +
+                `Sub-extractors will not be discovered.`,
+            severity: 'warning',
+            file: filePath,
+            line: declarator.init.span.start,
+        })
+        return
+    }
+
+    const hasRestSpread = declarator.id.properties.some(p => p.type === 'RestElement')
+    if (hasRestSpread) {
+        onDiagnostic?.({
+            code: 'MOCHI_INVALID_EXTRACTOR_USAGE',
+            message: `Destructuring of "${extractorName}" must not use rest spread (\`...\`). ` +
+                `Each sub-extractor must be explicitly named so it can be statically analyzed.`,
+            severity: 'warning',
+            file: filePath,
+            line: declarator.init.span.start,
+        })
+        return
+    }
+
+    parentCallsWithDerived.add(declarator.init)
+
+    for (const prop of declarator.id.properties) {
+        let keyName: string | null = null
+        let localId: SWC.Identifier | null = null
+
+        if (prop.type === 'AssignmentPatternProperty') {
+            keyName = prop.key.value
+            localId = prop.key
+        } else if (prop.type === 'KeyValuePatternProperty') {
+            if (prop.key.type === 'Identifier') keyName = prop.key.value
+            if (prop.value.type === 'Identifier') localId = prop.value
+        }
+
+        if (!keyName || !localId) continue
+
+        const derivedExtractor = parentExtractor.derivedExtractors.get(keyName)
+        if (!derivedExtractor) continue
+
+        const ref = idToRef(localId)
+        derivedExtractorBindings.set(ref, {
+            extractor: derivedExtractor,
+            parentExtractor,
+            parentCallExpression: declarator.init,
+            propertyName: keyName,
+            localIdentifier: localId
+        })
+        styleExtractorIdentifiers.set(ref, derivedExtractor)
+    }
+}
+
 type ExtractContext = {
     scopeDepth: number
     currentModuleItem: SWC.ModuleItem | null
@@ -213,6 +306,52 @@ function extractData(
         }
     }
 
+    // Pass 1.5: Discover derived extractors from destructuring
+    const derivedExtractorBindings = new RefMap<DerivedExtractorBinding>()
+    const parentCallsWithDerived = new Set<SWC.CallExpression>()
+
+    for (const item of ast.body) {
+        let varDecl: SWC.VariableDeclaration | null = null
+        if (item.type === 'VariableDeclaration') {
+            varDecl = item
+        } else if (item.type === 'ExportDeclaration' && item.declaration.type === 'VariableDeclaration') {
+            varDecl = item.declaration
+        }
+        if (!varDecl) continue
+
+        for (const declarator of varDecl.declarations) {
+            discoverDerivedFromDeclarator(
+                declarator, styleExtractorIdentifiers, derivedExtractorBindings,
+                parentCallsWithDerived, filePath, onDiagnostic
+            )
+        }
+    }
+
+    // Pass 1.75: Warn about ignored return values from parent extractors
+    for (const item of ast.body) {
+        let expr: SWC.Expression | undefined
+        if (item.type === 'ExpressionStatement') {
+            expr = item.expression
+        }
+        if (expr?.type !== 'CallExpression') continue
+        if (expr.callee.type !== 'Identifier') continue
+
+        const calleeRef = idToRef(expr.callee)
+        const extractor = styleExtractorIdentifiers.get(calleeRef)
+        if (!extractor?.derivedExtractors) continue
+
+        const extractorName = `${extractor.importPath}:${extractor.symbolName}`
+        onDiagnostic?.({
+            code: 'MOCHI_INVALID_EXTRACTOR_USAGE',
+            message: `Return value of "${extractorName}" is not used. ` +
+                `"${extractor.symbolName}" produces sub-extractors that must be destructured ` +
+                `(e.g. \`const { css } = ${extractor.symbolName}(...)\`).`,
+            severity: 'warning',
+            file: filePath,
+            line: expr.span.start,
+        })
+    }
+
     // Pass 2: Find style expressions
     visit.module(ast, {
         callExpression(node, { descend }) {
@@ -223,12 +362,14 @@ function extractData(
                     const staticArgs = styleExtractor.extractStaticArgs(node)
                     staticArgs.forEach(style => styleExpressions.add(style))
 
-                    // Track expressions per extractor
-                    const existing = extractedExpressions.get(styleExtractor)
-                    if (existing) {
-                        existing.push(...staticArgs)
-                    } else {
-                        extractedExpressions.set(styleExtractor, [...staticArgs])
+                    // Skip parent calls — they are handled via derived code gen
+                    if (!parentCallsWithDerived.has(node)) {
+                        const existing = extractedExpressions.get(styleExtractor)
+                        if (existing) {
+                            existing.push(...staticArgs)
+                        } else {
+                            extractedExpressions.set(styleExtractor, [...staticArgs])
+                        }
                     }
                 }
             }
@@ -395,13 +536,24 @@ function extractData(
         tsType() {}
     }, { scopeDepth: 0, currentModuleItem: null })
 
+    // Post-pass: Populate exportedDerivedExtractors
+    const exportedDerivedExtractors = new Map<string, DerivedExtractorBinding>()
+    for (const [exportName, ref] of exports) {
+        const binding = derivedExtractorBindings.get(ref)
+        if (binding) {
+            exportedDerivedExtractors.set(exportName, binding)
+        }
+    }
+
     return {
         styleExpressions,
         extractedExpressions,
         moduleBindings,
         localImports,
         references,
-        exports
+        exports,
+        derivedExtractorBindings,
+        exportedDerivedExtractors
     }
 }
 
@@ -431,8 +583,72 @@ export class ProjectIndex {
             this.filesInfo.set(module.filePath, {
                 ...module,
                 ...data,
-                usedBindings: new Set<BindingInfo>()
+                usedBindings: new Set<BindingInfo>(),
             })
+        }
+    }
+
+    public discoverCrossFileDerivedExtractors(): void {
+        let changed = true
+        while (changed) {
+            changed = false
+            for (const fileInfo of this.filesInfo.values()) {
+                for (const localImport of fileInfo.localImports.values()) {
+                    const sourceFile = this.filesInfo.get(localImport.sourcePath)
+                    if (!sourceFile) continue
+
+                    const derivedBinding = sourceFile.exportedDerivedExtractors.get(localImport.exportName)
+                    if (!derivedBinding) continue
+                    if (fileInfo.derivedExtractorBindings.has(localImport.localRef)) continue
+
+                    const importedBinding: DerivedExtractorBinding = {
+                        extractor: derivedBinding.extractor,
+                        parentExtractor: derivedBinding.parentExtractor,
+                        parentCallExpression: derivedBinding.parentCallExpression,
+                        propertyName: derivedBinding.propertyName,
+                        localIdentifier: fileInfo.moduleBindings.get(localImport.localRef)?.identifier
+                            ?? derivedBinding.localIdentifier
+                    }
+
+                    fileInfo.derivedExtractorBindings.set(localImport.localRef, importedBinding)
+                    this.scanForDerivedCalls(fileInfo, localImport.localRef, importedBinding)
+                    changed = true
+                }
+            }
+        }
+    }
+
+    private scanForDerivedCalls(
+        fileInfo: FileInfo,
+        ref: Ref,
+        binding: DerivedExtractorBinding
+    ): void {
+        let found = false
+        visit.module(fileInfo.ast, {
+            callExpression(node, { descend }) {
+                if (node.callee.type === "Identifier") {
+                    const calleeRef = idToRef(node.callee)
+                    if (calleeRef.name === ref.name && calleeRef.id === ref.id) {
+                        found = true
+                        const staticArgs = binding.extractor.extractStaticArgs(node)
+                        staticArgs.forEach(style => fileInfo.styleExpressions.add(style))
+
+                        const existing = fileInfo.extractedExpressions.get(binding.extractor)
+                        if (existing) {
+                            existing.push(...staticArgs)
+                        } else {
+                            fileInfo.extractedExpressions.set(binding.extractor, [...staticArgs])
+                        }
+                    }
+                }
+                descend(null)
+            }
+        }, null)
+
+        // Mark the import binding as used so it appears in generated code
+        if (found) {
+            const moduleBinding = fileInfo.moduleBindings.get(ref)
+            if (moduleBinding) fileInfo.usedBindings.add(moduleBinding)
         }
     }
 

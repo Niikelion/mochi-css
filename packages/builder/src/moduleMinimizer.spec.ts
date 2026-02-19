@@ -89,7 +89,9 @@ function createMockFileInfo(
         moduleBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["moduleBindings"],
         localImports: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["localImports"],
         usedBindings,
-        exports: new Map()
+        exports: new Map(),
+        derivedExtractorBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false, size: 0 } as unknown as FileInfo["derivedExtractorBindings"],
+        exportedDerivedExtractors: new Map()
     }
 }
 
@@ -103,7 +105,9 @@ function createEmptyFileInfo(ast: SWC.Module): FileInfo {
         moduleBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["moduleBindings"],
         localImports: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["localImports"],
         usedBindings: new Set(),
-        exports: new Map()
+        exports: new Map(),
+        derivedExtractorBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false, size: 0 } as unknown as FileInfo["derivedExtractorBindings"],
+        exportedDerivedExtractors: new Map()
     }
 }
 
