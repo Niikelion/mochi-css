@@ -944,9 +944,7 @@ const defaultVisitors = {
         visit.expression(node.expression, context.visitors, context.context)
         visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
     },
-    privateName<C>(node: SWC.PrivateName, context: VisitorContext<C>): void {
-        visit.identifier(node.id, context.visitors, context.context)
-    },
+    privateName<C>(_node: SWC.PrivateName, _context: VisitorContext<C>): void {},
     optionalChainingExpression<C>(node: SWC.OptionalChainingExpression, context: VisitorContext<C>): void {
         run(() => {
             switch (node.base.type) {
@@ -1184,7 +1182,7 @@ const defaultVisitors = {
         visit.tsType(node.typeAnnotation, context.visitors, context.context)
     },
     tsRestType<C>(node: SWC.TsRestType, context: VisitorContext<C>): void {
-        visit.tsType(node, context.visitors, context.context)
+        visit.tsType(node.typeAnnotation, context.visitors, context.context)
     },
     tsUnionType<C>(node: SWC.TsUnionType, context: VisitorContext<C>): void {
         node.types.forEach(type => visit.tsType(type, context.visitors, context.context))

@@ -126,6 +126,24 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
  */
 const emptyMochiCSS = new MochiCSS<AllVariants>([], {}, {})
 
+/**
+ * Merges multiple MochiCSS instances into a single one, combining their
+ * class names, variant class names, and default variants.
+ * @param instances - The MochiCSS instances to merge
+ * @returns A new MochiCSS instance with all styles combined
+ */
+export function mergeMochiCss<V extends AllVariants[]>(
+    instances: MochiCSS<AllVariants>[],
+): MochiCSS<MergeCSSVariants<V>> {
+    if (instances.length === 0) return emptyMochiCSS as MochiCSS<MergeCSSVariants<V>>
+
+    return new MochiCSS<AllVariants>(
+        instances.flatMap((c) => c.classNames),
+        instances.reduce((a, b) => Object.assign(a, b.variantClassNames), {}),
+        instances.reduce((a, b) => Object.assign(a, b.defaultVariants), {}),
+    ) as MochiCSS<MergeCSSVariants<V>>
+}
+
 export function css<V extends AllVariants[]>(
     ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
 ): MochiCSS<MergeCSSVariants<V>> {
@@ -140,11 +158,5 @@ export function css<V extends AllVariants[]>(
         }
     }
 
-    if (cssToMerge.length === 0) return emptyMochiCSS as MochiCSS<MergeCSSVariants<V>>
-
-    return new MochiCSS<AllVariants>(
-        cssToMerge.flatMap((css) => css.classNames),
-        cssToMerge.reduce((a, b) => Object.assign(a, b.variantClassNames), {}),
-        cssToMerge.reduce((a, b) => Object.assign(a, b.defaultVariants), {}),
-    ) as MochiCSS<MergeCSSVariants<V>>
+    return mergeMochiCss(cssToMerge)
 }

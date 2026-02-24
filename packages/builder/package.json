@@ -28,6 +28,7 @@
         "@arethetypeswrong/cli": "^0.18.2",
         "@gamedev-sensei/ts-config": "^2.0.0",
         "@gamedev-sensei/tsdown-config": "^2.0.0",
+        "@swc/types": "^0.1.25",
         "@types/node": "^24.8.1",
         "@vitest/coverage-v8": "^4.0.15",
         "tsdown": "^0.15.7",
@@ -36,7 +37,7 @@
     },
     "dependencies": {
         "@mochi-css/vanilla": "^1.0.1",
-        "@swc/core": "^1.15.2",
+        "@swc/core": "^1.15.13",
         "dedent": "^1.7.1",
         "rolldown": "1.0.0-beta.59",
         "zod": "^4.3.6"
