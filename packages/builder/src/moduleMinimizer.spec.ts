@@ -270,6 +270,19 @@ describe("patternContainsIdentifier", () => {
 
             expect(patternContainsIdentifier(pattern, aIdentifier)).toBe(false)
         })
+
+        it("returns false for unknown ObjectPattern property type", () => {
+            const mockProp = { type: "Unknown" } as unknown as SWC.ObjectPatternProperty
+            const pattern: SWC.ObjectPattern = { type: "ObjectPattern", properties: [mockProp], optional: false }
+            const identifier = { type: "Identifier", value: "x", optional: false, span: { start: 0, end: 0, ctxt: 0 } } as SWC.Identifier
+            expect(patternContainsIdentifier(pattern, identifier)).toBe(false)
+        })
+
+        it("returns false for unknown pattern type", () => {
+            const mockPattern = { type: "Unknown" } as unknown as SWC.Pattern
+            const identifier = { type: "Identifier", value: "x", optional: false, span: { start: 0, end: 0, ctxt: 0 } } as SWC.Identifier
+            expect(patternContainsIdentifier(mockPattern, identifier)).toBe(false)
+        })
     })
 })
 
@@ -319,6 +332,54 @@ describe("isPatternPropertyUsed", () => {
 
         expect(isPatternPropertyUsed(prop, declarator, fileInfo)).toBe(true)
     })
+
+    it("returns false when binding has non-variable declarator type", async () => {
+        const module = await parseSource("const { a } = obj", "test.ts")
+        const declaration = module.ast.body[0] as SWC.VariableDeclaration
+        const declarator = declaration.declarations[0]
+        assert(declarator, "Expected declarator")
+        const pattern = declarator.id as SWC.ObjectPattern
+        const aProp = pattern.properties[0]
+        assert(aProp, "Expected property")
+        const aIdentifier = getIdentifierFromPattern(pattern, "a")
+
+        const importDecl = { type: "ImportDeclaration" } as unknown as SWC.ImportDeclaration
+        const importSpec = { local: aIdentifier } as unknown as SWC.ImportSpecifier
+        const usedBindings = new Set<BindingInfo>([{
+            identifier: aIdentifier,
+            ref: { name: aIdentifier.value, id: aIdentifier.ctxt },
+            declarator: { type: 'import', specifier: importSpec, declaration: importDecl },
+            moduleItem: importDecl
+        }])
+        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+
+        expect(isPatternPropertyUsed(aProp, declarator, fileInfo)).toBe(false)
+    })
+
+    it("returns false when binding belongs to a different declarator", async () => {
+        const module = await parseSource("const { a } = obj; const { b } = other", "test.ts")
+        const declaration1 = module.ast.body[0] as SWC.VariableDeclaration
+        const declaration2 = module.ast.body[1] as SWC.VariableDeclaration
+        const declarator1 = declaration1.declarations[0]
+        const declarator2 = declaration2.declarations[0]
+        assert(declarator1, "Expected declarator1")
+        assert(declarator2, "Expected declarator2")
+        const pattern1 = declarator1.id as SWC.ObjectPattern
+        const pattern2 = declarator2.id as SWC.ObjectPattern
+        const aProp = pattern1.properties[0]
+        assert(aProp, "Expected property")
+        const bIdentifier = getIdentifierFromPattern(pattern2, "b")
+
+        const usedBindings = new Set<BindingInfo>([{
+            identifier: bIdentifier,
+            ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
+            declarator: { type: 'variable', declarator: declarator2, declaration: declaration2 },
+            moduleItem: declaration2
+        }])
+        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+
+        expect(isPatternPropertyUsed(aProp, declarator1, fileInfo)).toBe(false)
+    })
 })
 
 describe("isPatternElementUsed", () => {
@@ -366,6 +427,54 @@ describe("isPatternElementUsed", () => {
         const fileInfo = createMockFileInfo(declarator, declaration, declaration, [nestedIdentifier])
 
         expect(isPatternElementUsed(outerElem, declarator, fileInfo)).toBe(true)
+    })
+
+    it("returns false when binding has non-variable declarator type", async () => {
+        const module = await parseSource("const [a] = arr", "test.ts")
+        const declaration = module.ast.body[0] as SWC.VariableDeclaration
+        const declarator = declaration.declarations[0]
+        assert(declarator, "Expected declarator")
+        const pattern = declarator.id as SWC.ArrayPattern
+        const aElem = pattern.elements[0]
+        assert(aElem, "Expected element")
+        const aIdentifier = getIdentifierFromPattern(pattern, "a")
+
+        const importDecl = { type: "ImportDeclaration" } as unknown as SWC.ImportDeclaration
+        const importSpec = { local: aIdentifier } as unknown as SWC.ImportSpecifier
+        const usedBindings = new Set<BindingInfo>([{
+            identifier: aIdentifier,
+            ref: { name: aIdentifier.value, id: aIdentifier.ctxt },
+            declarator: { type: 'import', specifier: importSpec, declaration: importDecl },
+            moduleItem: importDecl
+        }])
+        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+
+        expect(isPatternElementUsed(aElem, declarator, fileInfo)).toBe(false)
+    })
+
+    it("returns false when binding belongs to a different declarator", async () => {
+        const module = await parseSource("const [a] = arr; const [b] = other", "test.ts")
+        const declaration1 = module.ast.body[0] as SWC.VariableDeclaration
+        const declaration2 = module.ast.body[1] as SWC.VariableDeclaration
+        const declarator1 = declaration1.declarations[0]
+        const declarator2 = declaration2.declarations[0]
+        assert(declarator1, "Expected declarator1")
+        assert(declarator2, "Expected declarator2")
+        const pattern1 = declarator1.id as SWC.ArrayPattern
+        const pattern2 = declarator2.id as SWC.ArrayPattern
+        const aElem = pattern1.elements[0]
+        assert(aElem, "Expected element")
+        const bIdentifier = getIdentifierFromPattern(pattern2, "b")
+
+        const usedBindings = new Set<BindingInfo>([{
+            identifier: bIdentifier,
+            ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
+            declarator: { type: 'variable', declarator: declarator2, declaration: declaration2 },
+            moduleItem: declaration2
+        }])
+        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+
+        expect(isPatternElementUsed(aElem, declarator1, fileInfo)).toBe(false)
     })
 })
 
@@ -464,6 +573,29 @@ describe("pruneUnusedPatternParts", () => {
             assert(firstProp, "Expected first property to be defined")
             expect(firstProp.type).toBe("RestElement")
         })
+
+        it("returns null when binding exists but identifier is not in any property", async () => {
+            // hasUsedBinding is true, but the identifier doesn't match any property
+            const module = await parseSource("const { a, b } = obj", "test.ts")
+            const module2 = await parseSource("const c = x", "test.ts")
+            const declaration = module.ast.body[0] as SWC.VariableDeclaration
+            const declarator = declaration.declarations[0]
+            assert(declarator, "Expected declarator to be defined")
+            const decl2 = module2.ast.body[0] as SWC.VariableDeclaration
+            const decl2r = decl2.declarations[0]
+            assert(decl2r, "Expected decl2r to be defined")
+            const cIdentifier = decl2r.id as SWC.Identifier
+
+            const usedBindings = new Set<BindingInfo>([{
+                identifier: cIdentifier,
+                ref: { name: cIdentifier.value, id: cIdentifier.ctxt },
+                declarator: { type: 'variable', declarator, declaration },
+                moduleItem: declaration
+            }])
+            const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+
+            expect(pruneUnusedPatternParts(declarator, fileInfo)).toBeNull()
+        })
     })
 
     describe("array patterns", () => {
@@ -559,6 +691,69 @@ describe("pruneUnusedPatternParts", () => {
             // Should keep first element (the object pattern), trim trailing 'b'
             expect(resultPattern.elements).toHaveLength(1)
             expect(resultPattern.elements[0]).toBeDefined()
+        })
+
+        it("preserves holes from source pattern when a later element is used", async () => {
+            // const [, b] = arr - 'b' is used; first slot is a hole
+            const module = await parseSource("const [, b] = arr", "test.ts")
+            const declaration = module.ast.body[0] as SWC.VariableDeclaration
+            const declarator = declaration.declarations[0]
+            assert(declarator, "Expected declarator to be defined")
+            const pattern = declarator.id as SWC.ArrayPattern
+            const bIdentifier = getIdentifierFromPattern(pattern, "b")
+
+            const fileInfo = createMockFileInfo(declarator, declaration, declaration, [bIdentifier])
+            const result = pruneUnusedPatternParts(declarator, fileInfo)
+
+            assert(result, "Expected result to be defined")
+            const resultPattern = result.id as SWC.ArrayPattern
+            expect(resultPattern.elements).toHaveLength(2)
+            expect(resultPattern.elements[0]).toBeUndefined()
+            expect(resultPattern.elements[1]).toBeDefined()
+        })
+
+        it("returns null when binding exists but identifier is not in any element", async () => {
+            // hasUsedBinding is true, but the identifier doesn't match any element
+            const module = await parseSource("const [a, b] = arr", "test.ts")
+            const module2 = await parseSource("const c = x", "test.ts")
+            const declaration = module.ast.body[0] as SWC.VariableDeclaration
+            const declarator = declaration.declarations[0]
+            assert(declarator, "Expected declarator to be defined")
+            const decl2 = module2.ast.body[0] as SWC.VariableDeclaration
+            const decl2r = decl2.declarations[0]
+            assert(decl2r, "Expected decl2r to be defined")
+            const cIdentifier = decl2r.id as SWC.Identifier
+
+            const usedBindings = new Set<BindingInfo>([{
+                identifier: cIdentifier,
+                ref: { name: cIdentifier.value, id: cIdentifier.ctxt },
+                declarator: { type: 'variable', declarator, declaration },
+                moduleItem: declaration
+            }])
+            const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+
+            expect(pruneUnusedPatternParts(declarator, fileInfo)).toBeNull()
+        })
+    })
+
+    describe("non-standard patterns", () => {
+        it("returns declarator as-is for unrecognized id type", () => {
+            const mockId = { type: "Invalid" } as unknown as SWC.Pattern
+            const mockDeclarator = { id: mockId, init: null } as unknown as SWC.VariableDeclarator
+            const fakeIdentifier = { type: "Identifier", value: "x", ctxt: 0, span: { start: 0, end: 0, ctxt: 0 } } as unknown as SWC.Identifier
+            const fakeDecl = {} as SWC.VariableDeclaration
+            const usedBindings = new Set<BindingInfo>([{
+                identifier: fakeIdentifier,
+                ref: { name: 'x', id: 0 },
+                declarator: { type: 'variable', declarator: mockDeclarator, declaration: fakeDecl },
+                moduleItem: {} as SWC.ModuleItem
+            }])
+            const fileInfo: FileInfo = {
+                ...createEmptyFileInfo({ type: "Module", span: { start: 0, end: 0, ctxt: 0 }, body: [], interpreter: "" }),
+                usedBindings
+            }
+
+            expect(pruneUnusedPatternParts(mockDeclarator, fileInfo)).toBe(mockDeclarator)
         })
     })
 })

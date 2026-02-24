@@ -9,12 +9,8 @@
             "dependsOn": [ "^build-example" ],
             "outputs": [ "dist/**" ]
         },
-        "test": {
-            "dependsOn": [ "^build" ]
-        },
-        "coverage": {
-            "dependsOn": [ "^build" ]
-        },
+        "test": {},
+        "coverage": {},
         "dev": {
             "persistent": true,
             "cache": false
