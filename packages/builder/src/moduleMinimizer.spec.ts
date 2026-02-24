@@ -273,7 +273,7 @@ describe("patternContainsIdentifier", () => {
 
         it("returns false for unknown ObjectPattern property type", () => {
             const mockProp = { type: "Unknown" } as unknown as SWC.ObjectPatternProperty
-            const pattern: SWC.ObjectPattern = { type: "ObjectPattern", properties: [mockProp], optional: false }
+            const pattern: SWC.ObjectPattern = { type: "ObjectPattern", properties: [mockProp], optional: false, span: { start: 0, ctxt: 0, end: 0 } }
             const identifier = { type: "Identifier", value: "x", optional: false, span: { start: 0, end: 0, ctxt: 0 } } as SWC.Identifier
             expect(patternContainsIdentifier(pattern, identifier)).toBe(false)
         })
