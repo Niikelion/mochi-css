@@ -1,9 +1,54 @@
 import { describe, it, expect, vi } from "vitest"
+import { parse, walk, generate, type CssNode, type WalkContext } from "css-tree"
 import { createToken } from "@/token"
 import { CSSObject, CssObjectBlock, CssObjectSubBlock, CompoundVariant } from "@/cssObject"
 import { MochiSelector } from "@/selector"
 import dedent from "dedent"
 import { StyleProps } from "@/props"
+
+interface ParsedRule {
+    selector: string
+    declarations: Record<string, string>
+    media: string | undefined
+}
+
+function parseRules(cssSource: string): ParsedRule[] {
+    const ast = parse(cssSource)
+    const result: ParsedRule[] = []
+
+    walk(ast, function (this: WalkContext, node: CssNode) {
+        if (node.type !== "Rule") return
+
+        const selector = generate(node.prelude)
+        const declarations: Record<string, string> = {}
+
+        walk(node.block, (decl: CssNode) => {
+            if (decl.type === "Declaration") {
+                declarations[decl.property] = generate(decl.value).trim()
+            }
+        })
+
+        const atrule = this.atrule
+        const media =
+            atrule !== null && atrule.name === "media" && atrule.prelude !== null
+                ? `@media ${generate(atrule.prelude)}`
+                : undefined
+
+        result.push({ selector, declarations, media })
+    })
+
+    return result
+}
+
+function collectDeclarations(cssSource: string, containsClass: string): Record<string, string> {
+    const result: Record<string, string> = {}
+    for (const rule of parseRules(cssSource)) {
+        if (rule.selector.includes(containsClass)) {
+            Object.assign(result, rule.declarations)
+        }
+    }
+    return result
+}
 
 describe("CssObjectSubBlock", () => {
     describe("hash", () => {
@@ -308,23 +353,17 @@ describe("CssObject", () => {
             [bg.variable]: "red",
         })
 
-        const cssSource = obj.asCssString()
+        const declarations = collectDeclarations(obj.asCssString(), `.${obj.mainBlock.className}`)
 
-        // main className appears in the source
-        expect(cssSource).toContain(`.${obj.mainBlock.className}`)
-
-        // all expected parts appear in the source
-        const expectedParts: string[] = [
-            "width: 200px;",
-            "display: flex;",
-            "flex-direction: column;",
-            "align-items: center;",
-            "justify-content: end;",
-            `background: ${bg.value};`,
-            `${bg.variable}: red;`,
-        ]
-
-        for (const part of expectedParts) expect(cssSource).toContain(part)
+        expect(declarations).toMatchObject({
+            width: "200px",
+            display: "flex",
+            "flex-direction": "column",
+            "align-items": "center",
+            "justify-content": "end",
+            background: bg.value,
+            [bg.variable]: "red",
+        })
     })
 
     it("should generate css code that accurately reflects provided styles for variant styles", () => {
@@ -343,14 +382,15 @@ describe("CssObject", () => {
 
         const cssSource = obj.asCssString()
 
-        // variant classNames appear in the source
-        expect(cssSource).toContain(`.${obj.variantBlocks.width.default.className}`)
-        expect(cssSource).toContain(`.${obj.variantBlocks.width.wide.className}`)
-        expect(cssSource).toContain(`.${obj.variantBlocks.width.narrow.className}`)
-
-        const expectedParts: string[] = ["width: auto;", "width: 100%;", "width: 200px;"]
-
-        for (const expectedPart of expectedParts) expect(cssSource).toContain(expectedPart)
+        expect(collectDeclarations(cssSource, `.${obj.variantBlocks.width.default.className}`)).toMatchObject({
+            width: "auto",
+        })
+        expect(collectDeclarations(cssSource, `.${obj.variantBlocks.width.wide.className}`)).toMatchObject({
+            width: "100%",
+        })
+        expect(collectDeclarations(cssSource, `.${obj.variantBlocks.width.narrow.className}`)).toMatchObject({
+            width: "200px",
+        })
     })
 
     it("should generate css code for base styles with nested selectors", () => {
@@ -364,13 +404,19 @@ describe("CssObject", () => {
             },
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
+        const cls = obj.mainBlock.className
 
-        expect(cssSource).toContain("color: blue;")
-        expect(cssSource).toContain(":hover")
-        expect(cssSource).toContain("color: red;")
-        expect(cssSource).toContain("> span")
-        expect(cssSource).toContain("font-weight: bold;")
+        const baseRule = rules.find(
+            (r) => r.selector.includes(cls) && !r.selector.includes(":hover") && !r.selector.includes("span"),
+        )
+        expect(baseRule?.declarations).toMatchObject({ color: "blue" })
+
+        const hoverRule = rules.find((r) => r.selector.includes(":hover"))
+        expect(hoverRule?.declarations).toMatchObject({ color: "red" })
+
+        const spanRule = rules.find((r) => r.selector.includes("span"))
+        expect(spanRule?.declarations).toMatchObject({ "font-weight": "bold" })
     })
 
     it("should generate css code for variant styles with nested selectors", () => {
@@ -393,15 +439,22 @@ describe("CssObject", () => {
             },
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
+        const primaryCls = obj.variantBlocks.intent.primary.className
+        const dangerCls = obj.variantBlocks.intent.danger.className
 
-        expect(cssSource).toContain(`.${obj.variantBlocks.intent.primary.className}`)
-        expect(cssSource).toContain(`.${obj.variantBlocks.intent.danger.className}`)
-        expect(cssSource).toContain("color: blue;")
-        expect(cssSource).toContain("color: darkblue;")
-        expect(cssSource).toContain("color: red;")
-        expect(cssSource).toContain("color: darkred;")
-        expect(cssSource).toContain(":hover")
+        expect(
+            rules.find((r) => r.selector.includes(primaryCls) && !r.selector.includes(":hover"))?.declarations,
+        ).toMatchObject({ color: "blue" })
+        expect(
+            rules.find((r) => r.selector.includes(primaryCls) && r.selector.includes(":hover"))?.declarations,
+        ).toMatchObject({ color: "darkblue" })
+        expect(
+            rules.find((r) => r.selector.includes(dangerCls) && !r.selector.includes(":hover"))?.declarations,
+        ).toMatchObject({ color: "red" })
+        expect(
+            rules.find((r) => r.selector.includes(dangerCls) && r.selector.includes(":hover"))?.declarations,
+        ).toMatchObject({ color: "darkred" })
     })
 
     it("should generate css code for base styles with media selectors", () => {
@@ -415,13 +468,16 @@ describe("CssObject", () => {
             },
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
+        const cls = obj.mainBlock.className
 
-        expect(cssSource).toContain("width: 100%;")
-        expect(cssSource).toContain("@media (width <= 480px)")
-        expect(cssSource).toContain("width: auto;")
-        expect(cssSource).toContain("@media (width >= 1024px)")
-        expect(cssSource).toContain("width: 800px;")
+        expect(rules.find((r) => r.selector.includes(cls) && !r.media)?.declarations).toMatchObject({ width: "100%" })
+        expect(rules.find((r) => r.selector.includes(cls) && r.media?.includes("480"))?.declarations).toMatchObject({
+            width: "auto",
+        })
+        expect(rules.find((r) => r.selector.includes(cls) && r.media?.includes("1024"))?.declarations).toMatchObject({
+            width: "800px",
+        })
     })
 
     it("should generate css code for variant styles with media selectors", () => {
@@ -445,15 +501,23 @@ describe("CssObject", () => {
             },
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
+        const stackCls = obj.variantBlocks.layout.stack.className
+        const gridCls = obj.variantBlocks.layout.grid.className
 
-        expect(cssSource).toContain(obj.variantBlocks.layout.stack.selector)
-        expect(cssSource).toContain(obj.variantBlocks.layout.grid.selector)
-        expect(cssSource).toContain("flex-direction: column;")
-        expect(cssSource).toContain("flex-direction: row;")
-        expect(cssSource).toContain("grid-template-columns: 1fr;")
-        expect(cssSource).toContain("grid-template-columns: 1fr 1fr;")
-        expect(cssSource).toContain("@media (width >= 768px)")
+        expect(rules.find((r) => r.selector.includes(stackCls) && !r.media)?.declarations).toMatchObject({
+            "flex-direction": "column",
+        })
+        expect(
+            rules.find((r) => r.selector.includes(stackCls) && r.media?.includes("768"))?.declarations,
+        ).toMatchObject({ "flex-direction": "row" })
+        expect(rules.find((r) => r.selector.includes(gridCls) && !r.media)?.declarations).toMatchObject({
+            display: "grid",
+            "grid-template-columns": "1fr",
+        })
+        expect(rules.find((r) => r.selector.includes(gridCls) && r.media?.includes("768"))?.declarations).toMatchObject(
+            { "grid-template-columns": "1fr 1fr" },
+        )
     })
 
     it("should generate css code for compound variants using combined selectors", () => {
@@ -471,14 +535,14 @@ describe("CssObject", () => {
             compoundVariants: [{ color: "red", size: "large", css: { fontWeight: "bold" } }],
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
 
         expect(obj.compoundVariants).toHaveLength(1)
         // compound variant should use combined variant selectors instead of its own class
-        const colorRedSelector = obj.variantBlocks.color.red.selector
-        const sizeLargeSelector = obj.variantBlocks.size.large.selector
-        expect(cssSource).toContain(`${obj.mainBlock.selector}${colorRedSelector}${sizeLargeSelector}`)
-        expect(cssSource).toContain("font-weight: bold;")
+        const compoundSelector = `${obj.mainBlock.selector}${obj.variantBlocks.color.red.selector}${obj.variantBlocks.size.large.selector}`
+        expect(rules.find((r) => r.selector === compoundSelector)?.declarations).toMatchObject({
+            "font-weight": "bold",
+        })
     })
 
     it("should store compound variant conditions correctly", () => {
@@ -515,11 +579,16 @@ describe("CssObject", () => {
             ],
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
+        const main = obj.mainBlock.selector
 
         expect(obj.compoundVariants).toHaveLength(2)
-        expect(cssSource).toContain("font-weight: bold;")
-        expect(cssSource).toContain("text-decoration: underline;")
+        const compound1 = `${main}${obj.variantBlocks.color.red.selector}${obj.variantBlocks.size.large.selector}`
+        const compound2 = `${main}${obj.variantBlocks.color.blue.selector}${obj.variantBlocks.size.small.selector}`
+        expect(rules.find((r) => r.selector === compound1)?.declarations).toMatchObject({ "font-weight": "bold" })
+        expect(rules.find((r) => r.selector === compound2)?.declarations).toMatchObject({
+            "text-decoration": "underline",
+        })
     })
 
     it("should handle compound variants with nested selectors", () => {
@@ -544,11 +613,15 @@ describe("CssObject", () => {
             ],
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
+        const compoundSelector = `${obj.mainBlock.selector}${obj.variantBlocks.color.red.selector}${obj.variantBlocks.size.large.selector}`
 
-        expect(cssSource).toContain("font-weight: bold;")
-        expect(cssSource).toContain(":hover")
-        expect(cssSource).toContain("font-weight: 900;")
+        expect(rules.find((r) => r.selector === compoundSelector)?.declarations).toMatchObject({
+            "font-weight": "bold",
+        })
+        expect(
+            rules.find((r) => r.selector.startsWith(compoundSelector) && r.selector.includes(":hover"))?.declarations,
+        ).toMatchObject({ "font-weight": "900" })
     })
 
     it("should have empty compoundVariants when none specified", () => {
@@ -578,11 +651,11 @@ describe("CssObject", () => {
             compoundVariants: [{ color: "red", css: { fontWeight: "bold" } }],
         })
 
-        const cssSource = obj.asCssString()
-
-        const colorRedSelector = obj.variantBlocks.color.red.selector
-        expect(cssSource).toContain(`${obj.mainBlock.selector}${colorRedSelector}`)
-        expect(cssSource).toContain("font-weight: bold;")
+        const rules = parseRules(obj.asCssString())
+        const compoundSelector = `${obj.mainBlock.selector}${obj.variantBlocks.color.red.selector}`
+        expect(rules.find((r) => r.selector === compoundSelector)?.declarations).toMatchObject({
+            "font-weight": "bold",
+        })
     })
 
     it("should skip unknown variant names in compound variant conditions", () => {
@@ -599,12 +672,12 @@ describe("CssObject", () => {
             ],
         })
 
-        const cssSource = obj.asCssString()
-
         // only the known variant selector should appear, unknown "size" is skipped
-        const colorRedSelector = obj.variantBlocks.color.red.selector
-        expect(cssSource).toContain(`${obj.mainBlock.selector}${colorRedSelector}`)
-        expect(cssSource).toContain("font-weight: bold;")
+        const rules = parseRules(obj.asCssString())
+        const compoundSelector = `${obj.mainBlock.selector}${obj.variantBlocks.color.red.selector}`
+        expect(rules.find((r) => r.selector === compoundSelector)?.declarations).toMatchObject({
+            "font-weight": "bold",
+        })
     })
 
     it("should silently ignore undefined variants", () => {
@@ -616,8 +689,8 @@ describe("CssObject", () => {
             },
         })
 
-        const cssSource = obj.asCssString()
+        const rules = parseRules(obj.asCssString())
 
-        expect(cssSource).toContain(obj.variantBlocks.color.red.selector)
+        expect(rules.some((r) => r.selector.includes(obj.variantBlocks.color.red.className))).toBe(true)
     })
 })
