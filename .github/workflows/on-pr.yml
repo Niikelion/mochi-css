@@ -16,6 +16,11 @@ jobs:
                     cache: 'yarn'
             -   name: Install dependencies
                 run: yarn install --immutable
+            -   name: Save node_modules
+                uses: actions/cache/save@v4
+                with:
+                    path: node_modules
+                    key: node-modules-${{ hashFiles('yarn.lock') }}
             -   name: Build packages
                 run: yarn build
             -   name: Save build artifacts
@@ -37,6 +42,11 @@ jobs:
                 with:
                     path: packages/*/dist
                     key: build-${{ github.sha }}
+            -   name: Restore node_modules
+                uses: actions/cache/restore@v4
+                with:
+                    path: node_modules
+                    key: node-modules-${{ hashFiles('yarn.lock') }}
             -   name: Use Node.js 24.x
                 uses: actions/setup-node@v4
                 with:
@@ -60,6 +70,11 @@ jobs:
                 with:
                     path: packages/*/dist
                     key: build-${{ github.sha }}
+            -   name: Restore node_modules
+                uses: actions/cache/restore@v4
+                with:
+                    path: node_modules
+                    key: node-modules-${{ hashFiles('yarn.lock') }}
             -   name: Use Node.js 24.x
                 uses: actions/setup-node@v4
                 with:
