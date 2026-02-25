@@ -7,6 +7,7 @@ import {RolldownBundler} from "@/Bundler";
 import {VmRunner} from "@/Runner";
 import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
 import { mochiKeyframesFunctionExtractor } from "@/extractors/VanillaKeyframesExtractor"
+import { mochiGlobalCssFunctionExtractor } from "@/extractors/VanillaGlobalCssExtractor"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
@@ -170,6 +171,30 @@ describe("Builder", () => {
         expect(result.files!["a.ts"]).toContain("color: red")
         expect(result.files!["b.ts"]).toContain("color: blue")
         expect(result.files!["a.ts"]).not.toContain("color: blue")
+    })
+
+    it("VanillaGlobalCssGenerator returns global CSS", async () => {
+        const module = await parseSource(/* language=typescript */ dedent`
+            import { globalCss } from "@mochi-css/vanilla"
+            globalCss({ body: { margin: 0 }, h1: { color: "red" } })
+        `, "globals.ts")
+
+        const builder = new Builder({
+            rootDir: "./",
+            extractors: [mochiGlobalCssFunctionExtractor],
+            bundler: new RolldownBundler(),
+            runner: new VmRunner()
+        })
+
+        const generators = await builder.collectStylesFromModules([module])
+        const generator = generators.get("@mochi-css/vanilla:globalCss")!
+        const result = await generator.generateStyles()
+
+        expect(result.global).toContain("body {")
+        expect(result.global).toContain("margin: 0;")
+        expect(result.global).toContain("h1 {")
+        expect(result.global).toContain("color: red;")
+        expect(result.files).toBeUndefined()
     })
 
     it("VanillaKeyframesGenerator returns per-file CSS", async () => {
