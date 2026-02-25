@@ -15,7 +15,7 @@ jobs:
                     node-version: '24.x'
                     registry-url: 'https://registry.npmjs.org'
             -   name: Install dependencies
-                run: yarn install --frozen-lockfile
+                run: yarn install --immutable
             -   name: Build packages
                 run: yarn build
             -   name: Lint packages
@@ -34,7 +34,7 @@ jobs:
                     node-version: '24.x'
                     registry-url: 'https://registry.npmjs.org'
             -   name: Install dependencies
-                run: yarn install --frozen-lockfile
+                run: yarn install --immutable
             -   name: Build packages
                 run: yarn build
             -   name: Run tests
