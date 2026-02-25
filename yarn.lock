@@ -1217,6 +1217,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mochi-css/config@workspace:packages/config":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/config@workspace:packages/config"
+  dependencies:
+    "@eslint/js": "npm:^9.18.0"
+    eslint: "npm:^9.39.2"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-prettier: "npm:^5.5.5"
+    prettier: "npm:^3.8.1"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.21.0"
+  languageName: unknown
+  linkType: soft
+
 "@mochi-css/next@workspace:^, @mochi-css/next@workspace:packages/next":
   version: 0.0.0-use.local
   resolution: "@mochi-css/next@workspace:packages/next"
