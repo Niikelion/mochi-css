@@ -10,6 +10,8 @@ import {
 import { render as rtlRender, cleanup as rtlCleanup } from "@testing-library/react"
 import { CSSObject, AllVariants, MochiCSSProps, MergeCSSVariants, RefineVariants } from "@/cssObject"
 import { MochiCSS, mergeMochiCss } from "@/css"
+import { GlobalCssObject } from "@/globalCssObject"
+import type { GlobalCssStyles } from "@/globalCss"
 import { camelToKebab } from "@/props"
 import { CSSStyleDeclaration } from "happy-dom"
 import clsx from "clsx"
@@ -87,6 +89,11 @@ class TestRenderer {
             }
         }
         return mergeMochiCss(cssToMerge)
+    }
+
+    globalCss(styles: GlobalCssStyles): void {
+        const obj = new GlobalCssObject(styles)
+        this.capturedCss.push(obj.asCssString())
     }
 
     styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
