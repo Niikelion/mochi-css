@@ -1,5 +1,13 @@
 # @mochi-css/vite
 
+## 1.1.0
+
+### Patch Changes
+
+- Updated dependencies [b453f9c]
+- Updated dependencies [6063c7d]
+  - @mochi-css/builder@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes

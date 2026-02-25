@@ -1,5 +1,11 @@
 # @mochi-css/vanilla
 
+## 1.1.0
+
+### Minor Changes
+
+- 6063c7d: Implemented globalCss function
+
 ## 1.0.1
 
 ## 1.0.0

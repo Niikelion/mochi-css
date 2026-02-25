@@ -1,5 +1,19 @@
 # @mochi-css/builder
 
+## 1.1.0
+
+### Minor Changes
+
+- b453f9c: Add derived extractor support.
+  `StyleExtractor` now accepts an optional `derivedExtractors` map, enabling extractors that return child extractors (e.g. a `createTheme()` that yields a scoped `css` function).
+  Return values must be destructured with an object pattern; cross-file derived extractors are discovered automatically.
+- 6063c7d: Implemented globalCss function
+
+### Patch Changes
+
+- Updated dependencies [6063c7d]
+  - @mochi-css/vanilla@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes

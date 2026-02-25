@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/builder",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -36,7 +36,7 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/vanilla": "^1.0.1",
+        "@mochi-css/vanilla": "^1.1.0",
         "@swc/core": "^1.15.13",
         "dedent": "^1.7.1",
         "rolldown": "1.0.0-beta.59",
