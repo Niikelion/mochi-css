@@ -28,6 +28,8 @@ export default defineConfig(
             "@typescript-eslint/no-import-type-side-effects": "error",
             "@typescript-eslint/consistent-type-definitions": "off",
             "@typescript-eslint/restrict-template-expressions": "off",
+            "@typescript-eslint/no-invalid-void-type": "off",
+            "@typescript-eslint/require-await": "off",
         },
     },
     {
