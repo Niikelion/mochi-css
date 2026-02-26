@@ -653,12 +653,15 @@ describe("CssObject", () => {
 
         const rules = parseRules(obj.asCssString())
         const compoundSelector = `${obj.mainBlock.selector}${obj.variantBlocks.color.red.selector}`
-        expect(rules.find((r) => r.selector === compoundSelector)?.declarations).toMatchObject({
-            "font-weight": "bold",
-        })
+        expect(rules.filter((r) => r.selector === compoundSelector).map((r) => r.declarations)).toEqual([
+            { color: "red" },
+            {
+                "font-weight": "bold",
+            },
+        ])
     })
 
-    it("should skip unknown variant names in compound variant conditions", () => {
+    it("should discard compound variant rule when any condition references an unknown variant", () => {
         const obj = new CSSObject({
             variants: {
                 color: {
@@ -672,12 +675,12 @@ describe("CssObject", () => {
             ],
         })
 
-        // only the known variant selector should appear, unknown "size" is skipped
+        // compound rule is discarded; only the regular color.red variant rule exists
         const rules = parseRules(obj.asCssString())
         const compoundSelector = `${obj.mainBlock.selector}${obj.variantBlocks.color.red.selector}`
-        expect(rules.find((r) => r.selector === compoundSelector)?.declarations).toMatchObject({
-            "font-weight": "bold",
-        })
+        expect(rules.filter((r) => r.selector === compoundSelector).map((r) => r.declarations)).toEqual([
+            { color: "red" },
+        ])
     })
 
     it("should silently ignore undefined variants", () => {

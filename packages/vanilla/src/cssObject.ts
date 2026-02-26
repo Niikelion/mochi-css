@@ -307,17 +307,15 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))
                 .map(([_, b]) => b.asCssString(this.mainBlock.selector)),
-            ...this.compoundVariants.map(({ conditions, subBlocks }) => {
-                const variantSelectors = Object.entries(conditions)
-                    .toSorted(compareStringKey)
-                    .map(([variantName, optionName]) => {
-                        const block = this.variantBlocks[variantName]?.[optionName]
-                        return block?.selector ?? ""
-                    })
-                    .filter(Boolean)
-                    .join("")
-                const combinedSelector = `${this.mainBlock.selector}${variantSelectors}`
-                return subBlocks.map((b) => b.asCssString(combinedSelector)).join("\n\n")
+            ...this.compoundVariants.flatMap(({ conditions, subBlocks }) => {
+                const selectorParts: string[] = []
+                for (const [variantName, optionName] of Object.entries(conditions).toSorted(compareStringKey)) {
+                    const selector = this.variantBlocks[variantName]?.[optionName]?.selector
+                    if (selector === undefined) return []
+                    selectorParts.push(selector)
+                }
+                const combinedSelector = `${this.mainBlock.selector}${selectorParts.join("")}`
+                return subBlocks.map((b) => b.asCssString(combinedSelector))
             }),
         ].join("\n\n")
     }
