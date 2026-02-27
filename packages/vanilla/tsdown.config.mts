@@ -83,7 +83,7 @@ function generatePropertyUnits(properties: CssFeature[], types: CssFeature[]) {
     return result
 }
 
-function generateFileContent(units: Record<string, string>) {
+function generateUnitMappingFileContent(units: Record<string, string>) {
     const entries = Object.entries(units)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([prop, unit]) => `${prop}: "${unit}",`)
@@ -102,15 +102,40 @@ function generateFileContent(units: Record<string, string>) {
     )
 }
 
+function generateKnownPropertiesFileContent(names: string[]) {
+    const entries = [...names]
+        .sort()
+        .map((name) => `"${name}",`)
+        .join(`\n${" ".repeat(3 * 4)}`)
+    return (
+        /* language=typescript */ dedent`
+        // Auto-generated from @webref/css - do not edit manually
+        // Run "yarn build" to regenerate
+
+        export const knownPropertyNames: ReadonlySet<string> = new Set([
+            ${entries}
+        ])
+    ` + "\n"
+    )
+}
+
 export default definePackageConfig({
     attw: true,
     hooks: {
         "build:prepare": async () => {
             const { properties, types } = await listAll()
+
             const units = generatePropertyUnits(properties, types)
-            const outPath = join(process.cwd(), "src", "propertyUnits.generated.ts")
-            await writeFile(outPath, generateFileContent(units), "utf-8")
+            const unitsPath = join(process.cwd(), "src", "propertyUnits.generated.ts")
+            await writeFile(unitsPath, generateUnitMappingFileContent(units), "utf-8")
             console.log(`Generated ${Object.keys(units).length} property unit mappings`)
+
+            const knownNames = properties
+                .filter((p) => !p.name.startsWith("-"))
+                .map((p) => kebabToCamel(p.name))
+            const knownPath = join(process.cwd(), "src", "knownProperties.generated.ts")
+            await writeFile(knownPath, generateKnownPropertiesFileContent(knownNames), "utf-8")
+            console.log(`Generated ${knownNames.length} known property names`)
         },
     },
 })

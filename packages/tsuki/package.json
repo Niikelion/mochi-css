@@ -16,7 +16,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.18.0",
-        "@gamedev-sensei/ts-config": "^2.0.0",
+        "@gamedev-sensei/ts-config": "^2.1.0",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "^24.8.1",
         "eslint": "^9.39.2",

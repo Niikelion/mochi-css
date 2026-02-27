@@ -24,8 +24,8 @@
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
-        "@gamedev-sensei/ts-config": "^2.0.0",
-        "@gamedev-sensei/tsdown-config": "^2.0.0",
+        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@gamedev-sensei/tsdown-config": "^2.1.0",
         "@types/node": "^24.8.1",
         "tsdown": "^0.15.7"
     },

@@ -61,7 +61,7 @@ describe("GlobalCssObject", () => {
 
     it("should handle media queries inside a rule", () => {
         const obj = new GlobalCssObject({
-            body: { "@min-width: 768px": { margin: 8 } },
+            body: { "@media (min-width: 768px)": { margin: 8 } },
         })
         const css = obj.asCssString()
 

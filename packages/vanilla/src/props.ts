@@ -7,8 +7,8 @@
 
 import { Properties, ObsoleteProperties } from "csstype"
 import { CssLike, CssVar } from "@/values"
-import properties from "known-css-properties"
 import { propertyUnits, type PropertyWithUnit } from "./propertyUnits.generated"
+import { knownPropertyNames } from "./knownProperties.generated"
 
 /** All non-obsolete CSS properties from csstype */
 type Props = Required<Omit<Properties, keyof ObsoleteProperties>>
@@ -50,9 +50,6 @@ function formatValue(value: CssLike<string | number>, propertyName: string, maxD
     return formatValue(value.value, propertyName, maxDepth - 1)
 }
 
-//TODO: generate this list and drop known-css-properties package
-const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
-
 /**
  * Checks if a property name is a CSS custom property (variable).
  */
@@ -82,7 +79,7 @@ export function asVar(value: CssLike<string | number>, maxDepth = 10): string {
  * Checks if a property name is a known CSS property.
  */
 export function isKnownPropertyName(key: string): key is keyof Props {
-    return knownPropertySet.has(key)
+    return knownPropertyNames.has(key)
 }
 
 /**
@@ -104,21 +101,23 @@ export function isNestedSelector(key: string): key is NestedCssSelector {
     return key.includes("&")
 }
 
+/** Known at-rule prefixes that mochi-css recognizes */
+const AT_RULE_PREFIXES = ["@media ", "@container ", "@supports ", "@layer "] as const
+
 /**
- * Checks if a key represents a media query.
+ * Checks if a key represents a CSS at-rule (media, container, supports, layer).
  */
-//TODO: make better validation, provide human readable errors
-export function isMediaSelector(key: string): key is MediaSelector {
-    return key.startsWith("@")
+export function isAtRuleKey(key: string): key is AtRuleKey {
+    return AT_RULE_PREFIXES.some((p) => key.startsWith(p))
 }
 
 /** A nested CSS selector pattern containing the parent reference `&` */
 export type NestedCssSelector = `${string}&${string}`
 
-/** A CSS media query starting with `@` */
-export type MediaSelector = `@${string}`
+/** A CSS at-rule key for media, container, supports, or layer queries */
+export type AtRuleKey = `@media ${string}` | `@container ${string}` | `@supports ${string}` | `@layer ${string}`
 
-type NestedStyleKeys = MediaSelector | NestedCssSelector
+type NestedStyleKeys = AtRuleKey | NestedCssSelector
 
 /**
  * Style properties without nesting support.
@@ -130,7 +129,7 @@ type NestedStyleKeys = MediaSelector | NestedCssSelector
  */
 export type SimpleStyleProps = { [K in PropsWithUnit]?: CssLike<number | Props[K]> } & {
     [K in Exclude<keyof Props, PropsWithUnit>]?: CssLike<Props[K]>
-} & Partial<Record<CssVar, CssLike<string | number>>>
+}
 
 /**
  * Full style properties type with support for nested selectors and media queries.
@@ -141,10 +140,13 @@ export type SimpleStyleProps = { [K in PropsWithUnit]?: CssLike<number | Props[K
  *   color: 'blue',
  *   padding: 16,
  *   '&:hover': { color: 'red' },
- *   '@min-width: 768px': { padding: 24 }
+ *   '@media (min-width: 768px)': { padding: 24 }
  * }
  */
-export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProps | CssLike<string | number> }
+export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProps | CssLike<string | number> } & Record<
+        string,
+        unknown
+    >
 
 /**
  * Converts a SimpleStyleProps object to a CSS properties record.
@@ -155,7 +157,9 @@ export type StyleProps = SimpleStyleProps & { [K in NestedStyleKeys]?: StyleProp
  * cssFromProps({ backgroundColor: 'blue', padding: 16 })
  * // { 'background-color': 'blue', 'padding': '16px' }
  */
-export function cssFromProps(props: SimpleStyleProps): Record<string, string> {
+export function cssFromProps(
+    props: SimpleStyleProps & Partial<Record<CssVar, CssLike<number | string>>>,
+): Record<string, string> {
     return Object.fromEntries(
         Object.entries(props)
             .map(([key, value]): [string, string] | undefined => {

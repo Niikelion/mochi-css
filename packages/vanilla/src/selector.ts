@@ -1,29 +1,29 @@
 /**
  * CSS selector building and manipulation utilities.
- * Handles nested selectors (using `&` placeholder) and media queries.
+ * Handles nested selectors (using `&` placeholder) and CSS at-rules.
  * @module selector
  */
 
-import { isMediaSelector, isNestedSelector } from "@/props"
+import { isAtRuleKey, isNestedSelector } from "@/props"
 
 /**
- * Immutable CSS selector builder that handles nested selectors and media queries.
+ * Immutable CSS selector builder that handles nested selectors and CSS at-rules.
  * Uses the `&` character as a placeholder for parent selector substitution.
  *
  * @example
  * const selector = new MochiSelector(['.button'])
  * selector.extend('&:hover').cssSelector // '.button:hover'
- * selector.wrap('@media (min-width: 768px)').mediaQuery // '@media (min-width: 768px)'
+ * selector.wrap('@media (min-width: 768px)').atRules // ['@media (min-width: 768px)']
  */
 export class MochiSelector {
     /**
      * Creates a new MochiSelector instance.
      * @param cssSelectors - Array of CSS selectors (may contain `&` placeholders)
-     * @param mediaSelectors - Array of media query conditions (without `@media` prefix)
+     * @param atRules - Array of full CSS at-rule strings e.g. `"@media (min-width: 768px)"`
      */
     constructor(
         private readonly cssSelectors: string[] = [],
-        private readonly mediaSelectors: string[] = [],
+        public readonly atRules: string[] = [],
     ) {}
 
     /**
@@ -37,15 +37,6 @@ export class MochiSelector {
     }
 
     /**
-     * Gets the combined media query string, if any.
-     * @returns The full `@media` query string, or undefined if no media conditions
-     */
-    get mediaQuery(): string | undefined {
-        if (this.mediaSelectors.length === 0) return undefined
-        return `@media ${this.mediaSelectors.map((s) => `(${s})`).join(" and ")}`
-    }
-
-    /**
      * Substitutes all `&` placeholders with the given root selector.
      * @param root - The selector to replace `&` with
      * @returns A new MochiSelector with substituted selectors
@@ -53,7 +44,7 @@ export class MochiSelector {
     substitute(root: string): MochiSelector {
         return new MochiSelector(
             this.cssSelectors.map((selector) => selector.replace(/&/g, root)),
-            this.mediaSelectors,
+            this.atRules,
         )
     }
 
@@ -74,20 +65,20 @@ export class MochiSelector {
                 return childSelector.replace(/&/g, parentSelector)
             }),
         )
-        return new MochiSelector(selectors, this.mediaSelectors)
+        return new MochiSelector(selectors, this.atRules)
     }
 
     /**
-     * Wraps this selector with a media query condition.
-     * @param mediaQuery - The media query string (starting with `@`)
-     * @returns A new MochiSelector with the added media condition
+     * Wraps this selector with a CSS at-rule.
+     * @param atRule - The full at-rule string (e.g. `"@media (min-width: 768px)"`)
+     * @returns A new MochiSelector with the added at-rule, or unchanged if not a known at-rule
      * @example
-     * selector.wrap('@min-width: 768px') // Adds media query condition
+     * selector.wrap('@media (min-width: 768px)') // Adds media query
+     * selector.wrap('@container sidebar (min-width: 300px)') // Adds container query
      */
-    wrap(mediaQuery: string): MochiSelector {
-        if (!isMediaSelector(mediaQuery)) return this
-        const mediaQueryPart = mediaQuery.substring(1)
-        return new MochiSelector(this.cssSelectors, [...this.mediaSelectors, mediaQueryPart])
+    wrap(atRule: string): MochiSelector {
+        if (!isAtRuleKey(atRule)) return this
+        return new MochiSelector(this.cssSelectors, [...this.atRules, atRule])
     }
 
     /**
