@@ -7,8 +7,8 @@
 
 import { Properties, ObsoleteProperties } from "csstype"
 import { CssLike, CssVar } from "@/values"
-import properties from "known-css-properties"
 import { propertyUnits, type PropertyWithUnit } from "./propertyUnits.generated"
+import { knownPropertyNames } from "./knownProperties.generated"
 
 /** All non-obsolete CSS properties from csstype */
 type Props = Required<Omit<Properties, keyof ObsoleteProperties>>
@@ -50,9 +50,6 @@ function formatValue(value: CssLike<string | number>, propertyName: string, maxD
     return formatValue(value.value, propertyName, maxDepth - 1)
 }
 
-//TODO: generate this list and drop known-css-properties package
-const knownPropertySet = new Set<string>(properties.all.map(kebabToCamel))
-
 /**
  * Checks if a property name is a CSS custom property (variable).
  */
@@ -82,7 +79,7 @@ export function asVar(value: CssLike<string | number>, maxDepth = 10): string {
  * Checks if a property name is a known CSS property.
  */
 export function isKnownPropertyName(key: string): key is keyof Props {
-    return knownPropertySet.has(key)
+    return knownPropertyNames.has(key)
 }
 
 /**

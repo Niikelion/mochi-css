@@ -64,7 +64,6 @@
     "dependencies": {
         "clsx": "^2.1.1",
         "csstype": "^3.2.3",
-        "known-css-properties": "^0.37.0",
         "react": ">= 18 || >= 19"
     }
 }
