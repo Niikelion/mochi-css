@@ -82,7 +82,7 @@ describe("CssObjectSubBlock", () => {
                     {
                         color: "red",
                     },
-                    new MochiSelector(["& > button"], ["width > 100px"]),
+                    new MochiSelector(["& > button"], ["@media (width > 100px)"]),
                 ),
             ] as const
 
@@ -142,7 +142,7 @@ describe("CssObjectSubBlock", () => {
                     {
                         width: "100%",
                     },
-                    new MochiSelector(["&"], ["width <= 480px"]),
+                    new MochiSelector(["&"], ["@media (width <= 480px)"]),
                 ).asCssString(".test"),
             ).toEqual(dedent`
                 @media (width <= 480px) {
@@ -158,7 +158,7 @@ describe("CssObjectSubBlock", () => {
         it("should ignore undefined values", () => {
             const blocks = CssObjectSubBlock.fromProps({
                 "& > span": undefined,
-                "@max-width: 500px": undefined,
+                "@media (max-width: 500px)": undefined,
                 color: undefined,
             })
 
@@ -189,7 +189,7 @@ describe("CssObjectSubBlock", () => {
                 color: "black",
                 "&:hover": {
                     color: "blue",
-                    "@width <= 200px": {
+                    "@media (width <= 200px)": {
                         color: "green",
                     },
                 },
@@ -309,7 +309,7 @@ describe("CssObjectBlock", () => {
         it("should handle media queries", () => {
             const block = new CssObjectBlock({
                 width: "100%",
-                "@width <= 480px": {
+                "@media (width <= 480px)": {
                     width: "auto",
                 },
             })
@@ -460,10 +460,10 @@ describe("CssObject", () => {
     it("should generate css code for base styles with media selectors", () => {
         const obj = new CSSObject({
             width: "100%",
-            "@width <= 480px": {
+            "@media (width <= 480px)": {
                 width: "auto",
             },
-            "@width >= 1024px": {
+            "@media (width >= 1024px)": {
                 width: 800,
             },
         })
@@ -486,14 +486,14 @@ describe("CssObject", () => {
                 layout: {
                     stack: {
                         flexDirection: "column",
-                        "@width >= 768px": {
+                        "@media (width >= 768px)": {
                             flexDirection: "row",
                         },
                     },
                     grid: {
                         display: "grid",
                         gridTemplateColumns: "1fr",
-                        "@width >= 768px": {
+                        "@media (width >= 768px)": {
                             gridTemplateColumns: "1fr 1fr",
                         },
                     },
@@ -670,7 +670,7 @@ describe("CssObject", () => {
             },
             compoundVariants: [
                 { color: "red", size: "large", css: { fontWeight: "bold" } } as CompoundVariant<{
-                    color: { red: object }
+                    color: { red: StyleProps }
                 }>,
             ],
         })
@@ -687,7 +687,7 @@ describe("CssObject", () => {
         const obj = new CSSObject({
             variants: {
                 color: {
-                    red: null as unknown as object,
+                    red: null as unknown as StyleProps,
                 },
             },
         })

@@ -6,7 +6,7 @@ import {
     cssFromProps,
     isCssVariableName,
     isKnownPropertyName,
-    isMediaSelector,
+    isAtRuleKey,
     isNestedSelector,
     kebabToCamel,
     SimpleStyleProps,
@@ -141,11 +141,18 @@ describe("isNestedSelector", () => {
     })
 })
 
-describe("isMediaSelector", () => {
-    it("returns true only if input starts with '@' character", () => {
-        expect(isMediaSelector("@max-width: 400px")).toEqual(true)
+describe("isAtRuleKey", () => {
+    it("returns true for known at-rule prefixes", () => {
+        expect(isAtRuleKey("@media (max-width: 400px)")).toEqual(true)
+        expect(isAtRuleKey("@container sidebar (min-width: 300px)")).toEqual(true)
+        expect(isAtRuleKey("@supports (display: grid)")).toEqual(true)
+        expect(isAtRuleKey("@layer base")).toEqual(true)
+    })
 
-        expect(isMediaSelector("& span")).toEqual(false)
+    it("returns false for unknown or old shorthand syntax", () => {
+        expect(isAtRuleKey("@max-width: 400px")).toEqual(false)
+        expect(isAtRuleKey("& span")).toEqual(false)
+        expect(isAtRuleKey("@invalid-no-space")).toEqual(false)
     })
 })
 

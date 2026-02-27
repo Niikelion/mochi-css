@@ -810,12 +810,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@gamedev-sensei/ts-config@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@gamedev-sensei/ts-config@npm:2.1.0"
+  dependencies:
+    typescript: "npm:^5.8.3"
+  checksum: 10c0/5fa25c9f40fcc844df1edcd2b2d6177455735d0892936981ac7e3bd17cb97463a857686e43bdb8fabe3c31ad41dd871fc5b161cf4e1b18c5e674dca9e1da14e1
+  languageName: node
+  linkType: hard
+
 "@gamedev-sensei/tsdown-config@npm:^2.0.0":
   version: 2.0.1
   resolution: "@gamedev-sensei/tsdown-config@npm:2.0.1"
   dependencies:
     esbuild-plugin-alias: "npm:^0.2.1"
   checksum: 10c0/9f826a2ede8248a05c5feaa6dbcf170d93720c6b2a292c8096b3f30eabd00d9bb55c597e5ccae582825e8c149c0f086d1c517918ccc84c2758f8184555e7f6cf
+  languageName: node
+  linkType: hard
+
+"@gamedev-sensei/tsdown-config@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@gamedev-sensei/tsdown-config@npm:2.1.0"
+  dependencies:
+    esbuild-plugin-alias: "npm:^0.2.1"
+  checksum: 10c0/378f9b49894d69bab545b4f0cb65690408993ef611cd962631ca4db951f1e6f38e2dfce159405c658bb66bbae110c8740196b10107d8385f33427c6d848740e0
   languageName: node
   linkType: hard
 
@@ -1201,8 +1219,8 @@ __metadata:
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@gamedev-sensei/ts-config": "npm:^2.0.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/vanilla": "npm:^1.1.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
@@ -1236,8 +1254,8 @@ __metadata:
   resolution: "@mochi-css/next@workspace:packages/next"
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@gamedev-sensei/ts-config": "npm:^2.0.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@types/node": "npm:^24.8.1"
     tsdown: "npm:^0.15.7"
   peerDependencies:
@@ -1270,8 +1288,8 @@ __metadata:
   resolution: "@mochi-css/postcss@workspace:packages/postcss"
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@gamedev-sensei/ts-config": "npm:^2.0.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/builder": "npm:^1.1.0"
     "@types/node": "npm:^24.8.1"
     postcss: "npm:^8.5.6"
@@ -1285,7 +1303,7 @@ __metadata:
   dependencies:
     "@clack/prompts": "npm:^0.10.0"
     "@eslint/js": "npm:^9.18.0"
-    "@gamedev-sensei/ts-config": "npm:^2.0.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@types/fs-extra": "npm:^11.0.4"
     "@types/node": "npm:^24.8.1"
     commander: "npm:^13.1.0"
@@ -1312,8 +1330,8 @@ __metadata:
   dependencies:
     "@arethetypeswrong/cli": "npm:^0.18.2"
     "@eslint/js": "npm:^9.18.0"
-    "@gamedev-sensei/ts-config": "npm:^2.0.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/css-tree": "npm:^2.3.10"

@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest"
 import { MochiSelector } from "@/selector"
 
 describe("MochiSelector", () => {
-    it("should have no media query and catch-all selector by default", () => {
+    it("should have no at-rules and catch-all selector by default", () => {
         const selector = new MochiSelector()
-        expect(selector.mediaQuery).toEqual(undefined)
+        expect(selector.atRules).toEqual([])
     })
 
     describe("cssSelector", () => {
@@ -22,15 +22,15 @@ describe("MochiSelector", () => {
         })
     })
 
-    describe("mediaQuery", () => {
-        it("should return undefined when no query is specified", () => {
+    describe("atRules", () => {
+        it("should return empty array when no at-rules are specified", () => {
             const selector = new MochiSelector()
-            expect(selector.mediaQuery).toEqual(undefined)
+            expect(selector.atRules).toEqual([])
         })
 
-        it("should return conditions wrapped in parenthesis, separated by ' and ' and prefixed by @media when specified", () => {
-            const selector = new MochiSelector([], ["width < 200px", "min-width: 1000px"])
-            expect(selector.mediaQuery).toEqual("@media (width < 200px) and (min-width: 1000px)")
+        it("should return full at-rule strings in order", () => {
+            const selector = new MochiSelector([], ["@media (width < 200px)", "@container sidebar (min-width: 300px)"])
+            expect(selector.atRules).toEqual(["@media (width < 200px)", "@container sidebar (min-width: 300px)"])
         })
     })
 
@@ -40,7 +40,7 @@ describe("MochiSelector", () => {
             const selectorWithRoot = selector.substitute(".test")
 
             expect(selectorWithRoot.cssSelector).toEqual(".test > span, p.container > .test")
-            expect(selectorWithRoot.mediaQuery).toEqual(undefined)
+            expect(selectorWithRoot.atRules).toEqual([])
         })
     })
 
@@ -50,13 +50,13 @@ describe("MochiSelector", () => {
             const childSelector = parentSelector.extend("& p, & div")
 
             expect(childSelector.cssSelector).toEqual(".ck-edit p, .ck-edit div")
-            expect(childSelector.mediaQuery).toEqual(undefined)
+            expect(childSelector.atRules).toEqual([])
 
-            const parentSelectorWithMedia = new MochiSelector([".test"], ["min-width: 600px"])
+            const parentSelectorWithMedia = new MochiSelector([".test"], ["@media (min-width: 600px)"])
             const childSelectorWithMedia = parentSelectorWithMedia.extend("&.new")
 
             expect(childSelectorWithMedia.cssSelector).toEqual(".test.new")
-            expect(childSelectorWithMedia.mediaQuery).toEqual("@media (min-width: 600px)")
+            expect(childSelectorWithMedia.atRules).toEqual(["@media (min-width: 600px)"])
         })
 
         it("should return source without changes if selector is not valid", () => {
@@ -68,18 +68,32 @@ describe("MochiSelector", () => {
     })
 
     describe("wrap", () => {
-        it("should convert mochi media condition to css media-query condition and append it to list of conditions", () => {
-            const selector = new MochiSelector([], ["width >= 1024px"])
-            const wrappedSelector = selector.wrap("@color")
+        it("should append a full at-rule string to the list of at-rules", () => {
+            const selector = new MochiSelector([], ["@media (width >= 1024px)"])
+            const wrappedSelector = selector.wrap("@media (color)")
 
-            expect(wrappedSelector.mediaQuery).toEqual("@media (width >= 1024px) and (color)")
+            expect(wrappedSelector.atRules).toEqual(["@media (width >= 1024px)", "@media (color)"])
         })
 
-        it("should return source without changes if condition is not valid", () => {
-            const selector = new MochiSelector([], ["width >= 1024px"])
+        it("should return source without changes if at-rule is not a known prefix", () => {
+            const selector = new MochiSelector([], ["@media (width >= 1024px)"])
             const wrappedSelector = selector.wrap("color")
 
-            expect(wrappedSelector.mediaQuery).toEqual("@media (width >= 1024px)")
+            expect(wrappedSelector.atRules).toEqual(["@media (width >= 1024px)"])
+        })
+
+        it("should return source without changes for unknown @ shorthand", () => {
+            const selector = new MochiSelector([], ["@media (width >= 1024px)"])
+            const wrappedSelector = selector.wrap("@invalid-no-space")
+
+            expect(wrappedSelector.atRules).toEqual(["@media (width >= 1024px)"])
+        })
+
+        it("should support nested at-rules (media + container)", () => {
+            const selector = new MochiSelector(["&"])
+            const wrapped = selector.wrap("@media (min-width: 768px)").wrap("@container sidebar (min-width: 300px)")
+
+            expect(wrapped.atRules).toEqual(["@media (min-width: 768px)", "@container sidebar (min-width: 300px)"])
         })
     })
 })

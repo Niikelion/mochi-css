@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { css, MochiCSS } from "@/css"
+import { StyleProps } from "@/props"
 
 describe("css", () => {
     it("should have a classname list that is deterministic and dependent on styles", () => {
@@ -165,7 +166,7 @@ describe("css", () => {
     })
 
     it("should handle variant() with missing variant group gracefully", () => {
-        const mochi = new MochiCSS<{ broken: { value: object } }>(["base"], { broken: undefined } as never, {})
+        const mochi = new MochiCSS<{ broken: { value: StyleProps } }>(["base"], { broken: undefined } as never, {})
         expect(mochi.variant({ broken: "value" })).toEqual("base")
     })
 

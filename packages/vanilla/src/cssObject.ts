@@ -11,13 +11,14 @@ import {
     camelToKebab,
     isCssVariableName,
     isKnownPropertyName,
-    isMediaSelector,
+    isAtRuleKey,
     isNestedSelector,
     StyleProps,
 } from "@/props"
 import { shortHash } from "@/hash"
 import { MochiSelector } from "@/selector"
 import { compareStringKey, stringPropComparator } from "@/compare"
+import { CssLike } from "@/values"
 
 /**
  * Represents a single CSS rule block with properties and a selector.
@@ -45,24 +46,29 @@ export class CssObjectSubBlock {
 
     /**
      * Converts this block to a CSS string.
-     * Handles media query wrapping if the selector has media conditions.
+     * Handles at-rule wrapping (media, container, supports, layer) if present.
+     * Multiple at-rules are nested in order.
      * @param root - The root selector to substitute for `&`
      * @returns Formatted CSS string
      */
     asCssString(root: string): string {
         const selector = this.selector.substitute(root)
-        const mediaQuery = selector.mediaQuery
-
-        const mediaIndent = mediaQuery === undefined ? "" : "    "
+        const atRules = selector.atRules
+        const innerIndent = "    ".repeat(atRules.length)
 
         const props = Object.entries(this.cssProps)
             .toSorted(compareStringKey)
-            .map(([k, v]) => `${mediaIndent}    ${k}: ${v};\n`)
+            .map(([k, v]) => `${innerIndent}    ${k}: ${v};\n`)
             .join("")
 
-        const blockCss = `${mediaIndent}${selector.cssSelector} {\n${props}${mediaIndent}}`
+        let result = `${innerIndent}${selector.cssSelector} {\n${props}${innerIndent}}`
 
-        return mediaQuery === undefined ? blockCss : `${mediaQuery} {\n${blockCss}\n}`
+        for (let i = atRules.length - 1; i >= 0; i--) {
+            const outerIndent = "    ".repeat(i)
+            result = `${outerIndent}${atRules[i]} {\n${result}\n${outerIndent}}`
+        }
+
+        return result
     }
 
     /**
@@ -86,7 +92,7 @@ export class CssObjectSubBlock {
 
             // transform variable
             if (isCssVariableName(key)) {
-                cssProps[key] = asVar(value as StyleProps[typeof key] & {})
+                cssProps[key] = asVar(value as CssLike<string | number>)
                 continue
             }
 
@@ -106,8 +112,8 @@ export class CssObjectSubBlock {
                 continue
             }
 
-            // transform media selector
-            if (isMediaSelector(key)) {
+            // transform at-rule selector (media, container, supports, layer)
+            if (isAtRuleKey(key)) {
                 propsToProcess.push({
                     key,
                     props: value as StyleProps,
@@ -214,7 +220,11 @@ export type VariantProps<V extends AllVariants> = {
 }
 
 /** Combined type for style props with optional variants */
-export type MochiCSSProps<V extends AllVariants> = StyleProps & VariantProps<V>
+export type MochiCSSProps<V extends AllVariants> = Omit<
+    StyleProps,
+    "variants" | "compoundVariants" | "defaultVariants"
+> &
+    VariantProps<V>
 
 /** Utility type to override properties of A with properties of B */
 type Override<A extends object, B extends object> = B & Omit<A, keyof B>
@@ -266,7 +276,7 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
      * Compiles main styles and all variant options into CSS blocks.
      */
     public constructor({ variants, defaultVariants, compoundVariants, ...props }: MochiCSSProps<V>) {
-        this.mainBlock = new CssObjectBlock(props)
+        this.mainBlock = new CssObjectBlock(props as StyleProps)
         this.variantBlocks = {} as typeof this.variantBlocks
         this.variantDefaults = defaultVariants ?? {}
         this.compoundVariants = []
