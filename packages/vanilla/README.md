@@ -3,6 +3,14 @@
 This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css).
 It provides type-safe CSS-in-JS styling functions with static extraction support, allowing you to write styles in TypeScript that get extracted to plain CSS at build time.
 
+## Installation
+
+```bash
+npm i @mochi-css/vanilla
+```
+
+---
+
 ## Functions
 
 ### `css(...styles)`
@@ -35,6 +43,20 @@ const buttonStyles = css(textStyles, {
 })
 ```
 
+### `globalCss(styles)`
+
+`globalCss` injects styles into the global scope — they are not scoped to any class and apply to all matching elements. Use it for resets, base typography, or any styles that must target plain HTML elements.
+
+```ts
+import { globalCss } from "@mochi-css/vanilla"
+
+globalCss({
+    "*, *::before, *::after": { boxSizing: "border-box" },
+    body: { margin: 0, fontFamily: "sans-serif" },
+    "h1, h2, h3": { lineHeight: 1.2 },
+})
+```
+
 ### `styled(component, ...styles)`
 
 `styled` creates a styled component by combining a base element or component with style definitions. It automatically applies the generated class names and forwards variant props.
@@ -45,6 +67,52 @@ import {styled} from "@mochi-css/vanilla"
 const Button = styled("button", {
     borderRadius: 10,
     border: "2px solid red"
+})
+```
+
+### `keyframes(stops)`
+
+The `keyframes` function lets you define CSS animations using the same type-safe syntax as style definitions.
+
+Define animation stops using `from`/`to` or percentage keys:
+
+```ts
+import { keyframes, css } from "@mochi-css/vanilla"
+
+const fadeIn = keyframes({
+    from: { opacity: 0 },
+    to: { opacity: 1 }
+})
+
+const fadeInStyle = css({
+    animation: `${fadeIn} 0.3s ease`
+})
+```
+
+For more control over animation timing, use percentage-based stops:
+
+```ts
+const bounce = keyframes({
+    "0%": { transform: "translateY(0)" },
+    "50%": { transform: "translateY(-20px)" },
+    "100%": { transform: "translateY(0)" }
+})
+```
+
+Each stop can contain multiple CSS properties with auto-units:
+
+```ts
+const grow = keyframes({
+    from: {
+        opacity: 0,
+        transform: "scale(0.5)",
+        fontSize: 12  // becomes 12px
+    },
+    to: {
+        opacity: 1,
+        transform: "scale(1)",
+        fontSize: 24  // becomes 24px
+    }
 })
 ```
 
@@ -402,62 +470,3 @@ Tokens can be used in two ways:
 - **As values**: Use the token directly (e.g., `backgroundColor: buttonColor`) to reference the CSS variable
 - **As keys**: Use `token.variable` (e.g., `[buttonColor.variable]: primaryColor`) to assign a value to the CSS variable
 
-## Keyframes
-
-The `keyframes` function lets you define CSS animations using the same type-safe syntax as style definitions.
-
-### Basic Usage
-
-Define animation stops using `from`/`to` or percentage keys:
-
-```ts
-import { keyframes, css } from "@mochi-css/vanilla"
-
-const fadeIn = keyframes({
-    from: { opacity: 0 },
-    to: { opacity: 1 }
-})
-
-const fadeInStyle = css({
-    animation: `${fadeIn} 0.3s ease`
-})
-```
-
-### Percentage Stops
-
-For more control over animation timing, use percentage-based stops:
-
-```ts
-import { keyframes, css } from "@mochi-css/vanilla"
-
-const bounce = keyframes({
-    "0%": { transform: "translateY(0)" },
-    "50%": { transform: "translateY(-20px)" },
-    "100%": { transform: "translateY(0)" }
-})
-
-const bouncingElement = css({
-    animation: `${bounce} 1s ease-in-out infinite`
-})
-```
-
-### Multiple Properties
-
-Each stop can contain multiple CSS properties with auto-units:
-
-```ts
-import { keyframes } from "@mochi-css/vanilla"
-
-const grow = keyframes({
-    from: {
-        opacity: 0,
-        transform: "scale(0.5)",
-        fontSize: 12  // becomes 12px
-    },
-    to: {
-        opacity: 1,
-        transform: "scale(1)",
-        fontSize: 24  // becomes 24px
-    }
-})
-```
