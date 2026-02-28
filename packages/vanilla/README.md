@@ -1,4 +1,4 @@
-# Mochi-CSS/vanilla
+# 🧁 Mochi-CSS/vanilla
 
 This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css).
 It provides type-safe CSS-in-JS styling functions with static extraction support, allowing you to write styles in TypeScript that get extracted to plain CSS at build time.
