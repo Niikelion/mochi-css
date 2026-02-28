@@ -132,73 +132,116 @@ const linkStyle = css({
 
 ## Media Selectors
 
-Media selectors allow you to apply styles conditionally based on viewport size, color scheme preferences, and other media features. Media selectors start with the `@` symbol and are compiled into CSS media queries:
+Mochi-CSS supports `@media`, `@container`, `@supports`, and `@layer` at-rules as style object keys.
+You can write them as plain strings or use the typed helper functions exported from the package.
+
+### `media` helper
 
 ```ts
-import { css } from "@mochi-css/vanilla"
+import { css, media } from "@mochi-css/vanilla"
 
 const responsiveContainer = css({
     display: "flex",
     flexDirection: "row",
     padding: 32,
 
-    // Responsive breakpoints
-    "@max-width: 768px": {
+    // media(condition) — wraps condition in parens automatically
+    [media("max-width: 768px")]: {
         flexDirection: "column",
         padding: 16
     },
 
-    "@max-width: 480px": {
-        padding: 8
-    },
-
     // Modern range syntax
-    "@width <= 1024px": {
+    [media("width <= 1024px")]: {
         gap: 16
     },
 
-    // Color scheme preferences
-    "@prefers-color-scheme: dark": {
+    // Shorthand properties for common queries
+    [media.dark]: {
         backgroundColor: "#1a1a1a",
         color: "white"
     },
 
-    // Reduced motion
-    "@prefers-reduced-motion: reduce": {
+    [media.motion]: {
         transition: "none"
+    },
+
+    [media.print]: {
+        display: "block"
     }
 })
 ```
 
-### Combined Media Selectors
-
-You can combine multiple media conditions using `and` and `not` operators:
+Combine conditions with `media.and` / `media.or`:
 
 ```ts
-const responsiveLayout = css({
+const layout = css({
     display: "grid",
     gridTemplateColumns: "1fr",
 
-    // Screen media type with width condition
-    "@screen and (width > 1000px)": {
-        gridTemplateColumns: "1fr 1fr"
-    },
-
-    // Multiple conditions with 'and'
-    "@screen and (min-width: 768px) and (max-width: 1024px)": {
+    [media.and("min-width: 768px", "max-width: 1024px")]: {
         gridTemplateColumns: "1fr 1fr",
         gap: 16
     },
 
-    // Print styles
-    "@print": {
+    [media.or("max-width: 480px", "print")]: {
         display: "block"
+    }
+})
+```
+
+### `container` helper
+
+```ts
+import { css, container } from "@mochi-css/vanilla"
+
+const card = css({
+    fontSize: 16,
+
+    // Anonymous container query
+    [container("min-width: 400px")]: {
+        fontSize: 20
     },
 
-    // Combining media type with preference
-    "@screen and (not (prefers-color-scheme: dark))": {
-        backgroundColor: "#121212"
+    // Named container query
+    [container.named("sidebar", "min-width: 200px")]: {
+        display: "none"
     }
+})
+```
+
+### `supports` helper
+
+```ts
+import { css, supports } from "@mochi-css/vanilla"
+
+const grid = css({
+    display: "flex",
+
+    [supports("display: grid")]: {
+        display: "grid"
+    },
+
+    [supports.not("display: grid")]: {
+        display: "flex"
+    },
+
+    [supports.and("display: grid", "gap: 1px")]: {
+        gap: 16
+    }
+})
+```
+
+### Raw strings
+
+You can also use raw at-rule strings directly without the helpers:
+
+```ts
+const styles = css({
+    "@media (max-width: 768px)": { padding: 8 },
+    "@container (min-width: 300px)": { fontSize: 20 },
+    "@supports (display: grid)": { display: "grid" },
+    "@layer utilities": { color: "red" }
 })
 ```
 
@@ -214,14 +257,13 @@ const buttonStyle = css({
         backgroundColor: "darkblue",
 
         // Media selector inside nested selector
-        "@width <= 480px": {
-            // Disable hover effects on mobile (touch devices)
+        [media("max-width: 480px")]: {
             backgroundColor: "blue"
         }
     },
 
     // Media selector with nested selectors inside
-    "@max-width: 768px": {
+    [media("max-width: 768px")]: {
         padding: 8,
 
         "& > span": {
@@ -244,13 +286,13 @@ const cardStyle = css({
         size: {
             small: {
                 padding: 8,
-                "@max-width: 480px": {
+                [media("max-width: 480px")]: {
                     padding: 4
                 }
             },
             large: {
                 padding: 32,
-                "@max-width: 480px": {
+                [media("max-width: 480px")]: {
                     padding: 16
                 }
             }
