@@ -25,17 +25,6 @@ function runTsuki(cwd: string): Promise<void> {
     })
 }
 
-async function rootFileContents(dir: string): Promise<Record<string, string>> {
-    const result: Record<string, string> = {}
-    for (const entry of await fs.readdir(dir)) {
-        const stat = await fs.stat(path.join(dir, entry))
-        if (stat.isFile()) {
-            result[entry] = await fs.readFile(path.join(dir, entry), "utf-8")
-        }
-    }
-    return result
-}
-
 async function runFixture(fixtureName: string): Promise<void> {
     const fixtureDir = path.join(fixturesDir, fixtureName)
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `mochi-manual-${fixtureName}-`))
@@ -50,17 +39,7 @@ async function runFixture(fixtureName: string): Promise<void> {
 
         console.log(pc.dim(`\nFixture: ${fixtureName}  |  Working directory: ${tmpDir}\n`))
 
-        const before = await rootFileContents(tmpDir)
-
         await runTsuki(tmpDir)
-
-        // Show files that were added or modified at the root level
-        // const after = await rootFileContents(tmpDir)
-        // for (const [file, content] of Object.entries(after)) {
-        //     if (before[file] !== content) {
-        //         console.log(pc.dim(`\n=== ${file} ===\n`) + content)
-        //     }
-        // }
     } finally {
         await fs.rm(tmpDir, { recursive: true })
     }

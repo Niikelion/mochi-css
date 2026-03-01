@@ -87,7 +87,7 @@ async function runInstall(title: string, command: string, args: string[], packag
             throw new Error(`Failed to install packages: ${packages.join(", ")}`)
         }
 
-        log.success(`${packages.join(", ")} has been installed installed!`)
+        log.success(`${packages.join(", ")} has been installed!`)
     } catch (err) {
         log.error(err instanceof Error ? err.message : String(err))
         throw err

@@ -4,6 +4,7 @@ import path from "path"
 import * as p from "@clack/prompts"
 import { parseModule, generateCode, ProxifiedValue } from "magicast"
 import type { Module, ModuleContext } from "@/types"
+import { getPropKeyName, optionsToAstProperties, type ObjNode } from "./ast"
 
 const postcssConfigNames = [
     "postcss.config.mts",
@@ -26,12 +27,14 @@ export function findPostcssConfig(): string | undefined {
     return postcssConfigNames.find((name) => fsExtra.existsSync(name))
 }
 
-const defaultPostcssConfig = /* language=typescript */ `export default {
-    plugins: {
-        "@mochi-css/postcss": {}
-    }
+function defaultPostcssConfig(pluginOptions: Record<string, string | number | boolean> = {}): string {
+    const entries = Object.entries(pluginOptions)
+    const optionsStr =
+        entries.length === 0
+            ? "{}"
+            : `{\n${entries.map(([k, v]) => `            ${k}: ${JSON.stringify(v)}`).join(",\n")}\n        }`
+    return `export default {\n    plugins: {\n        "@mochi-css/postcss": ${optionsStr}\n    }\n}\n`
 }
-`
 
 async function askForPath(): Promise<string | false> {
     const defaultConfig = findPostcssConfig() ?? "postcss.config.js"
@@ -59,21 +62,13 @@ function isObject(v: unknown): v is Record<string, unknown> {
     return v !== null && typeof v === "object"
 }
 
-type ObjNode = { type: "ObjectExpression"; properties: Record<string, unknown>[] }
-
-function getPropKeyName(prop: Record<string, unknown>): string | undefined {
-    const key = prop["key"] as Record<string, unknown>
-    if (typeof key["name"] === "string") return key["name"]
-    if (typeof key["value"] === "string") return key["value"]
-    return undefined
-}
-
 // Handles `const config = { ... }; export default config` by directly mutating the
 // module's babel AST — the only approach that works when magicast returns an identifier proxy.
 function addPluginToNamedVar(
     mod: ReturnType<typeof parseModule>,
     varName: string,
     pluginName: string,
+    pluginOptions: Record<string, string | number | boolean>,
     configPath: string,
 ): void {
     type DeclNode = { id: { type: string; name: string }; init: ObjNode | null }
@@ -90,7 +85,7 @@ function addPluginToNamedVar(
             const init = decl.init
             if (!init) throw new Error(`Failed to add postcss plugin to ${configPath}`)
 
-            const pluginsProp = init.properties.find((p) => getPropKeyName(p) === "plugins") as
+            const pluginsProp = init.properties.find((prop) => getPropKeyName(prop) === "plugins") as
                 | (Record<string, unknown> & { value: ObjNode })
                 | undefined
 
@@ -99,7 +94,7 @@ function addPluginToNamedVar(
             pluginsProp.value.properties.push({
                 type: "ObjectProperty",
                 key: { type: "StringLiteral", value: pluginName },
-                value: { type: "ObjectExpression", properties: [] as Record<string, unknown>[] },
+                value: { type: "ObjectExpression", properties: optionsToAstProperties(pluginOptions) },
                 computed: false,
                 shorthand: false,
             } as Record<string, unknown>)
@@ -114,7 +109,7 @@ function addPluginToNamedVar(
 async function addPostcssPlugin(
     configPath: string,
     pluginName: string,
-    pluginOptions: Record<string, unknown> = {},
+    pluginOptions: Record<string, string | number | boolean> = {},
 ): Promise<void> {
     const content = await fs.readFile(configPath, "utf-8")
 
@@ -123,7 +118,7 @@ async function addPostcssPlugin(
 
     // Handle `export default config` (identifier — variable reference)
     if (isProxy(defaultExport) && defaultExport.$type === "identifier") {
-        addPluginToNamedVar(mod, defaultExport.$name, pluginName, configPath)
+        addPluginToNamedVar(mod, defaultExport.$name, pluginName, pluginOptions, configPath)
         const { code } = generateCode(mod)
         await fs.writeFile(configPath, code)
         return
@@ -150,9 +145,18 @@ async function addPostcssPlugin(
     await fs.writeFile(configPath, code)
 }
 
-export async function addToConfig(configPath: string): Promise<void> {
+export interface PostcssModuleOptions {
+    outDir?: string
+    /** Skip the "Do you use PostCSS?" confirmation and auto-configure. */
+    auto?: boolean
+}
+
+export async function addToConfig(
+    configPath: string,
+    pluginOptions: Record<string, string | number | boolean> = {},
+): Promise<void> {
     if (!fsExtra.existsSync(configPath)) {
-        await fsExtra.writeFile("postcss.config.mts", defaultPostcssConfig)
+        await fsExtra.writeFile("postcss.config.mts", defaultPostcssConfig(pluginOptions))
         return
     }
 
@@ -163,7 +167,7 @@ export async function addToConfig(configPath: string): Promise<void> {
         if (!isObject(config)) throw new Error("Unrecognized config type in ${configPath}`)")
         config["plugins"] ??= {}
         if (!isObject(config["plugins"])) throw new Error("Unrecognized config type in ${configPath}`)")
-        config["plugins"]["@mochi-css/postcss"] = {}
+        config["plugins"]["@mochi-css/postcss"] = pluginOptions
         await fsExtra.writeJson(configPath, config, { spaces: 2 })
         return
     }
@@ -171,26 +175,40 @@ export async function addToConfig(configPath: string): Promise<void> {
     if (ext === "yml" || ext === "yaml") throw new Error("YAML PostCSS config is not supported yet")
 
     // JS/TS config - use magicast
-    await addPostcssPlugin(configPath, "@mochi-css/postcss")
+    await addPostcssPlugin(configPath, "@mochi-css/postcss", pluginOptions)
 }
 
-export const postcssModule: Module = {
-    id: "postcss",
-    name: "PostCSS",
+export function createPostcssModule(options: PostcssModuleOptions = {}): Module {
+    const pluginOptions: Record<string, string | number | boolean> = {}
+    if (options.outDir !== undefined) pluginOptions["outDir"] = options.outDir
 
-    async run(ctx: ModuleContext): Promise<void> {
-        const usePostcss = await p.confirm({
-            message: "Do you use PostCSS?",
-        })
+    return {
+        id: "postcss",
+        name: "PostCSS",
 
-        if (p.isCancel(usePostcss) || !usePostcss) return
+        async run(ctx: ModuleContext): Promise<void> {
+            let configPath: string
 
-        const configPath = await askForPath()
-        if (configPath === false) return
+            if (options.auto) {
+                configPath = findPostcssConfig() ?? "postcss.config.mts"
+            } else {
+                const usePostcss = await p.confirm({
+                    message: "Do you use PostCSS?",
+                })
 
-        await addToConfig(configPath)
-        p.log.step("Added mochi plugin to the postcss config")
+                if (p.isCancel(usePostcss) || !usePostcss) return
 
-        ctx.requirePackage("@mochi-css/postcss")
-    },
+                const selected = await askForPath()
+                if (selected === false) return
+                configPath = selected
+            }
+
+            await addToConfig(configPath, pluginOptions)
+            p.log.success("Added mochi plugin to the postcss config")
+
+            ctx.requirePackage("@mochi-css/postcss")
+        },
+    }
 }
+
+export const postcssModule: Module = createPostcssModule()
