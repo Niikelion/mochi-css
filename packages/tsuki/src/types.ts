@@ -16,5 +16,15 @@ export interface Module {
     /** Display name for prompts */
     name: string
     /** Run the module's setup logic */
-    run(ctx: ModuleContext): Promise<void>
+    run(ctx: ModuleContext): Promise<void> | void
+}
+
+export interface PresetRunner {
+    register(module: Module): this
+}
+
+export interface Preset {
+    id: string
+    name: string
+    setup(runner: PresetRunner): void
 }
