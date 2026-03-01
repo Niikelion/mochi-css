@@ -16,5 +16,5 @@ export interface Module {
     /** Display name for prompts */
     name: string
     /** Run the module's setup logic */
-    run(ctx: ModuleContext): Promise<void>
+    run(ctx: ModuleContext): Promise<void> | void
 }

@@ -10,6 +10,10 @@
     ],
     "scripts": {
         "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage",
+        "smoke": "jiti scripts/smoke.ts",
+        "manual": "jiti scripts/manual.ts",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
         "format": "prettier --write"
@@ -17,8 +21,10 @@
     "devDependencies": {
         "@eslint/js": "^9.18.0",
         "@gamedev-sensei/ts-config": "^2.1.0",
+        "@types/cross-spawn": "^6.0.6",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "^24.8.1",
+        "@vitest/coverage-v8": "^4.0.15",
         "eslint": "^9.39.2",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.5",
@@ -26,11 +32,14 @@
         "prettier": "^3.8.1",
         "tsdown": "^0.15.7",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.21.0"
+        "typescript-eslint": "^8.21.0",
+        "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@clack/prompts": "^0.10.0",
+        "@clack/prompts": "^1.0.1",
         "commander": "^13.1.0",
+        "cross-spawn": "^7.0.6",
         "fs-extra": "^11.3.0",
         "magicast": "^0.5.1",
         "package-manager-detector": "^1.6.0",

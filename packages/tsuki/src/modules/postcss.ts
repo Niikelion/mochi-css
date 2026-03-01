@@ -22,7 +22,7 @@ const postcssConfigNames = [
     ".postcssrc",
 ]
 
-function findPostcssConfig(): string | undefined {
+export function findPostcssConfig(): string | undefined {
     return postcssConfigNames.find((name) => fsExtra.existsSync(name))
 }
 
@@ -49,12 +49,66 @@ async function askForPath(): Promise<string | false> {
 
 type MagicastValue = ProxifiedValue | number | string | null | undefined | boolean | bigint | symbol
 
+// magicast v0.5: object proxies override the `has` trap to only expose user-visible keys,
+// so `"$ast" in proxy` returns false. Use property access (get trap) instead.
 function isProxy(v: MagicastValue): v is ProxifiedValue {
-    return v !== null && typeof v === "object" && "$ast" in v
+    return v !== null && typeof v === "object" && typeof (v as Record<string, unknown>)["$ast"] === "object"
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {
     return v !== null && typeof v === "object"
+}
+
+type ObjNode = { type: "ObjectExpression"; properties: Record<string, unknown>[] }
+
+function getPropKeyName(prop: Record<string, unknown>): string | undefined {
+    const key = prop["key"] as Record<string, unknown>
+    if (typeof key["name"] === "string") return key["name"]
+    if (typeof key["value"] === "string") return key["value"]
+    return undefined
+}
+
+// Handles `const config = { ... }; export default config` by directly mutating the
+// module's babel AST — the only approach that works when magicast returns an identifier proxy.
+function addPluginToNamedVar(
+    mod: ReturnType<typeof parseModule>,
+    varName: string,
+    pluginName: string,
+    configPath: string,
+): void {
+    type DeclNode = { id: { type: string; name: string }; init: ObjNode | null }
+    type VarDeclNode = { type: "VariableDeclaration"; declarations: DeclNode[] }
+
+    const body = (mod.$ast as unknown as { body: unknown[] }).body
+
+    for (const stmt of body) {
+        if ((stmt as { type: string }).type !== "VariableDeclaration") continue
+
+        for (const decl of (stmt as VarDeclNode).declarations) {
+            if (decl.id.type !== "Identifier" || decl.id.name !== varName) continue
+
+            const init = decl.init
+            if (!init) throw new Error(`Failed to add postcss plugin to ${configPath}`)
+
+            const pluginsProp = init.properties.find((p) => getPropKeyName(p) === "plugins") as
+                | (Record<string, unknown> & { value: ObjNode })
+                | undefined
+
+            if (!pluginsProp) throw new Error(`Failed to find plugins object in ${configPath}`)
+
+            pluginsProp.value.properties.push({
+                type: "ObjectProperty",
+                key: { type: "StringLiteral", value: pluginName },
+                value: { type: "ObjectExpression", properties: [] as Record<string, unknown>[] },
+                computed: false,
+                shorthand: false,
+            } as Record<string, unknown>)
+
+            return
+        }
+    }
+
+    throw new Error(`Failed to add postcss plugin to ${configPath}`)
 }
 
 async function addPostcssPlugin(
@@ -66,6 +120,14 @@ async function addPostcssPlugin(
 
     const mod = parseModule(content)
     const defaultExport = mod.exports["default"] as MagicastValue
+
+    // Handle `export default config` (identifier — variable reference)
+    if (isProxy(defaultExport) && defaultExport.$type === "identifier") {
+        addPluginToNamedVar(mod, defaultExport.$name, pluginName, configPath)
+        const { code } = generateCode(mod)
+        await fs.writeFile(configPath, code)
+        return
+    }
 
     // Handle both `export default { ... }` and `export default defineConfig({ ... })`
     const config = (
@@ -81,16 +143,14 @@ async function addPostcssPlugin(
     // Ensure plugins object exists
     config["plugins"] ??= {}
 
-    if (!isObject(config["plugins"])) throw new Error(`Unrecognized plugins config type in ${configPath}`)
-
     // Add plugin
-    config["plugins"][pluginName] = pluginOptions
+    ;(config["plugins"] as Record<string, unknown>)[pluginName] = pluginOptions
 
     const { code } = generateCode(mod)
     await fs.writeFile(configPath, code)
 }
 
-async function addToConfig(configPath: string): Promise<void> {
+export async function addToConfig(configPath: string): Promise<void> {
     if (!fsExtra.existsSync(configPath)) {
         await fsExtra.writeFile("postcss.config.mts", defaultPostcssConfig)
         return
