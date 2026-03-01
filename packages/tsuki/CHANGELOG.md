@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 2.0.0
+
+### Minor Changes
+
+- 3f5a2dc: Added presets for nextjs and vite
+
 ## 1.1.0
 
 ## 1.0.1

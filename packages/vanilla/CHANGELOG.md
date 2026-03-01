@@ -1,5 +1,11 @@
 # @mochi-css/vanilla
 
+## 2.0.0
+
+### Major Changes
+
+- 383e43f: Reworked media queries
+
 ## 1.1.0
 
 ### Minor Changes

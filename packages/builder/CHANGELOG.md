@@ -1,5 +1,12 @@
 # @mochi-css/builder
 
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [383e43f]
+  - @mochi-css/vanilla@2.0.0
+
 ## 1.1.0
 
 ### Minor Changes
