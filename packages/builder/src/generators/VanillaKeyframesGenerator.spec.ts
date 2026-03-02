@@ -12,11 +12,13 @@ describe("VanillaKeyframesGenerator", () => {
             const onDiagnostic = vi.fn()
             const gen = new VanillaKeyframesGenerator(onDiagnostic)
             gen.collectArgs("a.ts", [null])
-            expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({
-                code: "MOCHI_INVALID_KEYFRAMES_ARG",
-                severity: "warning",
-                file: "a.ts",
-            }))
+            expect(onDiagnostic).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    code: "MOCHI_INVALID_KEYFRAMES_ARG",
+                    severity: "warning",
+                    file: "a.ts",
+                }),
+            )
         })
 
         it("reports diagnostic for non-object args", () => {
@@ -40,7 +42,7 @@ describe("VanillaKeyframesGenerator", () => {
             gen.collectArgs("a.ts", [{ from: { opacity: "0" }, to: { opacity: "1" } }])
             gen.collectArgs("a.ts", [{ from: { opacity: "1" }, to: { opacity: "0" } }])
             const result = await gen.generateStyles()
-            expect(result.files?.["a.ts"]).toBeDefined()
+            expect(result.files["a.ts"]).toBeDefined()
         })
 
         it("reports diagnostic when keyframes generation fails", async () => {
@@ -51,11 +53,13 @@ describe("VanillaKeyframesGenerator", () => {
             })
             gen.collectArgs("a.ts", [{ from: { opacity: "0" }, to: { opacity: "1" } }])
             await gen.generateStyles()
-            expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({
-                code: "MOCHI_KEYFRAMES_GENERATION",
-                severity: "warning",
-                file: "a.ts",
-            }))
+            expect(onDiagnostic).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    code: "MOCHI_KEYFRAMES_GENERATION",
+                    severity: "warning",
+                    file: "a.ts",
+                }),
+            )
         })
     })
 })

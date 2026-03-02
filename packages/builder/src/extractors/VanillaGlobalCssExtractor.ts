@@ -22,7 +22,4 @@ export class VanillaGlobalCssExtractor implements StyleExtractor {
     }
 }
 
-export const mochiGlobalCssFunctionExtractor = new VanillaGlobalCssExtractor(
-    "@mochi-css/vanilla",
-    "globalCss",
-)
+export const mochiGlobalCssFunctionExtractor = new VanillaGlobalCssExtractor("@mochi-css/vanilla", "globalCss")

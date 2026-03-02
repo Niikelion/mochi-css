@@ -3,18 +3,18 @@ import { CSSObject, StyleProps } from "@mochi-css/vanilla"
 import { OnDiagnostic, getErrorMessage } from "@/diagnostics"
 
 export class VanillaCssGenerator implements StyleGenerator {
-    private readonly collectedStyles: { source: string, args: StyleProps[] }[] = []
+    private readonly collectedStyles: { source: string; args: StyleProps[] }[] = []
 
     constructor(private readonly onDiagnostic?: OnDiagnostic) {}
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: StyleProps[] = []
         for (const arg of args) {
-            if (arg == null || typeof arg !== 'object') {
+            if (arg == null || typeof arg !== "object") {
                 this.onDiagnostic?.({
-                    code: 'MOCHI_INVALID_STYLE_ARG',
-                    message: `Expected style object, got ${arg === null ? 'null' : typeof arg}`,
-                    severity: 'warning',
+                    code: "MOCHI_INVALID_STYLE_ARG",
+                    message: `Expected style object, got ${arg === null ? "null" : typeof arg}`,
+                    severity: "warning",
                     file: source,
                 })
                 continue
@@ -41,9 +41,9 @@ export class VanillaCssGenerator implements StyleGenerator {
                 } catch (err) {
                     const message = getErrorMessage(err)
                     this.onDiagnostic?.({
-                        code: 'MOCHI_STYLE_GENERATION',
+                        code: "MOCHI_STYLE_GENERATION",
                         message: `Failed to generate CSS: ${message}`,
-                        severity: 'warning',
+                        severity: "warning",
                         file: source,
                     })
                 }

@@ -11,11 +11,8 @@ import { StyleGenerator } from "@/generators/StyleGenerator"
 import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
 import { CallExpression, Expression } from "@swc/core"
 
-function buildIndex(
-    modules: { ast: SWC.Module; filePath: string }[],
-    extractors: StyleExtractor[]
-): ProjectIndex {
-    const knownFiles = new Set(modules.map(m => m.filePath))
+function buildIndex(modules: { ast: SWC.Module; filePath: string }[], extractors: StyleExtractor[]): ProjectIndex {
+    const knownFiles = new Set(modules.map((m) => m.filePath))
 
     const resolveImport: ResolveImport = (fromFile, importSource) => {
         const dir = path.dirname(fromFile)
@@ -33,18 +30,14 @@ function buildIndex(
     return index
 }
 
-function createMockParentExtractor(
-    importPath: string,
-    symbolName: string,
-    derivedNames: string[]
-): StyleExtractor {
+function createMockParentExtractor(importPath: string, symbolName: string, derivedNames: string[]): StyleExtractor {
     const derivedExtractors = new Map<string, StyleExtractor>()
     for (const name of derivedNames) {
         derivedExtractors.set(name, {
             importPath,
             symbolName: name,
             extractStaticArgs(call: CallExpression): Expression[] {
-                return call.arguments.map(a => a.expression)
+                return call.arguments.map((a) => a.expression)
             },
             startGeneration(): StyleGenerator {
                 return new VanillaCssGenerator()
@@ -57,7 +50,7 @@ function createMockParentExtractor(
         symbolName,
         derivedExtractors,
         extractStaticArgs(call: CallExpression): Expression[] {
-            return call.arguments.map(a => a.expression)
+            return call.arguments.map((a) => a.expression)
         },
         startGeneration(): StyleGenerator {
             const subGenerators = new Map<string, StyleGenerator>()
@@ -69,8 +62,8 @@ function createMockParentExtractor(
                 collectArgs(_source: string, _args: unknown[]): Record<string, StyleGenerator> {
                     return Object.fromEntries(subGenerators)
                 },
-                async generateStyles() {
-                    return {}
+                generateStyles() {
+                    return Promise.resolve({})
                 },
             }
         },
@@ -84,7 +77,7 @@ describe("extractRelevantSymbols", () => {
                 const x = 1
                 const y = x + 2
             `,
-            "unrelated.ts"
+            "unrelated.ts",
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor])
@@ -99,7 +92,7 @@ describe("extractRelevantSymbols", () => {
                 import { css } from "@mochi-css/vanilla"
                 css({ color: "red" })
             `,
-            "styles.ts"
+            "styles.ts",
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor])
@@ -116,7 +109,7 @@ describe("extractRelevantSymbols", () => {
                 import { css } from "@mochi-css/vanilla"
                 css({ color: "red" })
             `,
-            "styles.ts"
+            "styles.ts",
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor])
@@ -137,7 +130,7 @@ describe("extractRelevantSymbols", () => {
                 export const red = "red"
                 export const unused = "blue"
             `,
-            sharedPath
+            sharedPath,
         )
 
         // noinspection TypeScriptCheckImport
@@ -147,7 +140,7 @@ describe("extractRelevantSymbols", () => {
                 import { css } from "@mochi-css/vanilla"
                 css({ color: red })
             `,
-            stylesPath
+            stylesPath,
         )
 
         const index = buildIndex([sharedModule, stylesModule], [mochiCssFunctionExtractor])
@@ -172,7 +165,7 @@ describe("extractRelevantSymbols", () => {
             dedent`
                 export const x = 1
             `,
-            sharedPath
+            sharedPath,
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor])
@@ -191,14 +184,14 @@ describe("extractRelevantSymbols", () => {
                 import { css } from "@mochi-css/vanilla"
                 css({ color: "green" })
             `,
-            relevantPath
+            relevantPath,
         )
 
         const irrelevantModule = await parseSource(
             dedent`
                 const x = 42
             `,
-            irrelevantPath
+            irrelevantPath,
         )
 
         const index = buildIndex([relevantModule, irrelevantModule], [mochiCssFunctionExtractor])
@@ -222,7 +215,7 @@ describe("extractRelevantSymbols", () => {
                 const { css } = createMock({})
                 export { css }
             `,
-            configPath
+            configPath,
         )
 
         const index = buildIndex([configModule], [mockParent])
@@ -252,7 +245,7 @@ describe("extractRelevantSymbols", () => {
                 const { css } = createMock({})
                 export { css }
             `,
-            configPath
+            configPath,
         )
 
         // noinspection TypeScriptCheckImport
@@ -261,7 +254,7 @@ describe("extractRelevantSymbols", () => {
                 import { css } from "./cfg"
                 css({ color: "purple" })
             `,
-            consumerPath
+            consumerPath,
         )
 
         const index = buildIndex([configModule, consumerModule], [mockParent])
@@ -285,7 +278,7 @@ describe("extractRelevantSymbols", () => {
                 const notUsed = "blue"
                 css({ color: used })
             `,
-            "strip.ts"
+            "strip.ts",
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor])
@@ -307,7 +300,7 @@ describe("extractRelevantSymbols", () => {
                 css({ color })
                 styled("div")
             `,
-            "empty-args.ts"
+            "empty-args.ts",
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor, mochiStyledFunctionExtractor])
@@ -329,7 +322,7 @@ describe("extractRelevantSymbols", () => {
                 const { padding, margin } = { padding: "8px", margin: "4px" }
                 css({ color, padding, margin })
             `,
-            "dedup.ts"
+            "dedup.ts",
         )
 
         const index = buildIndex([module], [mochiCssFunctionExtractor])
@@ -356,7 +349,7 @@ describe("extractRelevantSymbols", () => {
                 const { css, theme } = createMock({})
                 css({ color: theme })
             `,
-            "sibling.ts"
+            "sibling.ts",
         )
 
         const index = buildIndex([module], [mockParent])
@@ -435,13 +428,16 @@ describe("extractRelevantSymbols", () => {
             // extractedExpressions is present so generateCallStatements is still reached
             const localId = mockId("css", 1)
             const derivedExtractorBindings = new RefMap<DerivedExtractorBinding>()
-            derivedExtractorBindings.set({ name: "css", id: 1 }, {
-                extractor: mochiCssFunctionExtractor,
-                parentExtractor: null as unknown as StyleExtractor,
-                parentCallExpression: mockCallExpr(),
-                propertyName: "css",
-                localIdentifier: localId,
-            })
+            derivedExtractorBindings.set(
+                { name: "css", id: 1 },
+                {
+                    extractor: mochiCssFunctionExtractor,
+                    parentExtractor: null as unknown as StyleExtractor,
+                    parentCallExpression: mockCallExpr(),
+                    propertyName: "css",
+                    localIdentifier: localId,
+                },
+            )
 
             const fileInfo = makeFileInfo({
                 derivedExtractorBindings,
@@ -458,13 +454,16 @@ describe("extractRelevantSymbols", () => {
             // → moduleBindings.get() returns undefined → if(moduleBinding) is false
             const localId = mockId("css", 99)
             const derivedExtractorBindings = new RefMap<DerivedExtractorBinding>()
-            derivedExtractorBindings.set({ name: "css", id: 99 }, {
-                extractor: mochiCssFunctionExtractor,
-                parentExtractor: mochiCssFunctionExtractor,
-                parentCallExpression: mockCallExpr(),
-                propertyName: "css",
-                localIdentifier: localId,
-            })
+            derivedExtractorBindings.set(
+                { name: "css", id: 99 },
+                {
+                    extractor: mochiCssFunctionExtractor,
+                    parentExtractor: mochiCssFunctionExtractor,
+                    parentCallExpression: mockCallExpr(),
+                    propertyName: "css",
+                    localIdentifier: localId,
+                },
+            )
 
             const fileInfo = makeFileInfo({
                 derivedExtractorBindings,
@@ -504,6 +503,118 @@ describe("extractRelevantSymbols", () => {
         })
     })
 
+    describe("dependency css call deduplication (issue #12)", () => {
+        it("generates __mochi_args_ variable when css result is used as dependency", async () => {
+            // noinspection JSUnusedLocalSymbols
+            const module = await parseSource(
+                /* language=typescript */ dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    const textStyles = css({ fontSize: 20 })
+                    css({ color: "blue" }, textStyles)
+                `,
+                "dep.ts",
+            )
+
+            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const result = extractRelevantSymbols(index)
+
+            const code = result["dep.ts"]
+            expect(code).not.toBeNull()
+            // Args variable is generated to avoid double evaluation
+            expect(code).toContain("__mochi_args_0")
+            // The binding uses the spread call
+            expect(code).toContain("...__mochi_args_0")
+            // The extractor call spreads the args variable
+            expect(code).toContain(`extractors["@mochi-css/vanilla:css"]`)
+        })
+
+        it("args literal appears only once in the generated code", async () => {
+            // noinspection JSUnusedLocalSymbols
+            const module = await parseSource(
+                /* language=typescript */ dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    const base = css({ fontSize: 20 })
+                    css({ color: "blue" }, base)
+                `,
+                "once.ts",
+            )
+
+            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const result = extractRelevantSymbols(index)
+
+            const code = result["once.ts"]
+            expect(code).not.toBeNull()
+
+            // Count occurrences: fontSize should appear exactly once (in __mochi_args_0)
+            const matches = code?.match(/fontSize/g)
+            expect(matches).toHaveLength(1)
+        })
+
+        it("uses spread in both binding init and extractor call", async () => {
+            // noinspection JSUnusedLocalSymbols
+            const module = await parseSource(
+                /* language=typescript */ dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    const base = css({ fontSize: 20 })
+                    css({ color: "blue" }, base)
+                `,
+                "spread.ts",
+            )
+
+            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const result = extractRelevantSymbols(index)
+
+            const code = result["spread.ts"]
+            expect(code).not.toBeNull()
+            // __mochi_args_0 is referenced at least twice: binding init + extractor call
+            const matches = code?.match(/__mochi_args_0/g)
+            expect(matches?.length).toBeGreaterThanOrEqual(2)
+        })
+
+        it("non-dependency css calls are unaffected", async () => {
+            const module = await parseSource(
+                /* language=typescript */ dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    css({ color: "red" })
+                `,
+                "nodep.ts",
+            )
+
+            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const result = extractRelevantSymbols(index)
+
+            const code = result["nodep.ts"]
+            expect(code).not.toBeNull()
+            // No args variable for standalone calls
+            expect(code).not.toContain("__mochi_args_")
+            expect(code).toContain(`color: "red"`)
+        })
+
+        it("handles multiple independent dependency calls", async () => {
+            // noinspection JSUnusedLocalSymbols
+            const module = await parseSource(
+                /* language=typescript */ dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    const a = css({ fontSize: 20 })
+                    const b = css({ fontWeight: "bold" })
+                    css({ color: "blue" }, a, b)
+                `,
+                "multi.ts",
+            )
+
+            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const result = extractRelevantSymbols(index)
+
+            const code = result["multi.ts"]
+            expect(code).not.toBeNull()
+            expect(code).toContain("__mochi_args_0")
+            expect(code).toContain("__mochi_args_1")
+            // Each arg literal appears exactly once
+            expect(code?.match(/fontSize/g)).toHaveLength(1)
+            expect(code?.match(/fontWeight/g)).toHaveLength(1)
+        })
+    })
+
     it("returns null when file imports derived extractor but never calls it", async () => {
         // unused.ts imports css (a derived extractor) but never calls it
         // hasDerived=true → early return skipped; but generateDerivedStatements skips local imports
@@ -519,7 +630,7 @@ describe("extractRelevantSymbols", () => {
                 const { css } = createMock({})
                 export { css }
             `,
-            configPath
+            configPath,
         )
 
         // noinspection TypeScriptCheckImport,JSUnusedLocalSymbols
@@ -527,7 +638,7 @@ describe("extractRelevantSymbols", () => {
             /* language=typescript */ dedent`
                 import { css } from "./cfg2"
             `,
-            unusedPath
+            unusedPath,
         )
 
         const index = buildIndex([configModule, unusedModule], [mockParent])

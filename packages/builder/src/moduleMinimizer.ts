@@ -1,5 +1,5 @@
-import * as SWC from "@swc/core";
-import {FileInfo} from "@/ProjectIndex";
+import * as SWC from "@swc/core"
+import { FileInfo } from "@/ProjectIndex"
 
 /**
  * Checks if a pattern (destructuring) contains a specific identifier.
@@ -9,7 +9,7 @@ export function patternContainsIdentifier(pattern: SWC.Pattern, identifier: SWC.
         case "Identifier":
             return pattern === identifier
         case "ObjectPattern":
-            return pattern.properties.some(prop => {
+            return pattern.properties.some((prop) => {
                 switch (prop.type) {
                     case "AssignmentPatternProperty":
                         return prop.key === identifier
@@ -21,11 +21,11 @@ export function patternContainsIdentifier(pattern: SWC.Pattern, identifier: SWC.
                         return false
                 }
             })
-        case 'ArrayPattern':
-            return pattern.elements.some(elem => elem && patternContainsIdentifier(elem, identifier))
-        case 'RestElement':
+        case "ArrayPattern":
+            return pattern.elements.some((elem) => elem && patternContainsIdentifier(elem, identifier))
+        case "RestElement":
             return patternContainsIdentifier(pattern.argument, identifier)
-        case 'AssignmentPattern':
+        case "AssignmentPattern":
             return patternContainsIdentifier(pattern.left, identifier)
         default:
             return false
@@ -35,15 +35,20 @@ export function patternContainsIdentifier(pattern: SWC.Pattern, identifier: SWC.
 /**
  * Checks if an object pattern property is used by any binding in the file.
  */
-export function isPatternPropertyUsed(prop: SWC.ObjectPatternProperty, declarator: SWC.VariableDeclarator, info: FileInfo): boolean {
+export function isPatternPropertyUsed(
+    prop: SWC.ObjectPatternProperty,
+    declarator: SWC.VariableDeclarator,
+    info: FileInfo,
+): boolean {
     for (const binding of info.usedBindings) {
-        if (binding.declarator.type !== 'variable') continue
+        if (binding.declarator.type !== "variable") continue
         if (binding.declarator.declarator !== declarator) continue
 
         // Check if this binding's identifier is within this property
-        if (prop.type === 'AssignmentPatternProperty' && binding.identifier === prop.key) return true
-        if (prop.type === 'KeyValuePatternProperty' && patternContainsIdentifier(prop.value, binding.identifier)) return true
-        if (prop.type === 'RestElement' && patternContainsIdentifier(prop.argument, binding.identifier)) return true
+        if (prop.type === "AssignmentPatternProperty" && binding.identifier === prop.key) return true
+        if (prop.type === "KeyValuePatternProperty" && patternContainsIdentifier(prop.value, binding.identifier))
+            return true
+        if (prop.type === "RestElement" && patternContainsIdentifier(prop.argument, binding.identifier)) return true
     }
     return false
 }
@@ -53,7 +58,7 @@ export function isPatternPropertyUsed(prop: SWC.ObjectPatternProperty, declarato
  */
 export function isPatternElementUsed(elem: SWC.Pattern, declarator: SWC.VariableDeclarator, info: FileInfo): boolean {
     for (const binding of info.usedBindings) {
-        if (binding.declarator.type !== 'variable') continue
+        if (binding.declarator.type !== "variable") continue
         if (binding.declarator.declarator !== declarator) continue
 
         if (patternContainsIdentifier(elem, binding.identifier)) return true
@@ -64,11 +69,13 @@ export function isPatternElementUsed(elem: SWC.Pattern, declarator: SWC.Variable
 /**
  * Prunes unused parts from destructuring patterns in a variable declarator.
  */
-export function pruneUnusedPatternParts(declarator: SWC.VariableDeclarator, info: FileInfo): SWC.VariableDeclarator | null {
+export function pruneUnusedPatternParts(
+    declarator: SWC.VariableDeclarator,
+    info: FileInfo,
+): SWC.VariableDeclarator | null {
     // Check if any binding from this declarator is used
-    const hasUsedBinding = [...info.usedBindings].some(binding =>
-        binding.declarator.type === 'variable' &&
-        binding.declarator.declarator === declarator
+    const hasUsedBinding = [...info.usedBindings].some(
+        (binding) => binding.declarator.type === "variable" && binding.declarator.declarator === declarator,
     )
 
     if (!hasUsedBinding) return null
@@ -79,7 +86,7 @@ export function pruneUnusedPatternParts(declarator: SWC.VariableDeclarator, info
             return declarator
         // For object patterns, prune unused properties
         case "ObjectPattern": {
-            const usedProperties = declarator.id.properties.filter(prop => {
+            const usedProperties = declarator.id.properties.filter((prop) => {
                 return isPatternPropertyUsed(prop, declarator, info)
             })
 
@@ -89,8 +96,8 @@ export function pruneUnusedPatternParts(declarator: SWC.VariableDeclarator, info
                 ...declarator,
                 id: {
                     ...declarator.id,
-                    properties: usedProperties
-                }
+                    properties: usedProperties,
+                },
             }
         }
         // For array patterns, prune unused elements (but keep holes for indices)
@@ -113,8 +120,8 @@ export function pruneUnusedPatternParts(declarator: SWC.VariableDeclarator, info
                 ...declarator,
                 id: {
                     ...declarator.id,
-                    elements: trimmedElements
-                }
+                    elements: trimmedElements,
+                },
             }
         }
         // For other patterns, return as-is
@@ -128,12 +135,14 @@ export function pruneUnusedPatternParts(declarator: SWC.VariableDeclarator, info
  */
 export function generateMinimalModuleItem(item: SWC.ModuleItem, info: FileInfo): SWC.ModuleItem | null {
     // For imports, generate minimal import declaration
-    if (item.type === 'ImportDeclaration') {
-        const usedSpecifiers = item.specifiers.filter(spec => {
+    if (item.type === "ImportDeclaration") {
+        const usedSpecifiers = item.specifiers.filter((spec) => {
             for (const binding of info.usedBindings) {
-                if (binding.declarator.type === 'import' &&
+                if (
+                    binding.declarator.type === "import" &&
                     binding.declarator.declaration === item &&
-                    binding.identifier === spec.local) {
+                    binding.identifier === spec.local
+                ) {
                     return true
                 }
             }
@@ -144,34 +153,34 @@ export function generateMinimalModuleItem(item: SWC.ModuleItem, info: FileInfo):
 
         return {
             ...item,
-            specifiers: usedSpecifiers
+            specifiers: usedSpecifiers,
         }
     }
 
     // For variable declarations, prune unused bindings from patterns
-    if (item.type === 'VariableDeclaration') {
+    if (item.type === "VariableDeclaration") {
         const minimalDeclarators = item.declarations
-            .map(declarator => pruneUnusedPatternParts(declarator, info))
+            .map((declarator) => pruneUnusedPatternParts(declarator, info))
             .filter((d): d is SWC.VariableDeclarator => d !== null)
 
         if (minimalDeclarators.length === 0) return null
 
         return {
             ...item,
-            declarations: minimalDeclarators
+            declarations: minimalDeclarators,
         }
     }
 
     // For function/class declarations, include as-is
-    if (item.type !== 'ExportDeclaration') {
+    if (item.type !== "ExportDeclaration") {
         return item
     }
 
     // For export declarations, handle the inner declaration
 
-    if (item.declaration.type === 'VariableDeclaration') {
+    if (item.declaration.type === "VariableDeclaration") {
         const minimalDeclarators = item.declaration.declarations
-            .map(declarator => pruneUnusedPatternParts(declarator, info))
+            .map((declarator) => pruneUnusedPatternParts(declarator, info))
             .filter((d): d is SWC.VariableDeclarator => d !== null)
 
         if (minimalDeclarators.length === 0) return null
@@ -180,8 +189,8 @@ export function generateMinimalModuleItem(item: SWC.ModuleItem, info: FileInfo):
             ...item,
             declaration: {
                 ...item.declaration,
-                declarations: minimalDeclarators
-            }
+                declarations: minimalDeclarators,
+            },
         }
     }
     // For function/class exports, include as-is if any binding is used

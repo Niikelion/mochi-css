@@ -6,9 +6,9 @@ import {
     isPatternPropertyUsed,
     isPatternElementUsed,
     pruneUnusedPatternParts,
-    generateMinimalModuleItem
+    generateMinimalModuleItem,
 } from "@/moduleMinimizer"
-import { FileInfo, BindingInfo } from "@/ProjectIndex"
+import { FileInfo, BindingInfo, RefMap } from "@/ProjectIndex"
 
 // Helper to parse code and extract the first variable declarator's pattern
 async function getPattern(code: string): Promise<SWC.Pattern> {
@@ -67,7 +67,7 @@ function createMockFileInfo(
     declarator: SWC.VariableDeclarator,
     declaration: SWC.VariableDeclaration,
     moduleItem: SWC.ModuleItem,
-    usedIdentifiers: SWC.Identifier[]
+    usedIdentifiers: SWC.Identifier[],
 ): FileInfo {
     const usedBindings = new Set<BindingInfo>()
 
@@ -75,8 +75,8 @@ function createMockFileInfo(
         usedBindings.add({
             identifier,
             ref: { name: identifier.value, id: identifier.ctxt },
-            declarator: { type: 'variable', declarator, declaration },
-            moduleItem
+            declarator: { type: "variable", declarator, declaration },
+            moduleItem,
         })
     }
 
@@ -86,12 +86,12 @@ function createMockFileInfo(
         styleExpressions: new Set(),
         extractedExpressions: new Map(),
         references: new Set(),
-        moduleBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["moduleBindings"],
-        localImports: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["localImports"],
+        moduleBindings: new RefMap(),
+        localImports: new RefMap(),
         usedBindings,
         exports: new Map(),
-        derivedExtractorBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false, size: 0 } as unknown as FileInfo["derivedExtractorBindings"],
-        exportedDerivedExtractors: new Map()
+        derivedExtractorBindings: new RefMap(),
+        exportedDerivedExtractors: new Map(),
     }
 }
 
@@ -102,12 +102,12 @@ function createEmptyFileInfo(ast: SWC.Module): FileInfo {
         styleExpressions: new Set(),
         extractedExpressions: new Map(),
         references: new Set(),
-        moduleBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["moduleBindings"],
-        localImports: { get: () => undefined, set: () => {}, has: () => false, delete: () => false } as unknown as FileInfo["localImports"],
+        moduleBindings: new RefMap(),
+        localImports: new RefMap(),
         usedBindings: new Set(),
         exports: new Map(),
-        derivedExtractorBindings: { get: () => undefined, set: () => {}, has: () => false, delete: () => false, size: 0 } as unknown as FileInfo["derivedExtractorBindings"],
-        exportedDerivedExtractors: new Map()
+        derivedExtractorBindings: new RefMap(),
+        exportedDerivedExtractors: new Map(),
     }
 }
 
@@ -133,7 +133,7 @@ describe("patternContainsIdentifier", () => {
     describe("object patterns", () => {
         it("finds identifier in shorthand property: { a }", async () => {
             // const { a } = obj
-            const pattern = await getPattern("const { a } = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const { a } = obj")) as SWC.ObjectPattern
             const identifier = getIdentifierFromPattern(pattern, "a")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -141,7 +141,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier in renamed property: { a: b }", async () => {
             // const { a: b } = obj - 'b' is the local binding
-            const pattern = await getPattern("const { a: b } = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const { a: b } = obj")) as SWC.ObjectPattern
             const identifier = getIdentifierFromPattern(pattern, "b")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -149,7 +149,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier in rest element: { ...rest }", async () => {
             // const { ...rest } = obj
-            const pattern = await getPattern("const { ...rest } = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const { ...rest } = obj")) as SWC.ObjectPattern
             const identifier = getIdentifierFromPattern(pattern, "rest")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -157,7 +157,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier in nested object pattern: { a: { b } }", async () => {
             // const { a: { b } } = obj
-            const pattern = await getPattern("const { a: { b } } = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const { a: { b } } = obj")) as SWC.ObjectPattern
             const identifier = getIdentifierFromPattern(pattern, "b")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -167,7 +167,7 @@ describe("patternContainsIdentifier", () => {
     describe("array patterns", () => {
         it("finds identifier in array element: [a]", async () => {
             // const [a] = arr
-            const pattern = await getPattern("const [a] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [a] = arr")) as SWC.ArrayPattern
             const identifier = getIdentifierFromPattern(pattern, "a")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -175,7 +175,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier with holes: [, , a]", async () => {
             // const [, , a] = arr - skipping first two elements
-            const pattern = await getPattern("const [, , a] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [, , a] = arr")) as SWC.ArrayPattern
             const identifier = getIdentifierFromPattern(pattern, "a")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -183,7 +183,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier in rest element: [...rest]", async () => {
             // const [...rest] = arr
-            const pattern = await getPattern("const [...rest] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [...rest] = arr")) as SWC.ArrayPattern
             const identifier = getIdentifierFromPattern(pattern, "rest")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -191,7 +191,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier in nested array: [[a]]", async () => {
             // const [[a]] = arr
-            const pattern = await getPattern("const [[a]] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [[a]] = arr")) as SWC.ArrayPattern
             const identifier = getIdentifierFromPattern(pattern, "a")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -201,7 +201,7 @@ describe("patternContainsIdentifier", () => {
     describe("assignment patterns (default values)", () => {
         it("finds identifier with default value: { a = 5 }", async () => {
             // const { a = 5 } = obj
-            const pattern = await getPattern("const { a = 5 } = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const { a = 5 } = obj")) as SWC.ObjectPattern
             const identifier = getIdentifierFromPattern(pattern, "a")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -209,7 +209,7 @@ describe("patternContainsIdentifier", () => {
 
         it("finds identifier in array with default: [a = 5]", async () => {
             // const [a = 5] = arr
-            const pattern = await getPattern("const [a = 5] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [a = 5] = arr")) as SWC.ArrayPattern
             const identifier = getIdentifierFromPattern(pattern, "a")
 
             expect(patternContainsIdentifier(pattern, identifier)).toBe(true)
@@ -228,7 +228,7 @@ describe("patternContainsIdentifier", () => {
 
     describe("negative cases", () => {
         it("returns false when identifier is not in object pattern", async () => {
-            const pattern = await getPattern("const { a, b } = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const { a, b } = obj")) as SWC.ObjectPattern
             const otherModule = await parseSource("const c = x", "test.ts")
             const otherDecl = otherModule.ast.body[0] as SWC.VariableDeclaration
             const otherDeclarator = otherDecl.declarations[0]
@@ -239,7 +239,7 @@ describe("patternContainsIdentifier", () => {
         })
 
         it("returns false when identifier is not in array pattern", async () => {
-            const pattern = await getPattern("const [a, b] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [a, b] = arr")) as SWC.ArrayPattern
             const otherModule = await parseSource("const c = x", "test.ts")
             const otherDecl = otherModule.ast.body[0] as SWC.VariableDeclaration
             const otherDeclarator = otherDecl.declarations[0]
@@ -250,7 +250,7 @@ describe("patternContainsIdentifier", () => {
         })
 
         it("returns false for empty object pattern", async () => {
-            const pattern = await getPattern("const {} = obj") as SWC.ObjectPattern
+            const pattern = (await getPattern("const {} = obj")) as SWC.ObjectPattern
             const otherModule = await parseSource("const a = x", "test.ts")
             const otherDecl = otherModule.ast.body[0] as SWC.VariableDeclaration
             const otherDeclarator = otherDecl.declarations[0]
@@ -261,7 +261,7 @@ describe("patternContainsIdentifier", () => {
         })
 
         it("returns false for empty array pattern", async () => {
-            const pattern = await getPattern("const [] = arr") as SWC.ArrayPattern
+            const pattern = (await getPattern("const [] = arr")) as SWC.ArrayPattern
             const otherModule = await parseSource("const a = x", "test.ts")
             const otherDecl = otherModule.ast.body[0] as SWC.VariableDeclaration
             const otherDeclarator = otherDecl.declarations[0]
@@ -273,14 +273,29 @@ describe("patternContainsIdentifier", () => {
 
         it("returns false for unknown ObjectPattern property type", () => {
             const mockProp = { type: "Unknown" } as unknown as SWC.ObjectPatternProperty
-            const pattern: SWC.ObjectPattern = { type: "ObjectPattern", properties: [mockProp], optional: false, span: { start: 0, ctxt: 0, end: 0 } }
-            const identifier = { type: "Identifier", value: "x", optional: false, span: { start: 0, end: 0, ctxt: 0 } } as SWC.Identifier
+            const pattern: SWC.ObjectPattern = {
+                type: "ObjectPattern",
+                properties: [mockProp],
+                optional: false,
+                span: { start: 0, ctxt: 0, end: 0 },
+            }
+            const identifier = {
+                type: "Identifier",
+                value: "x",
+                optional: false,
+                span: { start: 0, end: 0, ctxt: 0 },
+            } as SWC.Identifier
             expect(patternContainsIdentifier(pattern, identifier)).toBe(false)
         })
 
         it("returns false for unknown pattern type", () => {
             const mockPattern = { type: "Unknown" } as unknown as SWC.Pattern
-            const identifier = { type: "Identifier", value: "x", optional: false, span: { start: 0, end: 0, ctxt: 0 } } as SWC.Identifier
+            const identifier = {
+                type: "Identifier",
+                value: "x",
+                optional: false,
+                span: { start: 0, end: 0, ctxt: 0 },
+            } as SWC.Identifier
             expect(patternContainsIdentifier(mockPattern, identifier)).toBe(false)
         })
     })
@@ -345,12 +360,14 @@ describe("isPatternPropertyUsed", () => {
 
         const importDecl = { type: "ImportDeclaration" } as unknown as SWC.ImportDeclaration
         const importSpec = { local: aIdentifier } as unknown as SWC.ImportSpecifier
-        const usedBindings = new Set<BindingInfo>([{
-            identifier: aIdentifier,
-            ref: { name: aIdentifier.value, id: aIdentifier.ctxt },
-            declarator: { type: 'import', specifier: importSpec, declaration: importDecl },
-            moduleItem: importDecl
-        }])
+        const usedBindings = new Set<BindingInfo>([
+            {
+                identifier: aIdentifier,
+                ref: { name: aIdentifier.value, id: aIdentifier.ctxt },
+                declarator: { type: "import", specifier: importSpec, declaration: importDecl },
+                moduleItem: importDecl,
+            },
+        ])
         const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternPropertyUsed(aProp, declarator, fileInfo)).toBe(false)
@@ -370,12 +387,14 @@ describe("isPatternPropertyUsed", () => {
         assert(aProp, "Expected property")
         const bIdentifier = getIdentifierFromPattern(pattern2, "b")
 
-        const usedBindings = new Set<BindingInfo>([{
-            identifier: bIdentifier,
-            ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
-            declarator: { type: 'variable', declarator: declarator2, declaration: declaration2 },
-            moduleItem: declaration2
-        }])
+        const usedBindings = new Set<BindingInfo>([
+            {
+                identifier: bIdentifier,
+                ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
+                declarator: { type: "variable", declarator: declarator2, declaration: declaration2 },
+                moduleItem: declaration2,
+            },
+        ])
         const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternPropertyUsed(aProp, declarator1, fileInfo)).toBe(false)
@@ -441,12 +460,14 @@ describe("isPatternElementUsed", () => {
 
         const importDecl = { type: "ImportDeclaration" } as unknown as SWC.ImportDeclaration
         const importSpec = { local: aIdentifier } as unknown as SWC.ImportSpecifier
-        const usedBindings = new Set<BindingInfo>([{
-            identifier: aIdentifier,
-            ref: { name: aIdentifier.value, id: aIdentifier.ctxt },
-            declarator: { type: 'import', specifier: importSpec, declaration: importDecl },
-            moduleItem: importDecl
-        }])
+        const usedBindings = new Set<BindingInfo>([
+            {
+                identifier: aIdentifier,
+                ref: { name: aIdentifier.value, id: aIdentifier.ctxt },
+                declarator: { type: "import", specifier: importSpec, declaration: importDecl },
+                moduleItem: importDecl,
+            },
+        ])
         const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternElementUsed(aElem, declarator, fileInfo)).toBe(false)
@@ -466,12 +487,14 @@ describe("isPatternElementUsed", () => {
         assert(aElem, "Expected element")
         const bIdentifier = getIdentifierFromPattern(pattern2, "b")
 
-        const usedBindings = new Set<BindingInfo>([{
-            identifier: bIdentifier,
-            ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
-            declarator: { type: 'variable', declarator: declarator2, declaration: declaration2 },
-            moduleItem: declaration2
-        }])
+        const usedBindings = new Set<BindingInfo>([
+            {
+                identifier: bIdentifier,
+                ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
+                declarator: { type: "variable", declarator: declarator2, declaration: declaration2 },
+                moduleItem: declaration2,
+            },
+        ])
         const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternElementUsed(aElem, declarator1, fileInfo)).toBe(false)
@@ -586,12 +609,14 @@ describe("pruneUnusedPatternParts", () => {
             assert(decl2r, "Expected decl2r to be defined")
             const cIdentifier = decl2r.id as SWC.Identifier
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: cIdentifier,
-                ref: { name: cIdentifier.value, id: cIdentifier.ctxt },
-                declarator: { type: 'variable', declarator, declaration },
-                moduleItem: declaration
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: cIdentifier,
+                    ref: { name: cIdentifier.value, id: cIdentifier.ctxt },
+                    declarator: { type: "variable", declarator, declaration },
+                    moduleItem: declaration,
+                },
+            ])
             const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
 
             expect(pruneUnusedPatternParts(declarator, fileInfo)).toBeNull()
@@ -724,12 +749,14 @@ describe("pruneUnusedPatternParts", () => {
             assert(decl2r, "Expected decl2r to be defined")
             const cIdentifier = decl2r.id as SWC.Identifier
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: cIdentifier,
-                ref: { name: cIdentifier.value, id: cIdentifier.ctxt },
-                declarator: { type: 'variable', declarator, declaration },
-                moduleItem: declaration
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: cIdentifier,
+                    ref: { name: cIdentifier.value, id: cIdentifier.ctxt },
+                    declarator: { type: "variable", declarator, declaration },
+                    moduleItem: declaration,
+                },
+            ])
             const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
 
             expect(pruneUnusedPatternParts(declarator, fileInfo)).toBeNull()
@@ -740,17 +767,29 @@ describe("pruneUnusedPatternParts", () => {
         it("returns declarator as-is for unrecognized id type", () => {
             const mockId = { type: "Invalid" } as unknown as SWC.Pattern
             const mockDeclarator = { id: mockId, init: null } as unknown as SWC.VariableDeclarator
-            const fakeIdentifier = { type: "Identifier", value: "x", ctxt: 0, span: { start: 0, end: 0, ctxt: 0 } } as unknown as SWC.Identifier
+            const fakeIdentifier = {
+                type: "Identifier",
+                value: "x",
+                ctxt: 0,
+                span: { start: 0, end: 0, ctxt: 0 },
+            } as unknown as SWC.Identifier
             const fakeDecl = {} as SWC.VariableDeclaration
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: fakeIdentifier,
-                ref: { name: 'x', id: 0 },
-                declarator: { type: 'variable', declarator: mockDeclarator, declaration: fakeDecl },
-                moduleItem: {} as SWC.ModuleItem
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: fakeIdentifier,
+                    ref: { name: "x", id: 0 },
+                    declarator: { type: "variable", declarator: mockDeclarator, declaration: fakeDecl },
+                    moduleItem: {} as SWC.ModuleItem,
+                },
+            ])
             const fileInfo: FileInfo = {
-                ...createEmptyFileInfo({ type: "Module", span: { start: 0, end: 0, ctxt: 0 }, body: [], interpreter: "" }),
-                usedBindings
+                ...createEmptyFileInfo({
+                    type: "Module",
+                    span: { start: 0, end: 0, ctxt: 0 },
+                    body: [],
+                    interpreter: "",
+                }),
+                usedBindings,
             }
 
             expect(pruneUnusedPatternParts(mockDeclarator, fileInfo)).toBe(mockDeclarator)
@@ -767,16 +806,22 @@ describe("generateMinimalModuleItem", () => {
             const bSpecifier = importDecl.specifiers[1]
             assert(bSpecifier, "Expected bSpecifier to be defined")
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: bSpecifier.local,
-                ref: { name: bSpecifier.local.value, id: bSpecifier.local.ctxt },
-                declarator: { type: 'import', specifier: bSpecifier as SWC.ImportSpecifier, declaration: importDecl },
-                moduleItem: importDecl
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: bSpecifier.local,
+                    ref: { name: bSpecifier.local.value, id: bSpecifier.local.ctxt },
+                    declarator: {
+                        type: "import",
+                        specifier: bSpecifier,
+                        declaration: importDecl,
+                    },
+                    moduleItem: importDecl,
+                },
+            ])
 
             const fileInfo: FileInfo = {
                 ...createEmptyFileInfo(module.ast),
-                usedBindings
+                usedBindings,
             }
 
             const result = generateMinimalModuleItem(importDecl, fileInfo)
@@ -807,16 +852,22 @@ describe("generateMinimalModuleItem", () => {
             const defaultSpecifier = importDecl.specifiers[0]
             assert(defaultSpecifier, "Expected defaultSpecifier to be defined")
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: defaultSpecifier.local,
-                ref: { name: defaultSpecifier.local.value, id: defaultSpecifier.local.ctxt },
-                declarator: { type: 'import', specifier: defaultSpecifier as SWC.ImportDefaultSpecifier, declaration: importDecl },
-                moduleItem: importDecl
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: defaultSpecifier.local,
+                    ref: { name: defaultSpecifier.local.value, id: defaultSpecifier.local.ctxt },
+                    declarator: {
+                        type: "import",
+                        specifier: defaultSpecifier as SWC.ImportDefaultSpecifier,
+                        declaration: importDecl,
+                    },
+                    moduleItem: importDecl,
+                },
+            ])
 
             const fileInfo: FileInfo = {
                 ...createEmptyFileInfo(module.ast),
-                usedBindings
+                usedBindings,
             }
 
             const result = generateMinimalModuleItem(importDecl, fileInfo)
@@ -833,16 +884,22 @@ describe("generateMinimalModuleItem", () => {
             const namespaceSpecifier = importDecl.specifiers[0]
             assert(namespaceSpecifier, "Expected namespaceSpecifier to be defined")
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: namespaceSpecifier.local,
-                ref: { name: namespaceSpecifier.local.value, id: namespaceSpecifier.local.ctxt },
-                declarator: { type: 'import', specifier: namespaceSpecifier as SWC.ImportNamespaceSpecifier, declaration: importDecl },
-                moduleItem: importDecl
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: namespaceSpecifier.local,
+                    ref: { name: namespaceSpecifier.local.value, id: namespaceSpecifier.local.ctxt },
+                    declarator: {
+                        type: "import",
+                        specifier: namespaceSpecifier as SWC.ImportNamespaceSpecifier,
+                        declaration: importDecl,
+                    },
+                    moduleItem: importDecl,
+                },
+            ])
 
             const fileInfo: FileInfo = {
                 ...createEmptyFileInfo(module.ast),
-                usedBindings
+                usedBindings,
             }
 
             const result = generateMinimalModuleItem(importDecl, fileInfo)
@@ -860,16 +917,22 @@ describe("generateMinimalModuleItem", () => {
             const barSpecifier = importDecl.specifiers[1]
             assert(barSpecifier, "Expected barSpecifier to be defined")
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: barSpecifier.local,
-                ref: { name: barSpecifier.local.value, id: barSpecifier.local.ctxt },
-                declarator: { type: 'import', specifier: barSpecifier as SWC.ImportSpecifier, declaration: importDecl },
-                moduleItem: importDecl
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: barSpecifier.local,
+                    ref: { name: barSpecifier.local.value, id: barSpecifier.local.ctxt },
+                    declarator: {
+                        type: "import",
+                        specifier: barSpecifier,
+                        declaration: importDecl,
+                    },
+                    moduleItem: importDecl,
+                },
+            ])
 
             const fileInfo: FileInfo = {
                 ...createEmptyFileInfo(module.ast),
-                usedBindings
+                usedBindings,
             }
 
             const result = generateMinimalModuleItem(importDecl, fileInfo)
@@ -890,16 +953,18 @@ describe("generateMinimalModuleItem", () => {
             assert(bDeclarator, "Expected bDeclarator to be defined")
             const bIdentifier = bDeclarator.id as SWC.Identifier
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: bIdentifier,
-                ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
-                declarator: { type: 'variable', declarator: bDeclarator, declaration: varDecl },
-                moduleItem: varDecl
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: bIdentifier,
+                    ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
+                    declarator: { type: "variable", declarator: bDeclarator, declaration: varDecl },
+                    moduleItem: varDecl,
+                },
+            ])
 
             const fileInfo: FileInfo = {
                 ...createEmptyFileInfo(module.ast),
-                usedBindings
+                usedBindings,
             }
 
             const result = generateMinimalModuleItem(varDecl, fileInfo)
@@ -962,16 +1027,18 @@ describe("generateMinimalModuleItem", () => {
             assert(bDeclarator, "Expected bDeclarator to be defined")
             const bIdentifier = bDeclarator.id as SWC.Identifier
 
-            const usedBindings = new Set<BindingInfo>([{
-                identifier: bIdentifier,
-                ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
-                declarator: { type: 'variable', declarator: bDeclarator, declaration: varDecl },
-                moduleItem: exportDecl
-            }])
+            const usedBindings = new Set<BindingInfo>([
+                {
+                    identifier: bIdentifier,
+                    ref: { name: bIdentifier.value, id: bIdentifier.ctxt },
+                    declarator: { type: "variable", declarator: bDeclarator, declaration: varDecl },
+                    moduleItem: exportDecl,
+                },
+            ])
 
             const fileInfo: FileInfo = {
                 ...createEmptyFileInfo(module.ast),
-                usedBindings
+                usedBindings,
             }
 
             const result = generateMinimalModuleItem(exportDecl, fileInfo)

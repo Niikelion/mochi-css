@@ -1,15 +1,15 @@
-import vm from "vm";
+import vm from "vm"
 
 export interface Runner {
-    execute(source: string, context: Record<string, any>): Promise<void>
+    execute(source: string, context: Record<string, unknown>): Promise<void>
 }
 
 export class VmRunner implements Runner {
-    async execute(source: string, context: Record<string, any>): Promise<void> {
+    async execute(source: string, context: Record<string, unknown>): Promise<void> {
         const vmContext = vm.createContext({
             ...globalThis,
             process,
-            ...context
+            ...context,
         })
 
         await vm.runInContext(source, vmContext)

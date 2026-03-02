@@ -22,7 +22,10 @@
     "scripts": {
         "build": "tsc --noEmit && tsdown",
         "test": "vitest",
-        "coverage": "vitest run --coverage"
+        "coverage": "vitest run --coverage",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",

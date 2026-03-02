@@ -1,7 +1,7 @@
-import {describe, it, expect} from "vitest"
-import {RolldownBundler} from "./Bundler"
+import { describe, it, expect } from "vitest"
+import { RolldownBundler } from "./Bundler"
 import path from "path"
-import fs from "fs/promises";
+import fs from "fs/promises"
 
 describe("RolldownBundler", () => {
     it("bundles a single file from memory", async () => {
@@ -10,7 +10,7 @@ describe("RolldownBundler", () => {
         const index = path.resolve(process.cwd(), "index.js")
 
         const result = await bundler.bundle(index, {
-            [index]: "export const foo = 42;"
+            [index]: "export const foo = 42;",
         })
 
         expect(result).toContain("42")
@@ -24,7 +24,7 @@ describe("RolldownBundler", () => {
 
         const result = await bundler.bundle(index, {
             [index]: `import { bar } from "./utils.js"; export const foo = bar + 1;`,
-            [utils]: "export const bar = 10;"
+            [utils]: "export const bar = 10;",
         })
 
         expect(result).toContain("10")
@@ -39,7 +39,7 @@ describe("RolldownBundler", () => {
 
         const result = await bundler.bundle(index, {
             [index]: `import { helper } from "../lib/helper.js"; export const value = helper();`,
-            [helper]: "export const helper = () => 'hello';"
+            [helper]: "export const helper = () => 'hello';",
         })
 
         expect(result).toContain("hello")
@@ -54,7 +54,7 @@ describe("RolldownBundler", () => {
         await fs.writeFile(helper, "export const a = 5")
 
         const result = await bundler.bundle(index, {
-            [index]: `export * from "./helper.js"`
+            [index]: `export * from "./helper.js"`,
         })
 
         await fs.rm(helper)
@@ -70,7 +70,7 @@ describe("RolldownBundler", () => {
 
         const result = await bundler.bundle(index, {
             [index]: `console.log("test")`,
-            [helper]: undefined
+            [helper]: undefined,
         })
 
         expect(result).toBeDefined()

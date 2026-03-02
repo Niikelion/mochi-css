@@ -12,11 +12,13 @@ describe("VanillaCssGenerator", () => {
             const onDiagnostic = vi.fn()
             const gen = new VanillaCssGenerator(onDiagnostic)
             gen.collectArgs("a.ts", [null])
-            expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({
-                code: "MOCHI_INVALID_STYLE_ARG",
-                severity: "warning",
-                file: "a.ts",
-            }))
+            expect(onDiagnostic).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    code: "MOCHI_INVALID_STYLE_ARG",
+                    severity: "warning",
+                    file: "a.ts",
+                }),
+            )
         })
 
         it("reports diagnostic for non-object args", () => {
@@ -40,8 +42,8 @@ describe("VanillaCssGenerator", () => {
             gen.collectArgs("a.ts", [{ color: "red" }])
             gen.collectArgs("a.ts", [{ color: "blue" }])
             const result = await gen.generateStyles()
-            expect(result.files?.["a.ts"]).toContain("color: red")
-            expect(result.files?.["a.ts"]).toContain("color: blue")
+            expect(result.files["a.ts"]).toContain("color: red")
+            expect(result.files["a.ts"]).toContain("color: blue")
         })
 
         it("reports diagnostic when CSS generation fails", async () => {
@@ -52,11 +54,13 @@ describe("VanillaCssGenerator", () => {
             })
             gen.collectArgs("a.ts", [{ color: "red" }])
             await gen.generateStyles()
-            expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({
-                code: "MOCHI_STYLE_GENERATION",
-                severity: "warning",
-                file: "a.ts",
-            }))
+            expect(onDiagnostic).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    code: "MOCHI_STYLE_GENERATION",
+                    severity: "warning",
+                    file: "a.ts",
+                }),
+            )
         })
     })
 })

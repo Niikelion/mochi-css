@@ -1,8 +1,8 @@
 import path from "path"
-import {ProjectIndex, ResolveImport, Module} from "@/ProjectIndex"
-import {parseFile} from "@/parse"
-import {Bundler, FileLookup} from "@/Bundler"
-import {Runner, VmRunner} from "@/Runner"
+import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
+import { parseFile } from "@/parse"
+import { Bundler, FileLookup } from "@/Bundler"
+import { Runner, VmRunner } from "@/Runner"
 import dedent from "dedent"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
@@ -48,7 +48,7 @@ export class Builder {
             const filePath = path.join(tmp, relativePath)
             fileLookup[filePath] = source
         }
-        const rootImports = paths.map(f => `import "./${f}"`).join("\n")
+        const rootImports = paths.map((f) => `import "./${f}"`).join("\n")
 
         fileLookup[rootPath] = [rootImports, rootFileSuffix].join("\n\n")
 
@@ -57,7 +57,7 @@ export class Builder {
             return await this.options.bundler.bundle(rootPath, fileLookup)
         } catch (err) {
             const message = getErrorMessage(err)
-            throw new MochiError('MOCHI_BUNDLE', message, undefined, err)
+            throw new MochiError("MOCHI_BUNDLE", message, undefined, err)
         }
     }
 
@@ -65,11 +65,14 @@ export class Builder {
         const onDiagnostic = this.options.onDiagnostic
         const runner = new VmRunner()
 
-        const wrapGenerator = (generator: StyleGenerator): ((source: string, ...args: unknown[]) => Record<string, unknown>) => {
+        const wrapGenerator = (
+            generator: StyleGenerator,
+        ): ((source: string, ...args: unknown[]) => Record<string, unknown>) => {
             return (source: string, ...args: unknown[]) => {
                 try {
                     const subGenerators = generator.collectArgs(source, args)
                     const result: Record<string, unknown> = {}
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     for (const [name, subGen] of Object.entries(subGenerators ?? {})) {
                         result[name] = wrapGenerator(subGen)
                     }
@@ -77,9 +80,9 @@ export class Builder {
                 } catch (err) {
                     const message = getErrorMessage(err)
                     onDiagnostic?.({
-                        code: 'MOCHI_EXEC',
+                        code: "MOCHI_EXEC",
                         message: `Failed to collect styles: ${message}`,
-                        severity: 'warning',
+                        severity: "warning",
                         file: source,
                     })
                     return {}
@@ -96,18 +99,18 @@ export class Builder {
             await runner.execute(code, { extractors: extractorsObj })
         } catch (err) {
             const message = getErrorMessage(err)
-            throw new MochiError('MOCHI_EXEC', message, undefined, err)
+            throw new MochiError("MOCHI_EXEC", message, undefined, err)
         }
     }
 
     public async collectStylesFromModules(modules: Module[]) {
         // Create a set of known file paths for resolving imports
-        const knownFiles = new Set(modules.map(m => m.filePath))
+        const knownFiles = new Set(modules.map((m) => m.filePath))
 
         const resolveImport: ResolveImport = (fromFile, importSource) => {
             const dir = path.dirname(fromFile)
             // Try common extensions
-            const extensions = ['', '.ts', '.tsx', '.js', '.jsx']
+            const extensions = ["", ".ts", ".tsx", ".js", ".jsx"]
             for (const ext of extensions) {
                 const resolved = path.resolve(dir, importSource + ext)
                 if (knownFiles.has(resolved)) {
@@ -115,8 +118,8 @@ export class Builder {
                 }
             }
             // Try index files
-            for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
-                const resolved = path.resolve(dir, importSource, 'index' + ext)
+            for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                const resolved = path.resolve(dir, importSource, "index" + ext)
                 if (knownFiles.has(resolved)) {
                     return resolved
                 }
@@ -157,7 +160,9 @@ export class Builder {
         return await this.collectStylesFromModules(modules)
     }
 
-    public async collectMochiCss(options?: CollectCssOptions): Promise<{ global?: string, files?: Record<string, string> }> {
+    public async collectMochiCss(
+        options?: CollectCssOptions,
+    ): Promise<{ global?: string; files?: Record<string, string> }> {
         const generators = await this.collectMochiStyles(options?.onDep)
 
         // Collect and merge results from all generators
@@ -191,7 +196,7 @@ export class Builder {
 
         return {
             global: globalCss.length > 0 ? globalCss.join("\n\n") : undefined,
-            files: Object.keys(files).length > 0 ? files : undefined
+            files: Object.keys(files).length > 0 ? files : undefined,
         }
     }
 }

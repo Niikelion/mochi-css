@@ -22,7 +22,7 @@ describe("findAllFiles", () => {
             await fs.writeFile(path.join(dir, "c.js"), "")
 
             const files = await findAllFiles(dir)
-            const names = files.map(f => path.basename(f))
+            const names = files.map((f) => path.basename(f))
             expect(names).toContain("a.ts")
             expect(names).toContain("b.tsx")
             expect(names).not.toContain("c.js")
@@ -36,7 +36,7 @@ describe("findAllFiles", () => {
             await fs.writeFile(path.join(sub, "nested.ts"), "")
 
             const files = await findAllFiles(dir)
-            const names = files.map(f => path.basename(f))
+            const names = files.map((f) => path.basename(f))
             expect(names).toContain("nested.ts")
         })
     })
@@ -49,7 +49,6 @@ describe("findAllFiles", () => {
     })
 
     it("throws MochiError for nonexistent directory", async () => {
-        await expect(findAllFiles("/nonexistent/path/abc123"))
-            .rejects.toThrow(MochiError)
+        await expect(findAllFiles("/nonexistent/path/abc123")).rejects.toThrow(MochiError)
     })
 })

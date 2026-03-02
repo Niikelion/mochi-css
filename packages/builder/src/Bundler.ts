@@ -1,7 +1,7 @@
-import path from "path";
-import {rolldown, Plugin} from "rolldown";
+import path from "path"
+import { rolldown, Plugin } from "rolldown"
 
-export type FileLookup = { [K in string]?: string }
+export type FileLookup = Partial<Record<string, string>>
 
 export interface Bundler {
     bundle(rootFilePath: string, files: FileLookup): Promise<string>
@@ -22,7 +22,7 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
 
     const tryResolve = (resolvedPath: string): string | null => {
         if (normalizedFiles.has(resolvedPath)) return resolvedPath
-        for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
+        for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
             const withExt = resolvedPath + ext
             if (normalizedFiles.has(withExt)) return withExt
         }
@@ -32,9 +32,8 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
     return {
         name: "virtual-fs",
         resolveId(source, importer = rootFilePath) {
-            const resolvedPath = normalizeFilePath(path.isAbsolute(source)
-                ? source
-                : path.resolve(path.dirname(importer), source)
+            const resolvedPath = normalizeFilePath(
+                path.isAbsolute(source) ? source : path.resolve(path.dirname(importer), source),
             )
 
             return tryResolve(resolvedPath)
@@ -48,7 +47,7 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
             }
 
             return null
-        }
+        },
     } satisfies Pick<Plugin, "name" | "resolveId" | "load">
 }
 
@@ -58,7 +57,7 @@ export class RolldownBundler implements Bundler {
             input: rootFilePath,
             platform: "node",
             treeshake: false,
-            plugins: [createVirtualFsPlugin(rootFilePath, files)]
+            plugins: [createVirtualFsPlugin(rootFilePath, files)],
         })
 
         const { output } = await build.generate({ format: "cjs" })

@@ -1,4 +1,9 @@
-import { mochiCssFunctionExtractor, mochiStyledFunctionExtractor, mochiKeyframesFunctionExtractor, mochiGlobalCssFunctionExtractor } from "@/extractors"
+import {
+    mochiCssFunctionExtractor,
+    mochiStyledFunctionExtractor,
+    mochiKeyframesFunctionExtractor,
+    mochiGlobalCssFunctionExtractor,
+} from "@/extractors"
 
 export const defaultExtractors = [
     mochiCssFunctionExtractor,
