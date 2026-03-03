@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 2.0.1
+
+### Patch Changes
+
+- adccaca: Changed release process
+
 ## 2.0.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @mochi-css/postcss
 
+## 2.0.1
+
+### Patch Changes
+
+- adccaca: Changed release process
+- Updated dependencies [adccaca]
+  - @mochi-css/builder@2.0.1
+
 ## 2.0.0
 
 ### Patch Changes

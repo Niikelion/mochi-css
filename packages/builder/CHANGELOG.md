@@ -1,11 +1,19 @@
 # @mochi-css/builder
 
+## 2.0.1
+
+### Patch Changes
+
+- adccaca: Changed release process
+- Updated dependencies [adccaca]
+    - @mochi-css/vanilla@2.0.1
+
 ## 2.0.0
 
 ### Patch Changes
 
 - Updated dependencies [383e43f]
-  - @mochi-css/vanilla@2.0.0
+    - @mochi-css/vanilla@2.0.0
 
 ## 1.1.0
 
@@ -19,7 +27,7 @@
 ### Patch Changes
 
 - Updated dependencies [6063c7d]
-  - @mochi-css/vanilla@1.1.0
+    - @mochi-css/vanilla@1.1.0
 
 ## 1.0.1
 
@@ -41,7 +49,7 @@
 
 - Updated dependencies [ba15ebe]
 - Updated dependencies [742b4b2]
-  - @mochi-css/vanilla@1.0.0
+    - @mochi-css/vanilla@1.0.0
 
 ## 0.1.0
 
@@ -56,7 +64,7 @@
 - Updated dependencies [7aa4d94]
 - Updated dependencies [7aa4d94]
 - Updated dependencies [2f7deed]
-  - @mochi-css/vanilla@0.1.0
+    - @mochi-css/vanilla@0.1.0
 
 ## 0.0.3
 
@@ -64,7 +72,7 @@
 
 - b20f84f: Updated CI
 - Updated dependencies [b20f84f]
-  - @mochi-css/vanilla@0.0.3
+    - @mochi-css/vanilla@0.0.3
 
 ## 0.0.2
 
@@ -72,4 +80,4 @@
 
 - 0b663d9: Added simple test and improved CI
 - Updated dependencies [0b663d9]
-  - @mochi-css/vanilla@0.0.2
+    - @mochi-css/vanilla@0.0.2
