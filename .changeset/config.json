@@ -5,8 +5,5 @@
   "access": "public",
   "baseBranch": "master",
   "ignore": ["@mochi-css/nextjs-example"],
-  "fixed": [
-      ["@mochi-css/*"]
-  ],
   "updateInternalDependencies": "patch"
 }

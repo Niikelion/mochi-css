@@ -1,12 +1,12 @@
-import {describe, it, expect} from "vitest"
-import {parseFile, parseSource} from "@/parse";
-import {MochiError} from "@/diagnostics";
-import SWC from "@swc/core";
+import { describe, it, expect } from "vitest"
+import { parseFile, parseSource } from "@/parse"
+import { MochiError } from "@/diagnostics"
+import SWC from "@swc/core"
 import fs from "fs/promises"
 
 describe("parseSource", () => {
     it("should parse given file and return with and specified filePath", async () => {
-        const result = await parseSource(`const test = 5;`,"./source/index.ts")
+        const result = await parseSource(`const test = 5;`, "./source/index.ts")
 
         expect(result.filePath).toEqual("./source/index.ts")
         expect(SWC.printSync(result.ast).code).toEqual("const test = 5;\n")
@@ -25,7 +25,7 @@ describe("parseSource", () => {
                 err instanceof MochiError &&
                 err.code === "MOCHI_PARSE" &&
                 err.file === "./bad.ts" &&
-                err.cause !== undefined
+                err.cause !== undefined,
         )
     })
 })
@@ -47,7 +47,7 @@ describe("parseFile", () => {
                 err instanceof MochiError &&
                 err.code === "MOCHI_FILE_READ" &&
                 err.file === "./nonexistent-file.ts" &&
-                err.cause !== undefined
+                err.cause !== undefined,
         )
     })
 })

@@ -1,7 +1,7 @@
 export type Diagnostic = {
     code: string
     message: string
-    severity: 'error' | 'warning'
+    severity: "error" | "warning"
     file?: string
     line?: number
     column?: number
@@ -18,9 +18,9 @@ export class MochiError extends Error {
         public readonly code: string,
         message: string,
         public readonly file?: string,
-        public override readonly cause?: unknown
+        public override readonly cause?: unknown,
     ) {
         super(message)
-        this.name = 'MochiError'
+        this.name = "MochiError"
     }
 }

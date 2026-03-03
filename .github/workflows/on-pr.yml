@@ -84,3 +84,5 @@ jobs:
                 run: yarn install --immutable
             -   name: Run tests
                 run: yarn test
+            -   name: Run tsuki smoke test
+                run: yarn workspace @mochi-css/tsuki smoke

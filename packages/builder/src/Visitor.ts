@@ -12,14 +12,26 @@ function visitAny<C>(_: AnyNode, context: VisitorContext<C>) {
 }
 
 const defaultVisitors = {
-    stringLiteral<C>(_node: SWC.StringLiteral, _context: VisitorContext<C>) {},
-    booleanLiteral<C>(_node: SWC.BooleanLiteral, _context: VisitorContext<C>) {},
-    nullLiteral<C>(_node: SWC.NullLiteral, _context: VisitorContext<C>) {},
-    numericLiteral<C>(_node: SWC.NumericLiteral, _context: VisitorContext<C>) {},
-    bigIntLiteral<C>(_node: SWC.BigIntLiteral, _context: VisitorContext<C>) {},
-    regExpLiteral<C>(_node: SWC.RegExpLiteral, _context: VisitorContext<C>) {},
+    stringLiteral<C>(_node: SWC.StringLiteral, _context: VisitorContext<C>) {
+        /* empty */
+    },
+    booleanLiteral<C>(_node: SWC.BooleanLiteral, _context: VisitorContext<C>) {
+        /* empty */
+    },
+    nullLiteral<C>(_node: SWC.NullLiteral, _context: VisitorContext<C>) {
+        /* empty */
+    },
+    numericLiteral<C>(_node: SWC.NumericLiteral, _context: VisitorContext<C>) {
+        /* empty */
+    },
+    bigIntLiteral<C>(_node: SWC.BigIntLiteral, _context: VisitorContext<C>) {
+        /* empty */
+    },
+    regExpLiteral<C>(_node: SWC.RegExpLiteral, _context: VisitorContext<C>) {
+        /* empty */
+    },
     module<C>(node: SWC.Module, context: VisitorContext<C>): void {
-        node.body.forEach(node => visit.moduleItem(node, context.visitors, context.context))
+        node.body.forEach((node) => visit.moduleItem(node, context.visitors, context.context))
     },
     moduleItem<C>(node: SWC.ModuleItem, context: VisitorContext<C>): void {
         run(() => {
@@ -67,7 +79,7 @@ const defaultVisitors = {
         visit.declaration(node.declaration, context.visitors, context.context)
     },
     exportNamedDeclaration<C>(node: SWC.ExportNamedDeclaration, context: VisitorContext<C>): void {
-        node.specifiers.forEach(specifier => visit.exportSpecifier(specifier, context.visitors, context.context))
+        node.specifiers.forEach((specifier) => visit.exportSpecifier(specifier, context.visitors, context.context))
         if (node.source) visit.stringLiteral(node.source, context.visitors, context.context)
         if (node.asserts) visit.objectExpression(node.asserts, context.visitors, context.context)
     },
@@ -150,10 +162,9 @@ const defaultVisitors = {
         visit.identifier(node.exported, context.visitors, context.context)
     },
     importDeclaration<C>(node: SWC.ImportDeclaration, context: VisitorContext<C>): void {
-        node.specifiers.forEach(specifier => visit.importSpecifier(specifier, context.visitors, context.context))
+        node.specifiers.forEach((specifier) => visit.importSpecifier(specifier, context.visitors, context.context))
         visit.stringLiteral(node.source, context.visitors, context.context)
-        if (node.asserts)
-            visit.objectExpression(node.asserts, context.visitors, context.context)
+        if (node.asserts) visit.objectExpression(node.asserts, context.visitors, context.context)
     },
     importSpecifier<C>(node: SWC.ImportSpecifier, context: VisitorContext<C>): void {
         run(() => {
@@ -198,7 +209,9 @@ const defaultVisitors = {
         })
     },
     variableDeclaration<C>(node: SWC.VariableDeclaration, context: VisitorContext<C>): void {
-        node.declarations.forEach(declarator => visit.variableDeclarator(declarator, context.visitors, context.context))
+        node.declarations.forEach((declarator) =>
+            visit.variableDeclarator(declarator, context.visitors, context.context),
+        )
     },
     variableDeclarator<C>(node: SWC.VariableDeclarator, context: VisitorContext<C>): void {
         visit.pattern(node.id, context.visitors, context.context)
@@ -209,16 +222,18 @@ const defaultVisitors = {
         visit.identifier(node.identifier, context.visitors, context.context)
     },
     class<C>(node: SWC.Class, context: VisitorContext<C>): void {
-        if (node.decorators) node.decorators.forEach(d => visit.decorator(d, context.visitors, context.context))
+        if (node.decorators) node.decorators.forEach((d) => visit.decorator(d, context.visitors, context.context))
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
         if (node.superClass) visit.expression(node.superClass, context.visitors, context.context)
-        if (node.superTypeParams) visit.tsTypeParameterInstantiation(node.superTypeParams, context.visitors, context.context)
-        if (node.implements) node.implements.forEach(i => visit.tsExpressionWithTypeArguments(i, context.visitors, context.context))
-        node.body.forEach(m => visit.classMember(m, context.visitors, context.context))
+        if (node.superTypeParams)
+            visit.tsTypeParameterInstantiation(node.superTypeParams, context.visitors, context.context)
+        node.implements.forEach((i) => visit.tsExpressionWithTypeArguments(i, context.visitors, context.context))
+        node.body.forEach((m) => visit.classMember(m, context.visitors, context.context))
     },
     tsExpressionWithTypeArguments<C>(node: SWC.TsExpressionWithTypeArguments, context: VisitorContext<C>): void {
         visit.expression(node.expression, context.visitors, context.context)
-        if (node.typeArguments) visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
+        if (node.typeArguments)
+            visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
     },
     classMember<C>(node: SWC.ClassMember, context: VisitorContext<C>): void {
         run(() => {
@@ -244,16 +259,14 @@ const defaultVisitors = {
     },
     classConstructor<C>(node: SWC.Constructor, context: VisitorContext<C>): void {
         visit.propertyName(node.key, context.visitors, context.context)
-        node.params.forEach(param => {
-            if (param.type === "Parameter")
-                visit.param(param, context.visitors, context.context)
-            else
-                visit.tsParameterProperty(param, context.visitors, context.context)
+        node.params.forEach((param) => {
+            if (param.type === "Parameter") visit.param(param, context.visitors, context.context)
+            else visit.tsParameterProperty(param, context.visitors, context.context)
         })
         if (node.body) visit.blockStatement(node.body, context.visitors, context.context)
     },
     tsParameterProperty<C>(node: SWC.TsParameterProperty, context: VisitorContext<C>): void {
-        if (node.decorators) node.decorators.forEach(d => visit.decorator(d, context.visitors, context.context))
+        if (node.decorators) node.decorators.forEach((d) => visit.decorator(d, context.visitors, context.context))
         visit.tsParameterPropertyParameter(node.param, context.visitors, context.context)
     },
     tsParameterPropertyParameter<C>(node: SWC.TsParameterPropertyParameter, context: VisitorContext<C>): void {
@@ -281,8 +294,9 @@ const defaultVisitors = {
         visit.function(node.function, context.visitors, context.context, true)
     },
     function<C>(node: SWC.Fn, context: VisitorContext<C>): void {
-        if (node.typeParameters) visit.tsTypeParameterDeclaration(node.typeParameters, context.visitors, context.context)
-        node.params.forEach(param => visit.param(param, context.visitors, context.context))
+        if (node.typeParameters)
+            visit.tsTypeParameterDeclaration(node.typeParameters, context.visitors, context.context)
+        node.params.forEach((param) => visit.param(param, context.visitors, context.context))
         if (node.body) visit.blockStatement(node.body, context.visitors, context.context)
     },
     classProperty<C>(node: SWC.ClassProperty, context: VisitorContext<C>): void {
@@ -294,12 +308,12 @@ const defaultVisitors = {
         visit.privateName(node.key, context.visitors, context.context)
     },
     classPropertyBase<C>(node: SWC.ClassPropertyBase, context: VisitorContext<C>): void {
-        if (node.decorators) node.decorators.forEach(d => visit.decorator(d, context.visitors, context.context))
+        if (node.decorators) node.decorators.forEach((d) => visit.decorator(d, context.visitors, context.context))
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
         if (node.value) visit.expression(node.value, context.visitors, context.context)
     },
     tsIndexSignature<C>(node: SWC.TsIndexSignature, context: VisitorContext<C>): void {
-        node.params.forEach(param => visit.tsFnParameter(param, context.visitors, context.context))
+        node.params.forEach((param) => visit.tsFnParameter(param, context.visitors, context.context))
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     tsFnParameter<C>(node: SWC.TsFnParameter, context: VisitorContext<C>): void {
@@ -326,11 +340,11 @@ const defaultVisitors = {
     tsInterfaceDeclaration<C>(node: SWC.TsInterfaceDeclaration, context: VisitorContext<C>): void {
         visit.identifier(node.id, context.visitors, context.context)
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
-        node.extends.forEach(i => visit.tsExpressionWithTypeArguments(i, context.visitors, context.context))
+        node.extends.forEach((i) => visit.tsExpressionWithTypeArguments(i, context.visitors, context.context))
         visit.tsInterfaceBody(node.body, context.visitors, context.context)
     },
     tsInterfaceBody<C>(node: SWC.TsInterfaceBody, context: VisitorContext<C>): void {
-        node.body.forEach(e => visit.tsTypeElement(e, context.visitors, context.context))
+        node.body.forEach((e) => visit.tsTypeElement(e, context.visitors, context.context))
     },
     tsTypeElement<C>(node: SWC.TsTypeElement, context: VisitorContext<C>): void {
         run(() => {
@@ -354,12 +368,12 @@ const defaultVisitors = {
     },
     tsCallSignatureDeclaration<C>(node: SWC.TsCallSignatureDeclaration, context: VisitorContext<C>): void {
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
-        node.params.forEach(param => visit.tsFnParameter(param, context.visitors, context.context))
+        node.params.forEach((param) => visit.tsFnParameter(param, context.visitors, context.context))
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     tsConstructSignatureDeclaration<C>(node: SWC.TsConstructSignatureDeclaration, context: VisitorContext<C>): void {
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
-        node.params.forEach(param => visit.tsFnParameter(param, context.visitors, context.context))
+        node.params.forEach((param) => visit.tsFnParameter(param, context.visitors, context.context))
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     tsPropertySignature<C>(node: SWC.TsPropertySignature, context: VisitorContext<C>): void {
@@ -377,7 +391,7 @@ const defaultVisitors = {
     tsMethodSignature<C>(node: SWC.TsMethodSignature, context: VisitorContext<C>): void {
         visit.expression(node.key, context.visitors, context.context)
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
-        node.params.forEach(param => visit.tsFnParameter(param, context.visitors, context.context))
+        node.params.forEach((param) => visit.tsFnParameter(param, context.visitors, context.context))
         if (node.typeAnn) visit.tsTypeAnnotation(node.typeAnn, context.visitors, context.context)
     },
     tsTypeAliasDeclaration<C>(node: SWC.TsTypeAliasDeclaration, context: VisitorContext<C>): void {
@@ -387,7 +401,7 @@ const defaultVisitors = {
     },
     tsEnumDeclaration<C>(node: SWC.TsEnumDeclaration, context: VisitorContext<C>): void {
         visit.identifier(node.id, context.visitors, context.context)
-        node.members.forEach(member => visit.tsEnumMember(member, context.visitors, context.context))
+        node.members.forEach((member) => visit.tsEnumMember(member, context.visitors, context.context))
     },
     tsEnumMember<C>(node: SWC.TsEnumMember, context: VisitorContext<C>): void {
         visit.tsEnumMemberId(node.id, context.visitors, context.context)
@@ -428,14 +442,14 @@ const defaultVisitors = {
         })
     },
     tsModuleBlock<C>(node: SWC.TsModuleBlock, context: VisitorContext<C>): void {
-        node.body.forEach(item => visit.moduleItem(item, context.visitors, context.context, true))
+        node.body.forEach((item) => visit.moduleItem(item, context.visitors, context.context, true))
     },
     tsNamespaceDeclaration<C>(node: SWC.TsNamespaceDeclaration, context: VisitorContext<C>): void {
         visit.identifier(node.id, context.visitors, context.context)
         visit.tsNamespaceBody(node.body, context.visitors, context.context)
     },
     tsTypeParameterDeclaration<C>(node: SWC.TsTypeParameterDeclaration, context: VisitorContext<C>): void {
-        node.parameters.forEach(param => visit.tsTypeParameter(param, context.visitors, context.context))
+        node.parameters.forEach((param) => visit.tsTypeParameter(param, context.visitors, context.context))
     },
     tsTypeParameter<C>(node: SWC.TsTypeParameter, context: VisitorContext<C>): void {
         visit.identifier(node.name, context.visitors, context.context)
@@ -443,7 +457,7 @@ const defaultVisitors = {
         if (node.default) visit.tsType(node.default, context.visitors, context.context)
     },
     tsTypeParameterInstantiation<C>(node: SWC.TsTypeParameterInstantiation, context: VisitorContext<C>): void {
-        node.params.forEach(type => visit.tsType(type, context.visitors, context.context))
+        node.params.forEach((type) => visit.tsType(type, context.visitors, context.context))
     },
     statement<C>(node: SWC.Statement, context: VisitorContext<C>): void {
         run(() => {
@@ -496,10 +510,14 @@ const defaultVisitors = {
         })
     },
     blockStatement<C>(node: SWC.BlockStatement, context: VisitorContext<C>): void {
-        node.stmts.forEach(statement => visit.statement(statement, context.visitors, context.context))
+        node.stmts.forEach((statement) => visit.statement(statement, context.visitors, context.context))
     },
-    emptyStatement<C>(_node: SWC.EmptyStatement, _context: VisitorContext<C>): void {},
-    debuggerStatement<C>(_node: SWC.DebuggerStatement, _context: VisitorContext<C>): void {},
+    emptyStatement<C>(_node: SWC.EmptyStatement, _context: VisitorContext<C>): void {
+        /* empty */
+    },
+    debuggerStatement<C>(_node: SWC.DebuggerStatement, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     withStatement<C>(node: SWC.WithStatement, context: VisitorContext<C>): void {
         visit.expression(node.object, context.visitors, context.context)
         visit.statement(node.body, context.visitors, context.context)
@@ -524,11 +542,11 @@ const defaultVisitors = {
     },
     switchStatement<C>(node: SWC.SwitchStatement, context: VisitorContext<C>): void {
         visit.expression(node.discriminant, context.visitors, context.context)
-        node.cases.forEach(c => visit.switchCase(c, context.visitors, context.context))
+        node.cases.forEach((c) => visit.switchCase(c, context.visitors, context.context))
     },
     switchCase<C>(node: SWC.SwitchCase, context: VisitorContext<C>): void {
         if (node.test) visit.expression(node.test, context.visitors, context.context)
-        node.consequent.forEach(c => visit.statement(c, context.visitors, context.context))
+        node.consequent.forEach((c) => visit.statement(c, context.visitors, context.context))
     },
     throwStatement<C>(node: SWC.ThrowStatement, context: VisitorContext<C>): void {
         visit.expression(node.argument, context.visitors, context.context)
@@ -552,7 +570,8 @@ const defaultVisitors = {
     },
     forStatement<C>(node: SWC.ForStatement, context: VisitorContext<C>): void {
         if (node.init) {
-            if (node.init.type === "VariableDeclaration") visit.variableDeclaration(node.init, context.visitors, context.context)
+            if (node.init.type === "VariableDeclaration")
+                visit.variableDeclaration(node.init, context.visitors, context.context)
             else visit.expression(node.init, context.visitors, context.context)
         }
         if (node.test) visit.expression(node.test, context.visitors, context.context)
@@ -560,13 +579,15 @@ const defaultVisitors = {
         visit.statement(node.body, context.visitors, context.context)
     },
     forInStatement<C>(node: SWC.ForInStatement, context: VisitorContext<C>): void {
-        if (node.left.type === "VariableDeclaration") visit.variableDeclaration(node.left, context.visitors, context.context)
+        if (node.left.type === "VariableDeclaration")
+            visit.variableDeclaration(node.left, context.visitors, context.context)
         else visit.pattern(node.left, context.visitors, context.context)
         visit.expression(node.right, context.visitors, context.context)
         visit.statement(node.body, context.visitors, context.context)
     },
     forOfStatement<C>(node: SWC.ForOfStatement, context: VisitorContext<C>): void {
-        if (node.left.type === "VariableDeclaration") visit.variableDeclaration(node.left, context.visitors, context.context)
+        if (node.left.type === "VariableDeclaration")
+            visit.variableDeclaration(node.left, context.visitors, context.context)
         else visit.pattern(node.left, context.visitors, context.context)
         visit.expression(node.right, context.visitors, context.context)
         visit.statement(node.body, context.visitors, context.context)
@@ -662,19 +683,19 @@ const defaultVisitors = {
             }
         })
     },
-    thisExpression<C>(_node: SWC.ThisExpression, _context: VisitorContext<C>): void {},
+    thisExpression<C>(_node: SWC.ThisExpression, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     arrayExpression<C>(node: SWC.ArrayExpression, context: VisitorContext<C>): void {
-        node.elements.forEach(element => element && visit.exprOrSpread(element, context.visitors, context.context))
+        node.elements.forEach((element) => element && visit.exprOrSpread(element, context.visitors, context.context))
     },
     exprOrSpread<C>(node: SWC.ExprOrSpread, context: VisitorContext<C>): void {
         visit.expression(node.expression, context.visitors, context.context)
     },
     objectExpression<C>(node: SWC.ObjectExpression, context: VisitorContext<C>): void {
-        node.properties.forEach(property => {
-            if (property.type === 'SpreadElement')
-                visit.spreadElement(property, context.visitors, context.context)
-            else
-                visit.property(property, context.visitors, context.context)
+        node.properties.forEach((property) => {
+            if (property.type === "SpreadElement") visit.spreadElement(property, context.visitors, context.context)
+            else visit.property(property, context.visitors, context.context)
         })
     },
     functionExpression<C>(node: SWC.FunctionExpression, context: VisitorContext<C>): void {
@@ -737,18 +758,25 @@ const defaultVisitors = {
                     return visit.expression(node.callee, context.visitors, context.context)
             }
         })
-        if (node.typeArguments) visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
-        node.arguments.forEach(argument => visit.expression(argument.expression, context.visitors, context.context))
+        if (node.typeArguments)
+            visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
+        node.arguments.forEach((argument) => visit.expression(argument.expression, context.visitors, context.context))
     },
     newExpression<C>(node: SWC.NewExpression, context: VisitorContext<C>): void {
         visit.expression(node.callee, context.visitors, context.context)
-        if (node.typeArguments) visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
-        if (node.arguments) node.arguments.forEach(argument => visit.expression(argument.expression, context.visitors, context.context))
+        if (node.typeArguments)
+            visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
+        if (node.arguments)
+            node.arguments.forEach((argument) =>
+                visit.expression(argument.expression, context.visitors, context.context),
+            )
     },
     sequenceExpression<C>(node: SWC.SequenceExpression, context: VisitorContext<C>): void {
-        node.expressions.forEach(expression => visit.expression(expression, context.visitors, context.context))
+        node.expressions.forEach((expression) => visit.expression(expression, context.visitors, context.context))
     },
-    identifier<C>(_node: SWC.Identifier, _context: VisitorContext<C>): void {},
+    identifier<C>(_node: SWC.Identifier, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     literal<C>(node: SWC.Literal, context: VisitorContext<C>): void {
         run(() => {
             switch (node.type) {
@@ -769,20 +797,26 @@ const defaultVisitors = {
             }
         })
     },
-    jsxText<C>(_node: SWC.JSXText, _context: VisitorContext<C>): void {},
-    templateLiteral<C>(node: SWC.TemplateLiteral, context: VisitorContext<C>): void {
-        node.expressions.forEach(expression => visit.expression(expression, context.visitors, context.context))
-        node.quasis.forEach(quasi => visit.templateElement(quasi, context.visitors, context.context))
+    jsxText<C>(_node: SWC.JSXText, _context: VisitorContext<C>): void {
+        /* empty */
     },
-    templateElement<C>(_node: SWC.TemplateElement, _context: VisitorContext<C>): void {},
+    templateLiteral<C>(node: SWC.TemplateLiteral, context: VisitorContext<C>): void {
+        node.expressions.forEach((expression) => visit.expression(expression, context.visitors, context.context))
+        node.quasis.forEach((quasi) => visit.templateElement(quasi, context.visitors, context.context))
+    },
+    templateElement<C>(_node: SWC.TemplateElement, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     taggedTemplateExpression<C>(node: SWC.TaggedTemplateExpression, context: VisitorContext<C>): void {
         visit.expression(node.tag, context.visitors, context.context)
-        if (node.typeParameters) visit.tsTypeParameterInstantiation(node.typeParameters, context.visitors, context.context)
+        if (node.typeParameters)
+            visit.tsTypeParameterInstantiation(node.typeParameters, context.visitors, context.context)
         visit.templateLiteral(node.template, context.visitors, context.context)
     },
     arrowFunctionExpression<C>(node: SWC.ArrowFunctionExpression, context: VisitorContext<C>): void {
-        if (node.typeParameters) visit.tsTypeParameterDeclaration(node.typeParameters, context.visitors, context.context)
-        node.params.forEach(param => visit.pattern(param, context.visitors, context.context))
+        if (node.typeParameters)
+            visit.tsTypeParameterDeclaration(node.typeParameters, context.visitors, context.context)
+        node.params.forEach((param) => visit.pattern(param, context.visitors, context.context))
         if (node.returnType) visit.tsTypeAnnotation(node.returnType, context.visitors, context.context)
         if (node.body.type === "BlockStatement") visit.blockStatement(node.body, context.visitors, context.context)
         else visit.expression(node.body, context.visitors, context.context)
@@ -794,7 +828,9 @@ const defaultVisitors = {
     yieldExpression<C>(node: SWC.YieldExpression, context: VisitorContext<C>): void {
         if (node.argument) visit.expression(node.argument, context.visitors, context.context)
     },
-    metaProperty<C>(_node: SWC.MetaProperty, _context: VisitorContext<C>): void {},
+    metaProperty<C>(_node: SWC.MetaProperty, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     awaitExpression<C>(node: SWC.AwaitExpression, context: VisitorContext<C>): void {
         visit.expression(node.argument, context.visitors, context.context)
     },
@@ -819,16 +855,19 @@ const defaultVisitors = {
         visit.identifier(node.namespace, context.visitors, context.context)
         visit.identifier(node.name, context.visitors, context.context)
     },
-    jsxEmptyExpression<C>(_node: SWC.JSXEmptyExpression, _context: VisitorContext<C>): void {},
+    jsxEmptyExpression<C>(_node: SWC.JSXEmptyExpression, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     jsxElement<C>(node: SWC.JSXElement, context: VisitorContext<C>): void {
         visit.jsxOpeningElement(node.opening, context.visitors, context.context)
-        node.children.forEach(child => visit.jsxElementChild(child, context.visitors, context.context))
+        node.children.forEach((child) => visit.jsxElementChild(child, context.visitors, context.context))
         if (node.closing) visit.jsxClosingElement(node.closing, context.visitors, context.context)
     },
     jsxOpeningElement<C>(node: SWC.JSXOpeningElement, context: VisitorContext<C>): void {
         visit.jsxElementName(node.name, context.visitors, context.context)
-        if (node.typeArguments) visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
-        node.attributes.forEach(attribute => visit.jsxAttributeOrSpread(attribute, context.visitors, context.context))
+        if (node.typeArguments)
+            visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
+        node.attributes.forEach((attribute) => visit.jsxAttributeOrSpread(attribute, context.visitors, context.context))
     },
     jsxAttributeOrSpread<C>(node: SWC.JSXAttributeOrSpread, context: VisitorContext<C>): void {
         run(() => {
@@ -917,11 +956,15 @@ const defaultVisitors = {
     },
     jsxFragment<C>(node: SWC.JSXFragment, context: VisitorContext<C>): void {
         visit.jsxOpeningFragment(node.opening, context.visitors, context.context)
-        node.children.forEach(child => visit.jsxElementChild(child, context.visitors, context.context))
+        node.children.forEach((child) => visit.jsxElementChild(child, context.visitors, context.context))
         visit.jsxClosingFragment(node.closing, context.visitors, context.context)
     },
-    jsxOpeningFragment<C>(_node: SWC.JSXOpeningFragment, _context: VisitorContext<C>): void {},
-    jsxClosingFragment<C>(_node: SWC.JSXClosingFragment, _context: VisitorContext<C>): void {},
+    jsxOpeningFragment<C>(_node: SWC.JSXOpeningFragment, _context: VisitorContext<C>): void {
+        /* empty */
+    },
+    jsxClosingFragment<C>(_node: SWC.JSXClosingFragment, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     tsTypeAssertion<C>(node: SWC.TsTypeAssertion, context: VisitorContext<C>): void {
         visit.expression(node.expression, context.visitors, context.context)
         visit.tsType(node.typeAnnotation, context.visitors, context.context)
@@ -944,7 +987,9 @@ const defaultVisitors = {
         visit.expression(node.expression, context.visitors, context.context)
         visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
     },
-    privateName<C>(_node: SWC.PrivateName, _context: VisitorContext<C>): void {},
+    privateName<C>(_node: SWC.PrivateName, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     optionalChainingExpression<C>(node: SWC.OptionalChainingExpression, context: VisitorContext<C>): void {
         run(() => {
             switch (node.base.type) {
@@ -955,7 +1000,9 @@ const defaultVisitors = {
             }
         })
     },
-    invalid<C>(_node: SWC.Invalid, _context: VisitorContext<C>): void {},
+    invalid<C>(_node: SWC.Invalid, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     spreadElement<C>(node: SWC.SpreadElement, context: VisitorContext<C>): void {
         visit.expression(node.arguments, context.visitors, context.context)
     },
@@ -1019,7 +1066,8 @@ const defaultVisitors = {
         visit.propertyName(node.key, context.visitors, context.context)
     },
     param<C>(node: SWC.Param, context: VisitorContext<C>): void {
-        if (node.decorators) node.decorators.forEach(decorator => visit.decorator(decorator, context.visitors, context.context))
+        if (node.decorators)
+            node.decorators.forEach((decorator) => visit.decorator(decorator, context.visitors, context.context))
         visit.pattern(node.pat, context.visitors, context.context)
     },
     decorator<C>(node: SWC.Decorator, context: VisitorContext<C>): void {
@@ -1046,7 +1094,7 @@ const defaultVisitors = {
         })
     },
     arrayPattern<C>(node: SWC.ArrayPattern, context: VisitorContext<C>): void {
-        node.elements.forEach(element => element && visit.pattern(element, context.visitors, context.context))
+        node.elements.forEach((element) => element && visit.pattern(element, context.visitors, context.context))
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     restElement<C>(node: SWC.RestElement, context: VisitorContext<C>): void {
@@ -1054,7 +1102,7 @@ const defaultVisitors = {
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     objectPattern<C>(node: SWC.ObjectPattern, context: VisitorContext<C>): void {
-        node.properties.forEach(prop => visit.objectPatternProperty(prop, context.visitors, context.context))
+        node.properties.forEach((prop) => visit.objectPatternProperty(prop, context.visitors, context.context))
         if (node.typeAnnotation) visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     assignmentPattern<C>(node: SWC.AssignmentPattern, context: VisitorContext<C>): void {
@@ -1135,16 +1183,20 @@ const defaultVisitors = {
             }
         })
     },
-    tsKeywordType<C>(_node: SWC.TsKeywordType, _context: VisitorContext<C>): void {},
-    tsThisType<C>(_node: SWC.TsThisType, _context: VisitorContext<C>): void {},
+    tsKeywordType<C>(_node: SWC.TsKeywordType, _context: VisitorContext<C>): void {
+        /* empty */
+    },
+    tsThisType<C>(_node: SWC.TsThisType, _context: VisitorContext<C>): void {
+        /* empty */
+    },
     tsFunctionType<C>(node: SWC.TsFunctionType, context: VisitorContext<C>): void {
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
-        node.params.forEach(param => visit.tsFnParameter(param, context.visitors, context.context))
+        node.params.forEach((param) => visit.tsFnParameter(param, context.visitors, context.context))
         visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context, true)
     },
     tsConstructorType<C>(node: SWC.TsConstructorType, context: VisitorContext<C>): void {
         if (node.typeParams) visit.tsTypeParameterDeclaration(node.typeParams, context.visitors, context.context)
-        node.params.forEach(param => visit.tsFnParameter(param, context.visitors, context.context))
+        node.params.forEach((param) => visit.tsFnParameter(param, context.visitors, context.context))
         visit.tsTypeAnnotation(node.typeAnnotation, context.visitors, context.context)
     },
     tsTypeReference<C>(node: SWC.TsTypeReference, context: VisitorContext<C>): void {
@@ -1153,7 +1205,8 @@ const defaultVisitors = {
     },
     tsTypeQuery<C>(node: SWC.TsTypeQuery, context: VisitorContext<C>): void {
         visit.tsTypeQueryExpr(node.exprName, context.visitors, context.context)
-        if (node.typeArguments) visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
+        if (node.typeArguments)
+            visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
     },
     tsTypeQueryExpr<C>(node: SWC.TsTypeQueryExpr, context: VisitorContext<C>): void {
         run(() => {
@@ -1166,13 +1219,13 @@ const defaultVisitors = {
         })
     },
     tsTypeLiteral<C>(node: SWC.TsTypeLiteral, context: VisitorContext<C>): void {
-        node.members.forEach(member => visit.tsTypeElement(member, context.visitors, context.context))
+        node.members.forEach((member) => visit.tsTypeElement(member, context.visitors, context.context))
     },
     tsArrayType<C>(node: SWC.TsArrayType, context: VisitorContext<C>): void {
         visit.tsType(node.elemType, context.visitors, context.context)
     },
     tsTupleType<C>(node: SWC.TsTupleType, context: VisitorContext<C>): void {
-        node.elemTypes.forEach(elem => visit.tsTupleElement(elem, context.visitors, context.context))
+        node.elemTypes.forEach((elem) => visit.tsTupleElement(elem, context.visitors, context.context))
     },
     tsTupleElement<C>(node: SWC.TsTupleElement, context: VisitorContext<C>): void {
         if (node.label) visit.pattern(node.label, context.visitors, context.context)
@@ -1185,10 +1238,10 @@ const defaultVisitors = {
         visit.tsType(node.typeAnnotation, context.visitors, context.context)
     },
     tsUnionType<C>(node: SWC.TsUnionType, context: VisitorContext<C>): void {
-        node.types.forEach(type => visit.tsType(type, context.visitors, context.context))
+        node.types.forEach((type) => visit.tsType(type, context.visitors, context.context))
     },
     tsIntersectionType<C>(node: SWC.TsIntersectionType, context: VisitorContext<C>): void {
-        node.types.forEach(type => visit.tsType(type, context.visitors, context.context))
+        node.types.forEach((type) => visit.tsType(type, context.visitors, context.context))
     },
     tsConditionalType<C>(node: SWC.TsConditionalType, context: VisitorContext<C>): void {
         visit.tsType(node.checkType, context.visitors, context.context)
@@ -1234,8 +1287,8 @@ const defaultVisitors = {
         })
     },
     tsTemplateLiteralType<C>(node: SWC.TsTemplateLiteralType, context: VisitorContext<C>): void {
-        node.types.forEach(type => visit.tsType(type, context.visitors, context.context))
-        node.quasis.forEach(quasi => visit.templateElement(quasi, context.visitors, context.context))
+        node.types.forEach((type) => visit.tsType(type, context.visitors, context.context))
+        node.quasis.forEach((quasi) => visit.templateElement(quasi, context.visitors, context.context))
     },
     tsTypePredicate<C>(node: SWC.TsTypePredicate, context: VisitorContext<C>): void {
         visit.tsThisTypeOrIdent(node.paramName, context.visitors, context.context)
@@ -1253,7 +1306,8 @@ const defaultVisitors = {
     },
     tsImportType<C>(node: SWC.TsImportType, context: VisitorContext<C>): void {
         if (node.qualifier) visit.tsEntityName(node.qualifier, context.visitors, context.context)
-        if (node.typeArguments) visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
+        if (node.typeArguments)
+            visit.tsTypeParameterInstantiation(node.typeArguments, context.visitors, context.context)
         visit.stringLiteral(node.argument, context.visitors, context.context)
     },
     tsEntityName<C>(node: SWC.TsEntityName, context: VisitorContext<C>): void {
@@ -1270,31 +1324,38 @@ const defaultVisitors = {
         visit.tsEntityName(node.left, context.visitors, context.context)
         visit.identifier(node.right, context.visitors, context.context)
     },
-    super<C>(_node: SWC.Super, _context: VisitorContext<C>): void {},
-    import<C>(_node: SWC.Import, _context: VisitorContext<C>): void {},
-} satisfies { [k: string]: <C>(node: any, context: VisitorContext<C>) => void }
+    super<C>(_node: SWC.Super, _context: VisitorContext<C>): void {
+        /* empty */
+    },
+    import<C>(_node: SWC.Import, _context: VisitorContext<C>): void {
+        /* empty */
+    },
+} satisfies Record<string, <C>(node: never, context: VisitorContext<C>) => void>
 
-type VisitorContext<C> = { context: C, descend(context: C): void, visitors: Partial<AllVisitors<C>> }
+type VisitorContext<C> = { context: C; descend(this: void, context: C): void; visitors: Partial<AllVisitors<C>> }
 type Visitor<N extends object, C> = (node: N, context: VisitorContext<C>) => void
 
 type Values<T extends object> = T[keyof T]
 type DefaultVisitors = typeof defaultVisitors
-type AllVisitors<C> = { [K in keyof DefaultVisitors]?: DefaultVisitors[K] extends <_C>(node: infer N, context: VisitorContext<_C>) => void
-    ? (node: N, context: VisitorContext<C>) => void
-    : never
+type AllVisitors<C> = {
+    [K in keyof DefaultVisitors]?: DefaultVisitors[K] extends <_C>(node: infer N, context: VisitorContext<_C>) => void
+        ? (node: N, context: VisitorContext<C>) => void
+        : never
 } & { any: typeof visitAny<C> }
 type VisitorTarget<K extends keyof AllVisitors<unknown>> = Parameters<Required<AllVisitors<unknown>>[K]>[0]
 
 export type AnyNode = Values<{ [K in keyof DefaultVisitors]: Parameters<DefaultVisitors[K]>[0] }>
 
-function noDescend(): void {}
+function noDescend(): void {
+    /* empty */
+}
 
 function makeVisitor<Name extends keyof typeof defaultVisitors>(name: Name) {
     type Node = VisitorTarget<Name>
 
-    return function<C>(node: Node, visitors: Partial<AllVisitors<C>>, context: C, skipAny: boolean = false): Ret {
+    return function <C>(node: Node, visitors: Partial<AllVisitors<C>>, context: C, skipAny = false): Ret {
         function nodeDescend(newContext: C) {
-            (defaultVisitors[name] as Visitor<AnyNode, C>)(node, { context: newContext, visitors, descend: noDescend })
+            ;(defaultVisitors[name] as Visitor<AnyNode, C>)(node, { context: newContext, visitors, descend: noDescend })
         }
 
         function anyDescend(newContext: C) {
@@ -1313,10 +1374,13 @@ function makeVisitor<Name extends keyof typeof defaultVisitors>(name: Name) {
     }
 }
 
-type Visit = { [K in keyof typeof defaultVisitors]?: ReturnType<(typeof makeVisitor<K>)> }
+type Visit = { [K in keyof typeof defaultVisitors]?: ReturnType<typeof makeVisitor<K>> }
 
-export const visit = new Proxy<Visit>({}, {
-    get(target, name) {
-        return target[name as keyof Visit] ??= makeVisitor(name as keyof typeof defaultVisitors)
-    }
-}) as Required<Visit>
+export const visit = new Proxy<Visit>(
+    {},
+    {
+        get(target, name) {
+            return (target[name as keyof Visit] ??= makeVisitor(name as keyof typeof defaultVisitors))
+        },
+    },
+) as Required<Visit>

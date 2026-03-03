@@ -1,7 +1,7 @@
 import type { Config } from "prettier"
 
-export default {
+export const prettierConfig: Config = {
     semi: false,
     tabWidth: 4,
     printWidth: 120,
-} satisfies Config
+}

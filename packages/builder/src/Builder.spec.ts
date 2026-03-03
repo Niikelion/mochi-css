@@ -1,10 +1,10 @@
-import {describe, it, expect} from "vitest"
+import { describe, it, expect } from "vitest"
 import path from "path"
-import {parseSource} from "@/parse";
-import dedent from "dedent";
-import {Builder} from "@/Builder";
-import {RolldownBundler} from "@/Bundler";
-import {VmRunner} from "@/Runner";
+import { parseSource } from "@/parse"
+import dedent from "dedent"
+import { Builder } from "@/Builder"
+import { RolldownBundler } from "@/Bundler"
+import { VmRunner } from "@/Runner"
 import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
 import { mochiKeyframesFunctionExtractor } from "@/extractors/VanillaKeyframesExtractor"
 import { mochiGlobalCssFunctionExtractor } from "@/extractors/VanillaGlobalCssExtractor"
@@ -20,11 +20,11 @@ function createMockParentExtractor(importPath: string, symbolName: string, deriv
             importPath,
             symbolName: name,
             extractStaticArgs(call: CallExpression): Expression[] {
-                return call.arguments.map(a => a.expression)
+                return call.arguments.map((a) => a.expression)
             },
             startGeneration(): StyleGenerator {
                 return new VanillaCssGenerator()
-            }
+            },
         })
     }
 
@@ -33,7 +33,7 @@ function createMockParentExtractor(importPath: string, symbolName: string, deriv
         symbolName,
         derivedExtractors,
         extractStaticArgs(call: CallExpression): Expression[] {
-            return call.arguments.map(a => a.expression)
+            return call.arguments.map((a) => a.expression)
         },
         startGeneration(): StyleGenerator {
             const subGenerators = new Map<string, StyleGenerator>()
@@ -56,15 +56,16 @@ function createMockParentExtractor(importPath: string, symbolName: string, deriv
                         }
                     }
                     return { files: Object.keys(allFiles).length > 0 ? allFiles : undefined }
-                }
+                },
             }
-        }
+        },
     }
 }
 
 describe("Builder", () => {
     it("extracts style expressions from css calls", async () => {
-        const module = await parseSource(/* language=typescript */ dedent`
+        const module = await parseSource(
+            /* language=typescript */ dedent`
             import { css } from "@mochi-css/vanilla"
 
             export const buttonStyles = css({
@@ -74,26 +75,30 @@ describe("Builder", () => {
                     backgroundColor: "white"
                 }
             })
-        `,"buttonStyles.ts")
+        `,
+            "buttonStyles.ts",
+        )
 
         const builder = new Builder({
             rootDir: "./",
             extractors: [mochiCssFunctionExtractor],
             bundler: new RolldownBundler(),
-            runner: new VmRunner()
+            runner: new VmRunner(),
         })
 
         const generators = await builder.collectStylesFromModules([module])
-        const generator = generators.get("@mochi-css/vanilla:css")!
-        const result = await generator.generateStyles()
+        const generator = generators.get("@mochi-css/vanilla:css")
+        const result = await generator?.generateStyles()
+        expect.assert(result !== undefined)
 
-        const fileCss = Object.values(result.files!).join("\n\n")
+        const fileCss = Object.values(result.files ?? {}).join("\n\n")
         expect(fileCss).toContain("background-color: gray")
         expect(fileCss).toContain("background-color: white")
     })
 
     it("strips unused module-level symbols", async () => {
-        const module = await parseSource(/* language=typescript */ dedent`
+        const module = await parseSource(
+            /* language=typescript */ dedent`
             import { css } from "@mochi-css/vanilla"
 
             // @ts-ignore
@@ -105,7 +110,9 @@ describe("Builder", () => {
                 textDecoration: "none",
                 color
             })
-        `, "linkStyles.ts")
+        `,
+            "linkStyles.ts",
+        )
 
         let generatedCode = ""
 
@@ -125,9 +132,9 @@ describe("Builder", () => {
                     }
 
                     return bundler.bundle(rootFilePath, files)
-                }
+                },
             },
-            runner: new VmRunner()
+            runner: new VmRunner(),
         })
 
         await builder.collectStylesFromModules([module])
@@ -146,49 +153,60 @@ describe("Builder", () => {
     })
 
     it("VanillaCssGenerator returns per-file CSS keyed by source", async () => {
-        const moduleA = await parseSource(/* language=typescript */ dedent`
+        const moduleA = await parseSource(
+            /* language=typescript */ dedent`
             import { css } from "@mochi-css/vanilla"
             export const a = css({ color: "red" })
-        `, "a.ts")
+        `,
+            "a.ts",
+        )
 
-        const moduleB = await parseSource(/* language=typescript */ dedent`
+        const moduleB = await parseSource(
+            /* language=typescript */ dedent`
             import { css } from "@mochi-css/vanilla"
             export const b = css({ color: "blue" })
-        `, "b.ts")
+        `,
+            "b.ts",
+        )
 
         const builder = new Builder({
             rootDir: "./",
             extractors: [mochiCssFunctionExtractor],
             bundler: new RolldownBundler(),
-            runner: new VmRunner()
+            runner: new VmRunner(),
         })
 
         const generators = await builder.collectStylesFromModules([moduleA, moduleB])
-        const generator = generators.get("@mochi-css/vanilla:css")!
-        const result = await generator.generateStyles()
+        const generator = generators.get("@mochi-css/vanilla:css")
+        const result = await generator?.generateStyles()
+        expect.assert(result !== undefined)
 
         expect(result.files).toBeDefined()
-        expect(result.files!["a.ts"]).toContain("color: red")
-        expect(result.files!["b.ts"]).toContain("color: blue")
-        expect(result.files!["a.ts"]).not.toContain("color: blue")
+        expect(result.files?.["a.ts"]).toContain("color: red")
+        expect(result.files?.["b.ts"]).toContain("color: blue")
+        expect(result.files?.["a.ts"]).not.toContain("color: blue")
     })
 
     it("VanillaGlobalCssGenerator returns global CSS", async () => {
-        const module = await parseSource(/* language=typescript */ dedent`
+        const module = await parseSource(
+            /* language=typescript */ dedent`
             import { globalCss } from "@mochi-css/vanilla"
             globalCss({ body: { margin: 0 }, h1: { color: "red" } })
-        `, "globals.ts")
+        `,
+            "globals.ts",
+        )
 
         const builder = new Builder({
             rootDir: "./",
             extractors: [mochiGlobalCssFunctionExtractor],
             bundler: new RolldownBundler(),
-            runner: new VmRunner()
+            runner: new VmRunner(),
         })
 
         const generators = await builder.collectStylesFromModules([module])
-        const generator = generators.get("@mochi-css/vanilla:globalCss")!
-        const result = await generator.generateStyles()
+        const generator = generators.get("@mochi-css/vanilla:globalCss")
+        const result = await generator?.generateStyles()
+        expect.assert(result !== undefined)
 
         expect(result.global).toContain("body {")
         expect(result.global).toContain("margin: 0;")
@@ -198,25 +216,75 @@ describe("Builder", () => {
     })
 
     it("VanillaKeyframesGenerator returns per-file CSS", async () => {
-        const module = await parseSource(/* language=typescript */ dedent`
+        const module = await parseSource(
+            /* language=typescript */ dedent`
             import { keyframes } from "@mochi-css/vanilla"
             export const fade = keyframes({ from: { opacity: "0" }, to: { opacity: "1" } })
-        `, "anim.ts")
+        `,
+            "anim.ts",
+        )
 
         const builder = new Builder({
             rootDir: "./",
             extractors: [mochiKeyframesFunctionExtractor],
             bundler: new RolldownBundler(),
-            runner: new VmRunner()
+            runner: new VmRunner(),
         })
 
         const generators = await builder.collectStylesFromModules([module])
-        const generator = generators.get("@mochi-css/vanilla:keyframes")!
-        const result = await generator.generateStyles()
+        const generator = generators.get("@mochi-css/vanilla:keyframes")
+        const result = await generator?.generateStyles()
+        expect.assert(result !== undefined)
 
         expect(result.files).toBeDefined()
-        expect(result.files!["anim.ts"]).toContain("@keyframes")
+        expect(result.files?.["anim.ts"]).toContain("@keyframes")
         expect(result.global).toBeUndefined()
+    })
+
+    it("dependent css call args are not evaluated twice (issue #12)", async () => {
+        // When a css call result is stored in a variable and used as arg in another css call,
+        // the first call's args should be deduplicated via __mochi_args_N variable.
+        // noinspection JSUnusedLocalSymbols
+        const module = await parseSource(
+            /* language=typescript */ dedent`
+            import { css } from "@mochi-css/vanilla"
+            const base = css({ fontSize: 20 })
+            css({ color: "blue" }, base)
+        `,
+            "dep.ts",
+        )
+
+        let generatedCode = ""
+        const builder = new Builder({
+            rootDir: "./",
+            extractors: [mochiCssFunctionExtractor],
+            bundler: {
+                async bundle(rootFilePath, files) {
+                    const bundler = new RolldownBundler()
+                    for (const p in files) {
+                        if (!p.endsWith("dep.ts")) continue
+                        const source = files[p]
+                        if (source !== undefined) generatedCode = source
+                    }
+                    return bundler.bundle(rootFilePath, files)
+                },
+            },
+            runner: new VmRunner(),
+        })
+
+        const generators = await builder.collectStylesFromModules([module])
+        const generator = generators.get("@mochi-css/vanilla:css")
+        const result = await generator?.generateStyles()
+        expect.assert(result !== undefined)
+
+        // Both styles are collected correctly
+        expect(result.files).toBeDefined()
+        expect(result.files?.["dep.ts"]).toContain("font-size")
+        expect(result.files?.["dep.ts"]).toContain("color")
+
+        // The arg literal should appear only once in the generated code (no double evaluation)
+        const fontSizeMatches = generatedCode.match(/fontSize/g)
+        expect(fontSizeMatches).toHaveLength(1)
     })
 
     describe("derived extractors", () => {
@@ -224,25 +292,29 @@ describe("Builder", () => {
 
         it("single-file derived extractor produces CSS", async () => {
             // noinspection TypeScriptCheckImport
-            const module = await parseSource(/* language=typescript */ dedent`
+            const module = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const { css } = createMock({})
                 css({ color: "red" })
-            `, "single.ts")
+            `,
+                "single.ts",
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
-                runner: new VmRunner()
+                runner: new VmRunner(),
             })
 
             const generators = await builder.collectStylesFromModules([module])
-            const generator = generators.get("@mock/lib:createMock")!
-            const result = await generator.generateStyles()
+            const generator = generators.get("@mock/lib:createMock")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
 
             expect(result.files).toBeDefined()
-            expect(result.files!["single.ts"]).toContain("color: red")
+            expect(result.files?.["single.ts"]).toContain("color: red")
         })
 
         it("cross-file derived extractor propagation", async () => {
@@ -250,31 +322,38 @@ describe("Builder", () => {
             const buttonPath = path.resolve("button.ts")
 
             // noinspection TypeScriptCheckImport
-            const configModule = await parseSource(/* language=typescript */ dedent`
+            const configModule = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const { css } = createMock({})
                 export { css }
-            `, configPath)
+            `,
+                configPath,
+            )
 
             // noinspection TypeScriptCheckImport
-            const buttonModule = await parseSource(/* language=typescript */ dedent`
+            const buttonModule = await parseSource(
+                /* language=typescript */ dedent`
                 import { css } from "./config"
                 css({ color: "blue" })
-            `, buttonPath)
+            `,
+                buttonPath,
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
-                runner: new VmRunner()
+                runner: new VmRunner(),
             })
 
             const generators = await builder.collectStylesFromModules([configModule, buttonModule])
-            const generator = generators.get("@mock/lib:createMock")!
-            const result = await generator.generateStyles()
+            const generator = generators.get("@mock/lib:createMock")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
 
             expect(result.files).toBeDefined()
-            expect(result.files![buttonPath]).toContain("color: blue")
+            expect(result.files?.[buttonPath]).toContain("color: blue")
         })
 
         it("mixed regular and derived extractors", async () => {
@@ -282,70 +361,85 @@ describe("Builder", () => {
             const styledPath = path.resolve("styled.ts")
 
             // noinspection TypeScriptCheckImport
-            const configModule = await parseSource(/* language=typescript */ dedent`
+            const configModule = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const { css } = createMock({})
                 export { css }
-            `, configPath)
+            `,
+                configPath,
+            )
 
             // noinspection TypeScriptCheckImport
-            const styledModule = await parseSource(/* language=typescript */ dedent`
+            const styledModule = await parseSource(
+                /* language=typescript */ dedent`
                 import { css } from "@mochi-css/vanilla"
                 import { css as themeCss } from "./config"
                 css({ color: "red" })
                 themeCss({ color: "blue" })
-            `, styledPath)
+            `,
+                styledPath,
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mochiCssFunctionExtractor, mockParent],
                 bundler: new RolldownBundler(),
-                runner: new VmRunner()
+                runner: new VmRunner(),
             })
 
             const generators = await builder.collectStylesFromModules([configModule, styledModule])
 
-            const regularGen = generators.get("@mochi-css/vanilla:css")!
-            const regularResult = await regularGen.generateStyles()
-            expect(regularResult.files![styledPath]).toContain("color: red")
+            const regularGen = generators.get("@mochi-css/vanilla:css")
+            const regularResult = await regularGen?.generateStyles()
+            expect.assert(regularResult !== undefined)
+            expect(regularResult.files?.[styledPath]).toContain("color: red")
 
-            const derivedGen = generators.get("@mock/lib:createMock")!
-            const derivedResult = await derivedGen.generateStyles()
-            expect(derivedResult.files![styledPath]).toContain("color: blue")
+            const derivedGen = generators.get("@mock/lib:createMock")
+            const derivedResult = await derivedGen?.generateStyles()
+            expect.assert(derivedResult !== undefined)
+            expect(derivedResult.files?.[styledPath]).toContain("color: blue")
         })
 
         it("renamed destructuring", async () => {
             // noinspection TypeScriptCheckImport
-            const module = await parseSource(/* language=typescript */ dedent`
+            const module = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const { css: myCss } = createMock({})
                 myCss({ color: "green" })
-            `, "renamed.ts")
+            `,
+                "renamed.ts",
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
-                runner: new VmRunner()
+                runner: new VmRunner(),
             })
 
             const generators = await builder.collectStylesFromModules([module])
-            const generator = generators.get("@mock/lib:createMock")!
-            const result = await generator.generateStyles()
+            const generator = generators.get("@mock/lib:createMock")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
 
             expect(result.files).toBeDefined()
-            expect(result.files!["renamed.ts"]).toContain("color: green")
+            expect(result.files?.["renamed.ts"]).toContain("color: green")
         })
 
         it("code minimization only includes used derived bindings", async () => {
             const multiDerived = createMockParentExtractor("@mock/lib", "createMock", ["css", "styled"])
 
             // noinspection TypeScriptCheckImport, JSUnusedLocalSymbols
-            const module = await parseSource(/* language=typescript */ dedent`
+            const module = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const { css, styled } = createMock({})
                 css({ color: "red" })
-            `, "minimal.ts")
+            `,
+                "minimal.ts",
+            )
 
             let generatedCode = ""
             const builder = new Builder({
@@ -361,9 +455,9 @@ describe("Builder", () => {
                             generatedCode = source
                         }
                         return bundler.bundle(rootFilePath, files)
-                    }
+                    },
                 },
-                runner: new VmRunner()
+                runner: new VmRunner(),
             })
 
             await builder.collectStylesFromModules([module])
@@ -373,78 +467,93 @@ describe("Builder", () => {
         })
 
         it("warns when parent extractor return value is assigned to a variable", async () => {
-            const diagnostics: { code: string, message: string }[] = []
+            const diagnostics: { code: string; message: string }[] = []
 
             // noinspection TypeScriptCheckImport, JSUnusedLocalSymbols
-            const module = await parseSource(/* language=typescript */ dedent`
+            const module = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const styles = createMock({})
-            `, "assign.ts")
+            `,
+                "assign.ts",
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                onDiagnostic: d => diagnostics.push(d)
+                onDiagnostic: (d) => diagnostics.push(d),
             })
 
             await builder.collectStylesFromModules([module])
 
-            expect(diagnostics).toContainEqual(expect.objectContaining({
-                code: 'MOCHI_INVALID_EXTRACTOR_USAGE',
-                message: expect.stringContaining('must be destructured with an object pattern')
-            }))
+            expect(diagnostics).toContainEqual(
+                expect.objectContaining({
+                    code: "MOCHI_INVALID_EXTRACTOR_USAGE",
+                    message: expect.stringContaining("must be destructured with an object pattern") as string,
+                }),
+            )
         })
 
         it("warns when parent extractor return value is ignored", async () => {
-            const diagnostics: { code: string, message: string }[] = []
+            const diagnostics: { code: string; message: string }[] = []
 
             // noinspection TypeScriptCheckImport
-            const module = await parseSource(/* language=typescript */ dedent`
+            const module = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 createMock({})
-            `, "ignored.ts")
+            `,
+                "ignored.ts",
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                onDiagnostic: d => diagnostics.push(d)
+                onDiagnostic: (d) => diagnostics.push(d),
             })
 
             await builder.collectStylesFromModules([module])
 
-            expect(diagnostics).toContainEqual(expect.objectContaining({
-                code: 'MOCHI_INVALID_EXTRACTOR_USAGE',
-                message: expect.stringContaining('is not used')
-            }))
+            expect(diagnostics).toContainEqual(
+                expect.objectContaining({
+                    code: "MOCHI_INVALID_EXTRACTOR_USAGE",
+                    message: expect.stringContaining("is not used") as string,
+                }),
+            )
         })
 
         it("warns when parent extractor destructuring uses rest spread", async () => {
-            const diagnostics: { code: string, message: string }[] = []
+            const diagnostics: { code: string; message: string }[] = []
 
             // noinspection TypeScriptCheckImport, JSUnusedLocalSymbols
-            const module = await parseSource(/* language=typescript */ dedent`
+            const module = await parseSource(
+                /* language=typescript */ dedent`
                 import { createMock } from "@mock/lib"
                 const { css, ...rest } = createMock({})
-            `, "rest.ts")
+            `,
+                "rest.ts",
+            )
 
             const builder = new Builder({
                 rootDir: "./",
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                onDiagnostic: d => diagnostics.push(d)
+                onDiagnostic: (d) => diagnostics.push(d),
             })
 
             await builder.collectStylesFromModules([module])
 
-            expect(diagnostics).toContainEqual(expect.objectContaining({
-                code: 'MOCHI_INVALID_EXTRACTOR_USAGE',
-                message: expect.stringContaining('must not use rest spread')
-            }))
+            expect(diagnostics).toContainEqual(
+                expect.objectContaining({
+                    code: "MOCHI_INVALID_EXTRACTOR_USAGE",
+                    message: expect.stringContaining("must not use rest spread") as string,
+                }),
+            )
         })
     })
 })

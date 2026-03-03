@@ -1,10 +1,11 @@
 {
     "name": "@mochi-css/config",
     "private": true,
-    "version": "2.0.0",
+    "type": "module",
+    "version": "1.0.0",
     "exports": {
         "./eslint": "./eslint.ts",
-        "./prettier": "./prettier.mts"
+        "./prettier": "./prettier.ts"
     },
     "dependencies": {
         "@eslint/js": "^9.18.0",

@@ -14,7 +14,7 @@ export class VanillaKeyframesExtractor implements StyleExtractor {
     }
 
     extractStaticArgs(call: CallExpression): Expression[] {
-        return call.arguments.slice(0, 1).map(a => a.expression)
+        return call.arguments.slice(0, 1).map((a) => a.expression)
     }
 
     startGeneration(onDiagnostic?: OnDiagnostic): StyleGenerator {
@@ -22,7 +22,4 @@ export class VanillaKeyframesExtractor implements StyleExtractor {
     }
 }
 
-export const mochiKeyframesFunctionExtractor = new VanillaKeyframesExtractor(
-    "@mochi-css/vanilla",
-    "keyframes",
-)
+export const mochiKeyframesFunctionExtractor = new VanillaKeyframesExtractor("@mochi-css/vanilla", "keyframes")
