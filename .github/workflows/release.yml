@@ -22,22 +22,10 @@ jobs:
                 run: yarn install
                 env:
                     YARN_ENABLE_IMMUTABLE_INSTALLS: false
-            -   name: Get version from package.json
-                id: version
-                run: echo "VERSION=v$(jq -r .version packages/vanilla/package.json)" >> $GITHUB_OUTPUT
-            -   name: Commit and push changes
-                id: commit
-                uses: EndBug/add-and-commit@v9
-                with:
-                    author_name: github-actions[bot]
-                    author_email: github-actions[bot]@users.noreply.github.com
-                    message: "chore(release): ${{ steps.version.outputs.VERSION }}"
-                    tag: ${{ steps.version.outputs.VERSION }}
-                    push: true
-            -   name: Create GitHub Release
-                uses: ncipollo/release-action@v1
-                with:
-                    tag: ${{ steps.version.outputs.VERSION }}
-                    allowUpdates: true
-                    name: Release ${{ steps.version.outputs.VERSION }}
-                    generateReleaseNotes: true
+            -   name: Commit and push version bump
+                run: |
+                    git config user.name github-actions[bot]
+                    git config user.email "github-actions[bot]@users.noreply.github.com"
+                    git add -A
+                    git commit -m "chore(release)"
+                    git push
