@@ -147,7 +147,7 @@ async function addPostcssPlugin(
 
 export interface PostcssModuleOptions {
     outDir?: string
-    /** Skip the "Do you use PostCSS?" confirmation and auto-configure. */
+    /** Skip the "Do you use PostCSS?" confirmation and autoconfigure. */
     auto?: boolean
 }
 
@@ -189,8 +189,15 @@ export function createPostcssModule(options: PostcssModuleOptions = {}): Module 
         async run(ctx: ModuleContext): Promise<void> {
             let configPath: string
 
-            if (options.auto) {
+            const { postcss: cliOption } = ctx.moduleOptions
+
+            if (cliOption !== undefined) {
+                // --postcss [path]: forced on, use provided path or auto-detect
+                configPath = typeof cliOption === "string" ? cliOption : (findPostcssConfig() ?? "postcss.config.mts")
+            } else if (options.auto) {
                 configPath = findPostcssConfig() ?? "postcss.config.mts"
+            } else if (ctx.nonInteractive) {
+                return
             } else {
                 const usePostcss = await p.confirm({
                     message: "Do you use PostCSS?",

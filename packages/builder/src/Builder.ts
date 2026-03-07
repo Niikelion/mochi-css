@@ -20,8 +20,10 @@ export type CollectCssOptions = {
     onDep?: (path: string) => void
 }
 
+export type RootEntry = string | { path: string; package: string }
+
 export type BuilderOptions = {
-    rootDir: string
+    roots: RootEntry[]
     extractors: StyleExtractor[]
     bundler: Bundler
     runner: Runner
@@ -107,6 +109,14 @@ export class Builder {
         // Create a set of known file paths for resolving imports
         const knownFiles = new Set(modules.map((m) => m.filePath))
 
+        // Build a map from package name to absolute source directory for named roots
+        const packageMap = new Map<string, string>()
+        for (const root of this.options.roots) {
+            if (typeof root !== "string") {
+                packageMap.set(root.package, path.resolve(root.path))
+            }
+        }
+
         const resolveImport: ResolveImport = (fromFile, importSource) => {
             const dir = path.dirname(fromFile)
             // Try common extensions
@@ -122,6 +132,21 @@ export class Builder {
                 const resolved = path.resolve(dir, importSource, "index" + ext)
                 if (knownFiles.has(resolved)) {
                     return resolved
+                }
+            }
+            // Try package-name resolution for named roots
+            for (const [pkgName, sourceDir] of packageMap) {
+                if (importSource === pkgName || importSource.startsWith(pkgName + "/")) {
+                    const subPath = importSource.slice(pkgName.length)
+                    const base = path.resolve(sourceDir, subPath.replace(/^\//, "") || "index")
+                    for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
+                        const resolved = base + ext
+                        if (knownFiles.has(resolved)) return resolved
+                    }
+                    for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                        const resolved = path.resolve(sourceDir, subPath.replace(/^\//, ""), "index" + ext)
+                        if (knownFiles.has(resolved)) return resolved
+                    }
                 }
             }
             return null
@@ -147,7 +172,9 @@ export class Builder {
     }
 
     public async collectMochiStyles(onDep?: (path: string) => void) {
-        const files = await findAllFiles(this.options.rootDir)
+        const rootPaths = this.options.roots.map((r) => (typeof r === "string" ? r : r.path))
+        const fileArrays = await Promise.all(rootPaths.map(findAllFiles))
+        const files = fileArrays.flat()
 
         if (onDep) {
             for (const file of files) {

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
 import path from "path"
+import fs from "fs/promises"
+import os from "os"
 import { parseSource } from "@/parse"
 import dedent from "dedent"
 import { Builder } from "@/Builder"
@@ -80,7 +82,7 @@ describe("Builder", () => {
         )
 
         const builder = new Builder({
-            rootDir: "./",
+            roots: ["./"],
             extractors: [mochiCssFunctionExtractor],
             bundler: new RolldownBundler(),
             runner: new VmRunner(),
@@ -117,7 +119,7 @@ describe("Builder", () => {
         let generatedCode = ""
 
         const builder = new Builder({
-            rootDir: "./",
+            roots: ["./"],
             extractors: [mochiCssFunctionExtractor],
             bundler: {
                 async bundle(rootFilePath, files) {
@@ -170,7 +172,7 @@ describe("Builder", () => {
         )
 
         const builder = new Builder({
-            rootDir: "./",
+            roots: ["./"],
             extractors: [mochiCssFunctionExtractor],
             bundler: new RolldownBundler(),
             runner: new VmRunner(),
@@ -197,7 +199,7 @@ describe("Builder", () => {
         )
 
         const builder = new Builder({
-            rootDir: "./",
+            roots: ["./"],
             extractors: [mochiGlobalCssFunctionExtractor],
             bundler: new RolldownBundler(),
             runner: new VmRunner(),
@@ -225,7 +227,7 @@ describe("Builder", () => {
         )
 
         const builder = new Builder({
-            rootDir: "./",
+            roots: ["./"],
             extractors: [mochiKeyframesFunctionExtractor],
             bundler: new RolldownBundler(),
             runner: new VmRunner(),
@@ -256,7 +258,7 @@ describe("Builder", () => {
 
         let generatedCode = ""
         const builder = new Builder({
-            rootDir: "./",
+            roots: ["./"],
             extractors: [mochiCssFunctionExtractor],
             bundler: {
                 async bundle(rootFilePath, files) {
@@ -287,6 +289,78 @@ describe("Builder", () => {
         expect(fontSizeMatches).toHaveLength(1)
     })
 
+    it("multiple roots: extracts CSS from files in all roots", async () => {
+        const dirA = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-test-a-"))
+        const dirB = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-test-b-"))
+        try {
+            await fs.writeFile(
+                path.join(dirA, "a.ts"),
+                dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    export const a = css({ color: "red" })
+                `,
+            )
+            await fs.writeFile(
+                path.join(dirB, "b.ts"),
+                dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    export const b = css({ color: "blue" })
+                `,
+            )
+
+            const builder = new Builder({
+                roots: [dirA, dirB],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                splitBySource: true,
+            })
+
+            const generators = await builder.collectMochiStyles()
+            const generator = generators.get("@mochi-css/vanilla:css")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
+
+            const allCss = Object.values(result.files ?? {}).join("\n")
+            expect(allCss).toContain("color: red")
+            expect(allCss).toContain("color: blue")
+        } finally {
+            await fs.rm(dirA, { recursive: true, force: true })
+            await fs.rm(dirB, { recursive: true, force: true })
+        }
+    })
+
+    it("named root: same files found as with plain string root", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-test-named-"))
+        try {
+            await fs.writeFile(
+                path.join(dir, "comp.ts"),
+                dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    export const comp = css({ color: "green" })
+                `,
+            )
+
+            const builder = new Builder({
+                roots: [{ path: dir, package: "@test/pkg" }],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                splitBySource: true,
+            })
+
+            const generators = await builder.collectMochiStyles()
+            const generator = generators.get("@mochi-css/vanilla:css")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
+
+            const allCss = Object.values(result.files ?? {}).join("\n")
+            expect(allCss).toContain("color: green")
+        } finally {
+            await fs.rm(dir, { recursive: true, force: true })
+        }
+    })
+
     describe("derived extractors", () => {
         const mockParent = createMockParentExtractor("@mock/lib", "createMock", ["css"])
 
@@ -302,7 +376,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
@@ -341,7 +415,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
@@ -382,7 +456,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mochiCssFunctionExtractor, mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
@@ -413,7 +487,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
@@ -443,7 +517,7 @@ describe("Builder", () => {
 
             let generatedCode = ""
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [multiDerived],
                 bundler: {
                     async bundle(rootFilePath, files) {
@@ -479,7 +553,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
@@ -509,7 +583,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
@@ -539,7 +613,7 @@ describe("Builder", () => {
             )
 
             const builder = new Builder({
-                rootDir: "./",
+                roots: ["./"],
                 extractors: [mockParent],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),

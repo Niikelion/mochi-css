@@ -31,7 +31,7 @@ const pluginName = "postcss-mochi-css"
 
 const defaultOptions: Required<Omit<Options, 'onDiagnostic' | 'outDir'>> = {
     globalCss: /\/globals\.css$/,
-    rootDir: "src",
+    roots: ["src"],
     extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner(),
@@ -70,14 +70,16 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         options.globalCss.lastIndex = 0
         if (!options.globalCss.test(normalizedPath)) return
 
-        // Watch the root directory so new files trigger a rebuild
-        result.messages.push({
-            type: "dir-dependency",
-            dir: path.resolve(options.rootDir),
-            glob: "**/*.{ts,tsx}",
-            plugin: pluginName,
-            parent: result.opts.from
-        })
+        // Watch all root directories so new files trigger a rebuild
+        for (const root of options.roots) {
+            result.messages.push({
+                type: "dir-dependency",
+                dir: path.resolve(typeof root === "string" ? root : root.path),
+                glob: "**/*.{ts,tsx}",
+                plugin: pluginName,
+                parent: result.opts.from
+            })
+        }
 
         const css = await builder.collectMochiCss({
             onDep: filePath => {

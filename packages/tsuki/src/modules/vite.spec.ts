@@ -30,7 +30,7 @@ afterEach(async () => {
 const noop = () => {
     // no-op
 }
-const ctx = { requirePackage: noop, requirePackages: noop }
+const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
 describe("viteModule.run", () => {
     it("creates vite.config.ts with default template when no config exists", async () => {
