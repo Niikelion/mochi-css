@@ -26,11 +26,14 @@ describe("ModuleRunner", () => {
             },
         })
         await runner.run()
-        expect(installPackages).toHaveBeenCalledWith([
-            { name: "pkg-a", dev: true },
-            { name: "pkg-b", dev: false },
-            { name: "pkg-c", dev: true },
-        ])
+        expect(installPackages).toHaveBeenCalledWith(
+            [
+                { name: "pkg-a", dev: true },
+                { name: "pkg-b", dev: false },
+                { name: "pkg-c", dev: true },
+            ],
+            false,
+        )
     })
 
     it("skips installPackages when no packages are queued", async () => {

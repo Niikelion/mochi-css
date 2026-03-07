@@ -18,7 +18,7 @@ export type MochiViteOptions = Partial<BuilderOptions>
 
 export function mochiCss(opts?: MochiViteOptions): Plugin {
     const options: BuilderOptions = {
-        rootDir: opts?.rootDir ?? "src",
+        roots: opts?.roots ?? ["src"],
         extractors: opts?.extractors ?? defaultExtractors,
         bundler: opts?.bundler ?? new RolldownBundler(),
         runner: opts?.runner ?? new VmRunner(),

@@ -21,7 +21,19 @@ import { CSSObject, AllVariants, DefaultVariants, MergeCSSVariants, MochiCSSProp
  * }))
  * styles.variant({ size: 'large' }) // Returns combined class names
  */
+const MOCHI_CSS_TYPEOF = Symbol.for("mochi-css.MochiCSS")
+
+export function isMochiCSS(value: unknown): value is MochiCSS {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        (value as Record<string, unknown>)["$$typeof"] === MOCHI_CSS_TYPEOF
+    )
+}
+
 export class MochiCSS<V extends AllVariants = DefaultVariants> {
+    readonly $$typeof = MOCHI_CSS_TYPEOF
+
     /**
      * Creates a new MochiCSS instance.
      * @param classNames - Base class names to always include

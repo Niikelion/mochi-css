@@ -53,9 +53,16 @@ export const nextModule: Module = {
 
     async run(ctx: ModuleContext): Promise<void> {
         const existingConfig = findNextConfig()
+        const { next: cliOption } = ctx.moduleOptions
 
         let configPath: string
-        if (!existingConfig) {
+        if (cliOption !== undefined) {
+            configPath = typeof cliOption === "string" ? cliOption : (existingConfig ?? "next.config.ts")
+        } else if (existingConfig) {
+            configPath = existingConfig
+        } else if (ctx.nonInteractive) {
+            configPath = "next.config.ts"
+        } else {
             const selected = await p.text({
                 message: "Path to Next.js config",
                 placeholder: "next.config.ts",
@@ -63,8 +70,6 @@ export const nextModule: Module = {
             })
             if (p.isCancel(selected)) return
             configPath = selected
-        } else {
-            configPath = existingConfig
         }
 
         if (!fsExtra.existsSync(configPath)) {

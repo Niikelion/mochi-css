@@ -215,7 +215,7 @@ describe("createPostcssModule", () => {
     const noop = () => {
         // no-op
     }
-    const ctx = { requirePackage: noop, requirePackages: noop }
+    const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
     it("creates a module that passes outDir to config", async () => {
         const configPath = path.join(tmpDir, "postcss.config.js")
@@ -264,7 +264,7 @@ describe("postcssModule.run", () => {
     const noop = () => {
         // no-op
     }
-    const ctx = { requirePackage: noop, requirePackages: noop }
+    const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
     it("returns early when user declines PostCSS", async () => {
         vi.mocked(p.confirm).mockResolvedValue(false)

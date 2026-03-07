@@ -94,7 +94,7 @@ async function runInstall(title: string, command: string, args: string[], packag
     }
 }
 
-export async function installPackages(packages: PackageRequest[]): Promise<void> {
+export async function installPackages(packages: PackageRequest[], autoInstall = false): Promise<void> {
     if (packages.length === 0) return
 
     // Detect package manager
@@ -115,13 +115,15 @@ export async function installPackages(packages: PackageRequest[]): Promise<void>
 
     const packageList = [...devPackages.map((name) => `${name} (dev)`), ...prodPackages.map((name) => name)].join(", ")
 
-    const confirmed = await p.confirm({
-        message: `Install the following packages: ${packageList}?`,
-    })
+    if (!autoInstall) {
+        const confirmed = await p.confirm({
+            message: `Install the following packages: ${packageList}?`,
+        })
 
-    if (p.isCancel(confirmed) || !confirmed) {
-        p.log.info("Skipping package installation")
-        return
+        if (p.isCancel(confirmed) || !confirmed) {
+            p.log.info("Skipping package installation")
+            return
+        }
     }
 
     // Install dev dependencies

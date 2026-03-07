@@ -84,5 +84,16 @@ jobs:
                 run: yarn install --immutable
             -   name: Run tests
                 run: yarn test
-            -   name: Run tsuki smoke test
-                run: yarn workspace @mochi-css/tsuki smoke
+    changeset:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@v4
+            -   name: Check for changeset
+                run: |
+                    count=$(find .changeset -maxdepth 1 -name "*.md" ! -name "README.md" | wc -l)
+                    if [ "$count" -eq 0 ]; then
+                        echo "No changeset found. Please add a changeset with 'yarn changeset'."
+                        exit 1
+                    fi

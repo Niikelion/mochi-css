@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { css, MochiCSS } from "@/css"
+import { css, isMochiCSS, MochiCSS } from "@/css"
 import { StyleProps } from "@/props"
 
 describe("css", () => {
@@ -168,6 +168,17 @@ describe("css", () => {
     it("should handle variant() with missing variant group gracefully", () => {
         const mochi = new MochiCSS<{ broken: { value: StyleProps } }>(["base"], { broken: undefined } as never, {})
         expect(mochi.variant({ broken: "value" })).toEqual("base")
+    })
+
+    it("isMochiCSS returns true for MochiCSS instances and false for everything else", () => {
+        expect(isMochiCSS(css({ color: "red" }))).toBe(true)
+        expect(isMochiCSS(new MochiCSS([], {}, {}))).toBe(true)
+        expect(isMochiCSS({ color: "red" })).toBe(false)
+        expect(isMochiCSS({})).toBe(false)
+        expect(isMochiCSS(null)).toBe(false)
+        expect(isMochiCSS(undefined)).toBe(false)
+        expect(isMochiCSS(42)).toBe(false)
+        expect(isMochiCSS("string")).toBe(false)
     })
 
     it("should handle variant() when variantKey resolves to null", () => {

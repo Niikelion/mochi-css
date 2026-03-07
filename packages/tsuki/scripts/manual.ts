@@ -7,12 +7,29 @@ import * as fs from "fs/promises"
 import * as fsExtra from "fs-extra"
 import * as path from "path"
 import * as os from "os"
+import * as readline from "readline"
 import * as p from "@clack/prompts"
 import * as pc from "picocolors"
 import { spawn } from "child_process"
 
 const fixturesDir = path.resolve(__dirname, "../fixtures")
 const distPath = path.resolve(__dirname, "../dist/index.js")
+
+function openInExplorer(dir: string): void {
+    const cmds: Record<string, string> = { win32: "explorer.exe", darwin: "open", linux: "xdg-open" }
+    const cmd = cmds[process.platform] ?? "xdg-open"
+    spawn(cmd, [dir], { detached: true, stdio: "ignore" })
+}
+
+function waitForEnter(): Promise<void> {
+    return new Promise((resolve) => {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+        rl.question("Press Enter to clean up...", () => {
+            rl.close()
+            resolve()
+        })
+    })
+}
 
 function runTsuki(cwd: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -40,6 +57,8 @@ async function runFixture(fixtureName: string): Promise<void> {
         console.log(pc.dim(`\nFixture: ${fixtureName}  |  Working directory: ${tmpDir}\n`))
 
         await runTsuki(tmpDir)
+        openInExplorer(tmpDir)
+        await waitForEnter()
     } finally {
         await fs.rm(tmpDir, { recursive: true })
     }

@@ -1,4 +1,4 @@
-import type { Module, ModuleContext, PackageRequest } from "./types"
+import type { Module, ModuleContext, ModuleOptions, PackageRequest, RunOptions } from "./types"
 import { installPackages } from "./install"
 
 export class ModuleRunner {
@@ -10,7 +10,9 @@ export class ModuleRunner {
         return this
     }
 
-    async run(): Promise<void> {
+    async run(options: RunOptions = {}): Promise<void> {
+        const { nonInteractive = false, autoInstall = false, moduleOptions = {} as ModuleOptions } = options
+
         const ctx: ModuleContext = {
             requirePackage: (name, dev = true) => {
                 this.packages.push({ name, dev })
@@ -20,6 +22,8 @@ export class ModuleRunner {
                     this.packages.push({ name: pkg.name, dev: pkg.dev ?? true })
                 }
             },
+            nonInteractive,
+            moduleOptions,
         }
 
         // Run all modules
@@ -29,7 +33,7 @@ export class ModuleRunner {
 
         // Install all required packages
         if (this.packages.length > 0) {
-            await installPackages(this.packages)
+            await installPackages(this.packages, autoInstall)
         }
     }
 }

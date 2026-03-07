@@ -116,9 +116,16 @@ export const viteModule: Module = {
 
     async run(ctx: ModuleContext): Promise<void> {
         const existingConfig = findViteConfig()
+        const { vite: cliOption } = ctx.moduleOptions
 
         let configPath: string
-        if (!existingConfig) {
+        if (cliOption !== undefined) {
+            configPath = typeof cliOption === "string" ? cliOption : (existingConfig ?? "vite.config.ts")
+        } else if (existingConfig) {
+            configPath = existingConfig
+        } else if (ctx.nonInteractive) {
+            configPath = "vite.config.ts"
+        } else {
             const selected = await p.text({
                 message: "Path to Vite config",
                 placeholder: "vite.config.ts",
@@ -126,8 +133,6 @@ export const viteModule: Module = {
             })
             if (p.isCancel(selected)) return
             configPath = selected
-        } else {
-            configPath = existingConfig
         }
 
         if (!fsExtra.existsSync(configPath)) {

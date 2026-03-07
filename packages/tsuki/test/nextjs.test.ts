@@ -55,6 +55,6 @@ describe("postcss integration", () => {
         const modified = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(modified).toContain("@mochi-css/postcss")
         expect(modified).toContain("tailwindcss")
-        expect(installPackages).toHaveBeenCalledWith([{ name: "@mochi-css/postcss", dev: true }])
+        expect(installPackages).toHaveBeenCalledWith([{ name: "@mochi-css/postcss", dev: true }], false)
     })
 })

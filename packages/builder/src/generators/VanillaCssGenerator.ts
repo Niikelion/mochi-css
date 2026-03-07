@@ -1,5 +1,5 @@
 import { StyleGenerator } from "@/generators/StyleGenerator"
-import { CSSObject, StyleProps } from "@mochi-css/vanilla"
+import { CSSObject, StyleProps, isMochiCSS } from "@mochi-css/vanilla"
 import { OnDiagnostic, getErrorMessage } from "@/diagnostics"
 
 export class VanillaCssGenerator implements StyleGenerator {
@@ -19,6 +19,9 @@ export class VanillaCssGenerator implements StyleGenerator {
                 })
                 continue
             }
+            // Skip MochiCSS instances — they are runtime style handles whose styles
+            // have already been collected via their own extractor call
+            if (isMochiCSS(arg)) continue
             validArgs.push(arg as StyleProps)
         }
         if (validArgs.length > 0) {
