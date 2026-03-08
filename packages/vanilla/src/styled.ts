@@ -5,7 +5,7 @@
  */
 
 import { ComponentProps, ComponentType, createElement, FC, HTMLElementType } from "react"
-import { css } from "@/css"
+import { css, MochiCSS } from "@/css"
 import clsx from "clsx"
 import { AllVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@/cssObject"
 
@@ -16,6 +16,15 @@ type MochiProps<V extends AllVariants[]> = {
 
 /** Minimal interface for components that accept className */
 type Cls = { className?: string }
+
+/** A styled component FC augmented with a CSS selector for component targeting */
+export type MochiStyledComponent<
+    T extends HTMLElementType | ComponentType<Cls>,
+    V extends AllVariants[],
+> = FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> & {
+    toString(): string
+    selector: string
+}
 
 /**
  * Creates a styled React component with CSS-in-JS support and variant props.
@@ -48,14 +57,18 @@ type Cls = { className?: string }
 //TODO: Move to dedicated "styled" package
 export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
     target: T,
-    ...props: { [K in keyof V]: MochiCSSProps<V[K]> }
-): FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> {
-    const styles = css<V>(...props)
-    return ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
-        //TODO: pick only variant props from p
-        //TODO: omit variant props in p
-        createElement(target, {
-            className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
-            ...p,
-        })
+    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+): MochiStyledComponent<T, V> {
+    const styles = css<V>(...(props as Parameters<typeof css<V>>))
+    const selector = styles.selector
+    return Object.assign(
+        ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
+            //TODO: pick only variant props from p
+            //TODO: omit variant props in p
+            createElement(target, {
+                className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
+                ...p,
+            }),
+        { toString: () => selector, selector },
+    )
 }

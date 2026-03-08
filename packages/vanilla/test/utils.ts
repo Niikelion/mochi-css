@@ -98,14 +98,18 @@ class TestRenderer {
 
     styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
         target: T,
-        ...props: { [K in keyof V]: MochiCSSProps<V[K]> }
-    ): FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> {
-        const styles = this.css<V>(...props)
-        return ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
-            createElement(target, {
-                className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
-                ...p,
-            })
+        ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+    ): FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> & { toString(): string; selector: string } {
+        const styles = this.css<V>(...(props as Parameters<typeof this.css<V>>))
+        const selector = styles.selector
+        return Object.assign(
+            ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
+                createElement(target, {
+                    className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
+                    ...p,
+                }),
+            { toString: () => selector, selector },
+        )
     }
 
     render(element: ReactElement) {

@@ -22,3 +22,64 @@ describe("base styles", () => {
         expect(getComputedStyle(getByText("Box content"))).toMatchCss({ width: "200px", height: "200px" })
     })
 })
+
+describe("merging css() result with variants into styled", () => {
+    it("preserves variants from a MochiCSS arg passed to styled", () => {
+        const base = renderer.css({
+            color: "red",
+            variants: {
+                size: {
+                    small: { fontSize: "12px" },
+                    large: { fontSize: "18px" },
+                },
+            },
+            defaultVariants: { size: "small" },
+        })
+        const Button = renderer.styled("button", base, { fontWeight: "bold" })
+        const { getByText } = renderer.render(<Button size="large">Click</Button>)
+
+        expect(getComputedStyle(getByText("Click"))).toMatchCss({ fontSize: "18px", fontWeight: "bold" })
+    })
+
+    it("applies default variant from merged MochiCSS", () => {
+        const base = renderer.css({
+            variants: {
+                color: {
+                    red: { color: "red" },
+                    blue: { color: "blue" },
+                },
+            },
+            defaultVariants: { color: "red" },
+        })
+        const Box = renderer.styled("div", base)
+        const { getByText } = renderer.render(<Box>Content</Box>)
+
+        expect(getComputedStyle(getByText("Content"))).toMatchCss({ color: "red" })
+    })
+})
+
+describe("component targeting selector", () => {
+    it("toString() returns a CSS selector string", () => {
+        const Button = renderer.styled("button", { color: "red" })
+        expect(Button.toString()).toMatch(/^\.[a-zA-Z0-9]+$/)
+    })
+
+    it("selector property matches toString()", () => {
+        const Button = renderer.styled("button", { color: "blue" })
+        expect(Button.selector).toBe(Button.toString())
+    })
+
+    it("selector can be used to target the component from another style", () => {
+        const Inner = renderer.styled("span", { color: "blue" })
+        const Outer = renderer.styled("div", {
+            [`& ${Inner}`]: { color: "red" },
+        })
+        const { getByText } = renderer.render(
+            <Outer>
+                <Inner>text</Inner>
+            </Outer>,
+        )
+
+        expect(getComputedStyle(getByText("text"))).toMatchCss({ color: "red" })
+    })
+})

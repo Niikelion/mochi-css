@@ -80,6 +80,18 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
     }
 
     /**
+     * Returns the CSS selector for this style (e.g. `.abc123`).
+     * Useful for targeting this component from another style.
+     */
+    get selector(): string {
+        return this.classNames.map(n => `.${n}`).join()
+    }
+
+    toString(): string {
+        return this.selector
+    }
+
+    /**
      * Creates a MochiCSS instance from a CSSObject.
      * Extracts class names from the compiled CSS blocks.
      * @template V - The variant definitions type
