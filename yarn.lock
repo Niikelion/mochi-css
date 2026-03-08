@@ -1330,6 +1330,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/stitches@workspace:packages/stitches"
   dependencies:
+    "@arethetypeswrong/cli": "npm:^0.18.2"
+    "@eslint/js": "npm:^9.18.0"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/config": "workspace:*"
@@ -1338,12 +1340,16 @@ __metadata:
     "@types/react-dom": "npm:^19.2.3"
     "@vitest/coverage-v8": "npm:^4.0.15"
     clsx: "npm:^2.1.1"
+    eslint: "npm:^9.39.2"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-prettier: "npm:^5.5.5"
     happy-dom: "npm:^20.6.3"
     prettier: "npm:^3.8.1"
     react: "npm:>= 19"
     react-dom: "npm:^19.2.4"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.21.0"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
   peerDependencies:
