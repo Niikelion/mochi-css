@@ -28,10 +28,10 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/stitches": "workspace:*"
+        "@mochi-css/stitches": "^0.1.0"
     },
     "peerDependencies": {
-        "@mochi-css/builder": "workspace:*"
+        "@mochi-css/builder": "^2.1.0"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",

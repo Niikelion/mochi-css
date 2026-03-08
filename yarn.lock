@@ -1242,7 +1242,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@workspace:*, @mochi-css/config@workspace:packages/config":
+"@mochi-css/config@npm:*, @mochi-css/config@workspace:*, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
@@ -1312,7 +1312,7 @@ __metadata:
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/builder": "workspace:*"
     "@mochi-css/config": "workspace:*"
-    "@mochi-css/stitches": "workspace:*"
+    "@mochi-css/stitches": "npm:^0.1.0"
     "@swc/types": "npm:^0.1.25"
     "@types/node": "npm:^24.8.1"
     "@vitest/coverage-v8": "npm:^4.0.15"
@@ -1322,11 +1322,11 @@ __metadata:
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
   peerDependencies:
-    "@mochi-css/builder": "workspace:*"
+    "@mochi-css/builder": ^2.1.0
   languageName: unknown
   linkType: soft
 
-"@mochi-css/stitches@workspace:*, @mochi-css/stitches@workspace:packages/stitches":
+"@mochi-css/stitches@npm:^0.1.0, @mochi-css/stitches@workspace:packages/stitches":
   version: 0.0.0-use.local
   resolution: "@mochi-css/stitches@workspace:packages/stitches"
   dependencies:
@@ -1334,8 +1334,8 @@ __metadata:
     "@eslint/js": "npm:^9.18.0"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/config": "workspace:*"
-    "@mochi-css/vanilla": "workspace:*"
+    "@mochi-css/config": "npm:*"
+    "@mochi-css/vanilla": "npm:^2.1.0"
     "@types/react": "npm:^19.2.2"
     "@types/react-dom": "npm:^19.2.3"
     "@vitest/coverage-v8": "npm:^4.0.15"
@@ -1389,7 +1389,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:^2.1.0, @mochi-css/vanilla@workspace:*, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:^2.1.0, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
