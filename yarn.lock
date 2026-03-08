@@ -1214,7 +1214,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mochi-css/builder@npm:^2.1.0, @mochi-css/builder@workspace:packages/builder":
+"@mochi-css/builder@npm:^2.1.0, @mochi-css/builder@workspace:*, @mochi-css/builder@workspace:packages/builder":
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
@@ -1242,7 +1242,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@workspace:packages/config":
+"@mochi-css/config@workspace:*, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
@@ -1304,6 +1304,53 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mochi-css/stitches-builder@workspace:packages/stitches-builder":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/stitches-builder@workspace:packages/stitches-builder"
+  dependencies:
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/builder": "workspace:*"
+    "@mochi-css/config": "workspace:*"
+    "@mochi-css/stitches": "workspace:*"
+    "@swc/types": "npm:^0.1.25"
+    "@types/node": "npm:^24.8.1"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    "@mochi-css/builder": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/stitches@workspace:*, @mochi-css/stitches@workspace:packages/stitches":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/stitches@workspace:packages/stitches"
+  dependencies:
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/config": "workspace:*"
+    "@mochi-css/vanilla": "workspace:*"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    clsx: "npm:^2.1.1"
+    happy-dom: "npm:^20.6.3"
+    prettier: "npm:^3.8.1"
+    react: "npm:>= 19"
+    react-dom: "npm:^19.2.4"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    react: ">= 19"
+  languageName: unknown
+  linkType: soft
+
 "@mochi-css/tsuki@workspace:packages/tsuki":
   version: 0.0.0-use.local
   resolution: "@mochi-css/tsuki@workspace:packages/tsuki"
@@ -1336,7 +1383,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:^2.1.0, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:^2.1.0, @mochi-css/vanilla@workspace:*, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
@@ -6258,7 +6305,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:>= 18 || >= 19":
+"react@npm:>= 18 || >= 19, react@npm:>= 19":
   version: 19.2.4
   resolution: "react@npm:19.2.4"
   checksum: 10c0/cd2c9ff67a720799cc3b38a516009986f7fc4cb8d3e15716c6211cf098d1357ee3e348ab05ad0600042bbb0fd888530ba92e329198c92eafa0994f5213396596

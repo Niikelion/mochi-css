@@ -1,0 +1,50 @@
+{
+    "name": "@mochi-css/stitches-builder",
+    "repository": "git@github.com:Niikelion/mochi-css.git",
+    "version": "0.1.0",
+    "license": "MIT",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "exports": {
+        "import": {
+            "types": "./dist/index.d.mts",
+            "import": "./dist/index.mjs"
+        },
+        "require": {
+            "types": "./dist/index.d.ts",
+            "require": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
+    },
+    "dependencies": {
+        "@mochi-css/stitches": "workspace:*"
+    },
+    "peerDependencies": {
+        "@mochi-css/builder": "workspace:*"
+    },
+    "devDependencies": {
+        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "@mochi-css/builder": "workspace:*",
+        "@mochi-css/config": "workspace:*",
+        "@swc/types": "^0.1.25",
+        "@types/node": "^24.8.1",
+        "@vitest/coverage-v8": "^4.0.15",
+        "prettier": "^3.8.1",
+        "tsdown": "^0.15.7",
+        "typescript": "^5.9.3",
+        "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^4.0.15"
+    }
+}
