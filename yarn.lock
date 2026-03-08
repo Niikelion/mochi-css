@@ -1242,7 +1242,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@workspace:packages/config":
+"@mochi-css/config@npm:*, @mochi-css/config@npm:^1.0.0, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
@@ -1301,6 +1301,55 @@ __metadata:
     "@types/node": "npm:^24.8.1"
     postcss: "npm:^8.5.6"
     tsdown: "npm:^0.15.7"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/stitches-builder@workspace:packages/stitches-builder":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/stitches-builder@workspace:packages/stitches-builder"
+  dependencies:
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/builder": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
+    "@mochi-css/stitches": "npm:^0.0.0"
+    "@swc/types": "npm:^0.1.25"
+    "@types/node": "npm:^24.8.1"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/stitches@npm:^0.0.0, @mochi-css/stitches@workspace:packages/stitches":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/stitches@workspace:packages/stitches"
+  dependencies:
+    "@arethetypeswrong/cli": "npm:^0.18.2"
+    "@eslint/js": "npm:^9.18.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/config": "npm:*"
+    "@mochi-css/vanilla": "npm:^2.1.0"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    clsx: "npm:^2.1.1"
+    eslint: "npm:^9.39.2"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-prettier: "npm:^5.5.5"
+    happy-dom: "npm:^20.6.3"
+    prettier: "npm:^3.8.1"
+    react: "npm:>= 18 || >= 19"
+    react-dom: "npm:^19.2.4"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.21.0"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
   languageName: unknown
   linkType: soft
 
