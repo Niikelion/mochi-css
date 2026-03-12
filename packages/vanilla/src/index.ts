@@ -8,7 +8,7 @@
 export * from "./values"
 export * from "./token"
 export * from "./selector"
-export { type StyleProps, type AtRuleKey, isAtRuleKey, cssFromProps } from "./props"
+export { type StyleProps, type AtRuleKey, isAtRuleKey, cssFromProps, camelToKebab, kebabToCamel } from "./props"
 export * from "./cssObject"
 export * from "./css"
 export * from "./styled"

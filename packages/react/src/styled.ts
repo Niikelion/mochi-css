@@ -5,9 +5,8 @@
  */
 
 import { ComponentProps, ComponentType, createElement, FC, HTMLElementType } from "react"
-import { css, MochiCSS } from "@/css"
+import { css, MochiCSS, AllVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@mochi-css/vanilla"
 import clsx from "clsx"
-import { AllVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@/cssObject"
 
 /** Props added by MochiCSS to styled components */
 type MochiProps<V extends AllVariants[]> = {
@@ -53,7 +52,6 @@ export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>,
  *
  * // Usage: <Button size="large" variant="primary">Click me</Button>
  */
-//TODO: Move to dedicated "styled" package
 export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
     target: T,
     ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }

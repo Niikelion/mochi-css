@@ -1,5 +1,5 @@
 {
-    "name": "@mochi-css/vanilla",
+    "name": "@mochi-css/react",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "version": "2.1.0",
     "license": "MIT",
@@ -53,8 +53,8 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
+        "@mochi-css/vanilla": "^2.1.0",
         "clsx": "^2.1.1",
-        "csstype": "^3.2.3",
         "react": ">= 18 || >= 19"
     }
 }
