@@ -1,24 +1,47 @@
 {
     "name": "@mochi-css/config",
-    "private": true,
-    "type": "module",
-    "version": "1.0.0",
+    "version": "2.1.0",
+    "license": "MIT",
+    "repository": "git@github.com:Niikelion/mochi-css.git",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
     "exports": {
-        "./eslint": "./eslint.ts",
-        "./prettier": "./prettier.ts"
+        "import": {
+            "types": "./dist/index.d.mts",
+            "import": "./dist/index.mjs"
+        },
+        "require": {
+            "types": "./dist/index.d.ts",
+            "require": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
     },
     "dependencies": {
-        "@arethetypeswrong/cli": "^0.18.2",
-        "@eslint/js": "^9.18.0",
-        "@gamedev-sensei/ts-config": "^2.1.0",
+        "jiti": "^2.6.1"
+    },
+    "peerDependencies": {
+        "@mochi-css/builder": "^2.1.0"
+    },
+    "devDependencies": {
         "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "@mochi-css/builder": "^2.1.0",
+        "@mochi-css/shared-config": "^1.0.0",
+        "@mochi-css/test": "^1.0.0",
+        "@types/node": "^24.8.1",
         "eslint": "^9.39.2",
-        "eslint-config-prettier": "^10.1.8",
-        "eslint-plugin-prettier": "^5.5.5",
-        "jiti": "^2.6.1",
         "prettier": "^3.8.1",
-        "tsdown": "^0.15.7",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.21.0"
+        "vitest": "^4.0.15"
     }
 }

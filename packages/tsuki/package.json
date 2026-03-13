@@ -17,7 +17,7 @@
         "format": "prettier --write"
     },
     "devDependencies": {
-        "@mochi-css/config": "^1.0.0",
+        "@mochi-css/shared-config": "^1.0.0",
         "@mochi-css/test": "^1.0.0",
         "@types/cross-spawn": "^6.0.6",
         "@types/fs-extra": "^11.0.4",

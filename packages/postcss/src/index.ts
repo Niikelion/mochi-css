@@ -11,6 +11,7 @@ import {
     fileHash,
     MochiManifest
 } from "@mochi-css/builder"
+import { loadConfig, resolveConfig, type MochiConfig, type ResolvedConfig } from "@mochi-css/config"
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -22,16 +23,16 @@ type DiskManifest = {
     files: Record<string, string>
 }
 
-type Options = Partial<BuilderOptions> & {
+type Options = Partial<BuilderOptions> & Pick<MochiConfig, "esbuildPlugins" | "plugins"> & {
     globalCss?: RegExp
     outDir?: string
 }
 
 const pluginName = "postcss-mochi-css"
 
-const defaultOptions: Required<Omit<Options, 'onDiagnostic' | 'outDir'>> = {
+const defaultOptions = {
     globalCss: /\/globals\.css$/,
-    roots: ["src"],
+    roots: ["src"] as BuilderOptions["roots"],
     extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner(),
@@ -39,23 +40,24 @@ const defaultOptions: Required<Omit<Options, 'onDiagnostic' | 'outDir'>> = {
 }
 
 const creator: PluginCreator<Options> = (opts?: Options) => {
-    const options = Object.assign({}, defaultOptions, opts)
+    let resolvedPromise: Promise<ResolvedConfig> | undefined
 
-    // When outDir is set, force splitBySource
-    if (options.outDir) {
-        options.splitBySource = true
+    const getResolved = () => {
+        resolvedPromise ??= loadConfig().then(fileConfig =>
+            resolveConfig(fileConfig, opts, {
+                roots: defaultOptions.roots,
+                extractors: defaultOptions.extractors,
+                splitBySource: opts?.outDir ? true : defaultOptions.splitBySource,
+            })
+        )
+        return resolvedPromise
     }
 
+    let builder: Builder | undefined
     let currentResult: Result | undefined
-    const onDiagnostic: OnDiagnostic = (diagnostic) => {
-        options.onDiagnostic?.(diagnostic)
-        currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
-            plugin: pluginName,
-        })
-    }
-
-    const builder = new Builder({ ...options, onDiagnostic })
     let builderGuard: Promise<void> | undefined
+
+    const globalCssRegex = opts?.globalCss ?? defaultOptions.globalCss
 
     const postcssProcess: TransformCallback = async (root, result) => {
         currentResult = result
@@ -67,14 +69,34 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         const normalizedPath = filePath.replaceAll(path.win32.sep, path.posix.sep)
 
         // Reset lastIndex to handle regexes with /g flag correctly
-        options.globalCss.lastIndex = 0
-        if (!options.globalCss.test(normalizedPath)) return
+        globalCssRegex.lastIndex = 0
+        if (!globalCssRegex.test(normalizedPath)) return
+
+        const resolved = await getResolved()
+
+        if (!builder) {
+            const onDiagnostic: OnDiagnostic = (diagnostic) => {
+                resolved.onDiagnostic?.(diagnostic)
+                currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
+                    plugin: pluginName,
+                })
+            }
+
+            builder = new Builder({
+                roots: resolved.roots,
+                extractors: resolved.extractors,
+                bundler: opts?.bundler ?? defaultOptions.bundler,
+                runner: opts?.runner ?? defaultOptions.runner,
+                splitBySource: opts?.outDir ? true : resolved.splitBySource,
+                onDiagnostic,
+            })
+        }
 
         // Watch all root directories so new files trigger a rebuild
-        for (const root of options.roots) {
+        for (const rootEntry of resolved.roots) {
             result.messages.push({
                 type: "dir-dependency",
-                dir: path.resolve(typeof root === "string" ? root : root.path),
+                dir: path.resolve(typeof rootEntry === "string" ? rootEntry : rootEntry.path),
                 glob: "**/*.{ts,tsx}",
                 plugin: pluginName,
                 parent: result.opts.from
@@ -82,10 +104,10 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         }
 
         const css = await builder.collectMochiCss({
-            onDep: filePath => {
+            onDep: depPath => {
                 result.messages.push({
                     type: "dependency",
-                    file: filePath,
+                    file: depPath,
                     plugin: pluginName,
                     parent: result.opts.from
                 })
@@ -102,8 +124,8 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         })
 
         // Write per-file CSS and manifest to outDir
-        if (options.outDir) {
-            const outDir = options.outDir
+        if (opts?.outDir) {
+            const outDir = opts.outDir
             await fs.promises.mkdir(outDir, { recursive: true })
 
             const manifest: MochiManifest = { global: css.global, files: css.files ?? {} }

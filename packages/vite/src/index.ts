@@ -8,23 +8,17 @@ import {
     fileHash,
     type MochiManifest,
 } from "@mochi-css/builder"
+import { loadConfig, resolveConfig, type MochiConfig, type ResolvedConfig } from "@mochi-css/config"
 
 const VIRTUAL_PREFIX = "virtual:mochi-css/"
 const RESOLVED_PREFIX = "\0virtual:mochi-css/"
 const GLOBAL_ID = "virtual:mochi-css/global.css"
 const RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
 
-export type MochiViteOptions = Partial<BuilderOptions>
+export type MochiViteOptions = Partial<BuilderOptions> & Pick<MochiConfig, "esbuildPlugins" | "plugins">
 
 export function mochiCss(opts?: MochiViteOptions): Plugin {
-    const options: BuilderOptions = {
-        roots: opts?.roots ?? ["src"],
-        extractors: opts?.extractors ?? defaultExtractors,
-        bundler: opts?.bundler ?? new RolldownBundler(),
-        runner: opts?.runner ?? new VmRunner(),
-        splitBySource: true,
-        onDiagnostic: opts?.onDiagnostic,
-    }
+    let resolved: ResolvedConfig | undefined
 
     let manifest: MochiManifest | undefined
     // Map from hash to source path for resolving virtual modules
@@ -34,7 +28,27 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
         name: "mochi-css",
         enforce: "pre",
 
+        async configResolved(viteConfig) {
+            const fileConfig = await loadConfig(viteConfig.root)
+            resolved = await resolveConfig(fileConfig, opts, {
+                roots: ["src"],
+                extractors: defaultExtractors,
+                splitBySource: true,
+            })
+        },
+
         async buildStart() {
+            if (!resolved) return
+
+            const options: BuilderOptions = {
+                roots: resolved.roots,
+                extractors: resolved.extractors,
+                bundler: opts?.bundler ?? new RolldownBundler(),
+                runner: opts?.runner ?? new VmRunner(),
+                splitBySource: resolved.splitBySource,
+                onDiagnostic: resolved.onDiagnostic,
+            }
+
             const builder = new Builder(options)
             const result = await builder.collectMochiCss()
             manifest = { global: result.global, files: result.files ?? {} }

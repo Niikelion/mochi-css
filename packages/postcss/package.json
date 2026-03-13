@@ -23,12 +23,13 @@
         "build": "tsc --noEmit && tsdown"
     },
     "devDependencies": {
-        "@mochi-css/config": "^1.0.0",
+        "@mochi-css/shared-config": "^1.0.0",
         "@types/node": "^24.8.1",
         "typescript": "^5.9.3"
     },
     "dependencies": {
         "@mochi-css/builder": "^2.1.0",
+        "@mochi-css/config": "^2.1.0",
         "postcss": "^8.5.6"
     }
 }

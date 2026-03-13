@@ -1,17 +1,21 @@
 import path from "path"
 import { NextConfig } from "next"
+import { loadConfig, resolveConfig, type MochiConfig } from "@mochi-css/config"
 
 const MOCHI_DIR = ".mochi"
 const MANIFEST_FILE = "manifest.json"
 
-export type MochiNextOptions = {
+export type MochiNextOptions = Pick<MochiConfig, "esbuildPlugins" | "plugins"> & {
     manifestPath?: string
 }
 
-export function withMochi(
+export async function withMochi(
     nextConfig: NextConfig,
     opts?: MochiNextOptions,
-): NextConfig {
+): Promise<NextConfig> {
+    const fileConfig = await loadConfig()
+    await resolveConfig(fileConfig, opts)
+
     const manifestPath = opts?.manifestPath ?? path.resolve(MOCHI_DIR, MANIFEST_FILE)
     const loaderPath = require.resolve("@mochi-css/next/loader")
 

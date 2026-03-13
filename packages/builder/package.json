@@ -28,7 +28,7 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
-        "@mochi-css/config": "^1.0.0",
+        "@mochi-css/shared-config": "^1.0.0",
         "@mochi-css/test": "^1.0.0",
         "@swc/types": "^0.1.25",
         "@types/node": "^24.8.1",
