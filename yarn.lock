@@ -801,30 +801,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@gamedev-sensei/ts-config@npm:^2.0.0":
-  version: 2.0.1
-  resolution: "@gamedev-sensei/ts-config@npm:2.0.1"
-  dependencies:
-    typescript: "npm:^5.8.3"
-  checksum: 10c0/87f9006793567b46040b5335f41a6108ec352ee853f8b35d4843e1df9aa9fecf867eaf258fc75247f6436f5cb1c89f5e8eb9615ac72a1f36ae65891cb84a1e90
-  languageName: node
-  linkType: hard
-
 "@gamedev-sensei/ts-config@npm:^2.1.0":
   version: 2.1.0
   resolution: "@gamedev-sensei/ts-config@npm:2.1.0"
   dependencies:
     typescript: "npm:^5.8.3"
   checksum: 10c0/5fa25c9f40fcc844df1edcd2b2d6177455735d0892936981ac7e3bd17cb97463a857686e43bdb8fabe3c31ad41dd871fc5b161cf4e1b18c5e674dca9e1da14e1
-  languageName: node
-  linkType: hard
-
-"@gamedev-sensei/tsdown-config@npm:^2.0.0":
-  version: 2.0.1
-  resolution: "@gamedev-sensei/tsdown-config@npm:2.0.1"
-  dependencies:
-    esbuild-plugin-alias: "npm:^0.2.1"
-  checksum: 10c0/9f826a2ede8248a05c5feaa6dbcf170d93720c6b2a292c8096b3f30eabd00d9bb55c597e5ccae582825e8c149c0f086d1c517918ccc84c2758f8184555e7f6cf
   languageName: node
   linkType: hard
 
@@ -1218,39 +1200,36 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
-    "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@eslint/js": "npm:^9.18.0"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
+    "@mochi-css/test": "npm:^1.0.0"
     "@mochi-css/vanilla": "npm:^2.1.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
     "@types/node": "npm:^24.8.1"
-    "@vitest/coverage-v8": "npm:^4.0.15"
     dedent: "npm:^1.7.1"
     eslint: "npm:^9.39.2"
-    eslint-config-prettier: "npm:^10.1.8"
-    eslint-plugin-prettier: "npm:^5.5.5"
     prettier: "npm:^3.8.1"
     rolldown: "npm:1.0.0-beta.59"
-    tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.21.0"
-    vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
     zod: "npm:^4.3.6"
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@workspace:packages/config":
+"@mochi-css/config@npm:^1.0.0, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
+    "@arethetypeswrong/cli": "npm:^0.18.2"
     "@eslint/js": "npm:^9.18.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     eslint: "npm:^9.39.2"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-prettier: "npm:^5.5.5"
+    jiti: "npm:^2.6.1"
     prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.21.0"
   languageName: unknown
@@ -1260,11 +1239,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/next@workspace:packages/next"
   dependencies:
-    "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
     "@types/node": "npm:^24.8.1"
-    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
   peerDependencies:
     next: ^14 || ^15 || ^16
   languageName: unknown
@@ -1294,13 +1271,48 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/postcss@workspace:packages/postcss"
   dependencies:
-    "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/builder": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
     "@types/node": "npm:^24.8.1"
     postcss: "npm:^8.5.6"
-    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/react@workspace:packages/react":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/react@workspace:packages/react"
+  dependencies:
+    "@mochi-css/config": "npm:^1.0.0"
+    "@mochi-css/test": "npm:^1.0.0"
+    "@mochi-css/vanilla": "npm:^2.1.0"
+    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/react": "npm:^16.3.2"
+    "@types/css-tree": "npm:^2.3.10"
+    "@types/node": "npm:^24.8.1"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.3"
+    "@webref/css": "npm:^8.2.3"
+    clsx: "npm:^2.1.1"
+    css-tree: "npm:^3.1.0"
+    dedent: "npm:^1.7.1"
+    eslint: "npm:^9.39.2"
+    happy-dom: "npm:^20.6.3"
+    prettier: "npm:^3.8.1"
+    react: "npm:>= 18 || >= 19"
+    react-dom: "npm:^19.2.4"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/test@npm:^1.0.0, @mochi-css/test@workspace:packages/test":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/test@workspace:packages/test"
+  dependencies:
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
   languageName: unknown
   linkType: soft
 
@@ -1309,27 +1321,20 @@ __metadata:
   resolution: "@mochi-css/tsuki@workspace:packages/tsuki"
   dependencies:
     "@clack/prompts": "npm:^1.0.1"
-    "@eslint/js": "npm:^9.18.0"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
+    "@mochi-css/test": "npm:^1.0.0"
     "@types/cross-spawn": "npm:^6.0.6"
     "@types/fs-extra": "npm:^11.0.4"
     "@types/node": "npm:^24.8.1"
-    "@vitest/coverage-v8": "npm:^4.0.15"
     commander: "npm:^13.1.0"
     cross-spawn: "npm:^7.0.6"
     eslint: "npm:^9.39.2"
-    eslint-config-prettier: "npm:^10.1.8"
-    eslint-plugin-prettier: "npm:^5.5.5"
     fs-extra: "npm:^11.3.0"
-    jiti: "npm:^2.6.1"
     magicast: "npm:^0.5.1"
     package-manager-detector: "npm:^1.6.0"
     picocolors: "npm:^1.1.1"
     prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.21.0"
-    vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
   bin:
     tsuki: ./dist/index.js
@@ -1340,34 +1345,25 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
-    "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@eslint/js": "npm:^9.18.0"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
+    "@mochi-css/test": "npm:^1.0.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/css-tree": "npm:^2.3.10"
     "@types/node": "npm:^24.8.1"
     "@types/react": "npm:^19.2.2"
     "@types/react-dom": "npm:^19.2.3"
-    "@vitest/coverage-v8": "npm:^4.0.15"
     "@webref/css": "npm:^8.2.3"
     clsx: "npm:^2.1.1"
     css-tree: "npm:^3.1.0"
     csstype: "npm:^3.2.3"
     dedent: "npm:^1.7.1"
     eslint: "npm:^9.39.2"
-    eslint-config-prettier: "npm:^10.1.8"
-    eslint-plugin-prettier: "npm:^5.5.5"
     happy-dom: "npm:^20.6.3"
-    jiti: "npm:^2.6.1"
     prettier: "npm:^3.8.1"
     react: "npm:>= 18 || >= 19"
     react-dom: "npm:^19.2.4"
-    tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.21.0"
-    vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
   languageName: unknown
   linkType: soft
@@ -1376,12 +1372,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/vite@workspace:packages/vite"
   dependencies:
-    "@arethetypeswrong/cli": "npm:^0.18.2"
-    "@gamedev-sensei/ts-config": "npm:^2.0.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.0.0"
     "@mochi-css/builder": "npm:^2.1.0"
+    "@mochi-css/config": "npm:^1.0.0"
     "@types/node": "npm:^24.8.1"
-    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
   peerDependencies:
     vite: ^5.0.0 || ^6.0.0
   languageName: unknown

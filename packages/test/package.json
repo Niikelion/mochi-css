@@ -1,0 +1,14 @@
+{
+    "name": "@mochi-css/test",
+    "private": true,
+    "type": "module",
+    "version": "1.0.0",
+    "exports": {
+        "./vitest": "./vitest.ts"
+    },
+    "dependencies": {
+        "@vitest/coverage-v8": "^4.0.15",
+        "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^4.0.15"
+    }
+}

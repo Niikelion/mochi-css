@@ -1,9 +1,2 @@
-import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
-
-export default defineConfig({
-    plugins: [tsconfigPaths()],
-    test: {
-        //
-    }
-})
+import { vitestConfig } from "@mochi-css/test/vitest"
+export default vitestConfig

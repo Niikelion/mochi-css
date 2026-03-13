@@ -170,6 +170,44 @@ describe("css", () => {
         expect(mochi.variant({ broken: "value" })).toEqual("base")
     })
 
+    it("selector and toString return .className for the first class", () => {
+        const styles = css({ color: "red" })
+        expect(styles.selector).toBe(`.${styles.classNames[0]}`)
+        expect(styles.toString()).toBe(`.${styles.classNames[0]}`)
+    })
+
+    it("selector and toString return empty string when there are no class names", () => {
+        const empty = new MochiCSS([], {}, {})
+        expect(empty.selector).toBe("")
+        expect(empty.toString()).toBe("")
+    })
+
+    it("merged css preserves variants from a MochiCSS instance passed as arg", () => {
+        const base = css({
+            color: "red",
+            variants: {
+                size: {
+                    small: { fontSize: 12 },
+                    large: { fontSize: 18 },
+                },
+            },
+            defaultVariants: { size: "small" },
+        })
+        const extended = css(base, { fontWeight: "bold" })
+
+        // all base class names are present in merged result
+        for (const cn of base.classNames) {
+            expect(extended.classNames).toContain(cn)
+        }
+
+        // variants from base are preserved in the merged result
+        expect(extended.variant({ size: "small" })).toContain(base.variant({ size: "small" }).split(" ")[1])
+        expect(extended.variant({ size: "large" })).toContain(base.variant({ size: "large" }).split(" ")[1])
+
+        // default variant from base is preserved
+        expect(extended.variant({})).toEqual(extended.variant({ size: "small" }))
+    })
+
     it("isMochiCSS returns true for MochiCSS instances and false for everything else", () => {
         expect(isMochiCSS(css({ color: "red" }))).toBe(true)
         expect(isMochiCSS(new MochiCSS([], {}, {}))).toBe(true)

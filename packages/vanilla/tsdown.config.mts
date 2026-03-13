@@ -130,9 +130,7 @@ export default definePackageConfig({
             await writeFile(unitsPath, generateUnitMappingFileContent(units), "utf-8")
             console.log(`Generated ${Object.keys(units).length} property unit mappings`)
 
-            const knownNames = properties
-                .filter((p) => !p.name.startsWith("-"))
-                .map((p) => kebabToCamel(p.name))
+            const knownNames = properties.filter((p) => !p.name.startsWith("-")).map((p) => kebabToCamel(p.name))
             const knownPath = join(process.cwd(), "src", "knownProperties.generated.ts")
             await writeFile(knownPath, generateKnownPropertiesFileContent(knownNames), "utf-8")
             console.log(`Generated ${knownNames.length} known property names`)

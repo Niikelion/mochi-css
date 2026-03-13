@@ -23,11 +23,9 @@
         "build": "tsc --noEmit && tsdown"
     },
     "devDependencies": {
-        "@arethetypeswrong/cli": "^0.18.2",
-        "@gamedev-sensei/ts-config": "^2.0.0",
-        "@gamedev-sensei/tsdown-config": "^2.0.0",
+        "@mochi-css/config": "^1.0.0",
         "@types/node": "^24.8.1",
-        "tsdown": "^0.15.7"
+        "typescript": "^5.9.3"
     },
     "dependencies": {
         "@mochi-css/builder": "^2.1.0"
