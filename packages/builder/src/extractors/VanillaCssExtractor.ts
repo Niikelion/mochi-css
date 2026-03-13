@@ -28,8 +28,3 @@ export class VanillaCssExtractor implements StyleExtractor {
 export const mochiCssFunctionExtractor = new VanillaCssExtractor("@mochi-css/vanilla", "css", (call) =>
     call.arguments.map((a) => a.expression),
 )
-
-//TODO: move to react package
-export const mochiStyledFunctionExtractor = new VanillaCssExtractor("@mochi-css/vanilla", "styled", (call) =>
-    call.arguments.map((a) => a.expression).slice(1),
-)

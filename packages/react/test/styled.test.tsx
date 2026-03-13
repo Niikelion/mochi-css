@@ -58,6 +58,17 @@ describe("merging css() result with variants into styled", () => {
     })
 })
 
+describe("variant prop stripping", () => {
+    it("does not pass variant props to the DOM element", () => {
+        const Button = renderer.styled("button", {
+            variants: { size: { sm: { fontSize: 12 }, lg: { fontSize: 18 } } },
+        })
+        const { container } = renderer.render(<Button size="lg">click</Button>)
+        const btn = container.querySelector("button")
+        expect(btn?.hasAttribute("size")).toBe(false)
+    })
+})
+
 describe("component targeting selector", () => {
     it("toString() returns a CSS selector string", () => {
         const Button = renderer.styled("button", { color: "red" })

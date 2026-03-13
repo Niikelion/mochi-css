@@ -1,4 +1,4 @@
-import { styled } from "@mochi-css/vanilla"
+import { styled } from "@mochi-css/react"
 
 const Box = styled("div", {
     backgroundColor: "red",

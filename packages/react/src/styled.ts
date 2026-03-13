@@ -34,6 +34,12 @@ export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>,
  * @param props - One or more style objects with optional variants
  * @returns A React functional component with merged props and variant support
  *
+ * @remarks
+ * Variant props are automatically stripped and never forwarded to the underlying
+ * element or component. This prevents unknown prop warnings on DOM elements.
+ * If the inner component has a prop with the same
+ * name as a variant, it will not receive that prop.
+ *
  * @example
  * const Button = styled('button', {
  *   padding: 8,
@@ -58,14 +64,20 @@ export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends
 ): MochiStyledComponent<T, V> {
     const styles = css<V>(...(props as Parameters<typeof css<V>>))
     const selector = styles.selector
+    const variantKeys = new Set(Object.keys(styles.variantClassNames))
     return Object.assign(
-        ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
-            //TODO: pick only variant props from p
-            //TODO: omit variant props in p
-            createElement(target, {
-                className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
-                ...p,
-            }),
+        ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) => {
+            const variantProps: Record<string, unknown> = {}
+            const restProps: Record<string, unknown> = {}
+            for (const [k, v] of Object.entries(p)) {
+                if (variantKeys.has(k)) variantProps[k] = v
+                else restProps[k] = v
+            }
+            return createElement(target, {
+                className: clsx(styles.variant(variantProps as Parameters<typeof styles.variant>[0]), className),
+                ...restProps,
+            })
+        },
         { toString: () => selector, selector },
     )
 }
