@@ -1,6 +1,7 @@
 import path from "path"
+import fs from "fs/promises"
 import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
-import { parseFile } from "@/parse"
+import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
 import { Runner, VmRunner } from "@/Runner"
 import dedent from "dedent"
@@ -22,6 +23,24 @@ export type CollectCssOptions = {
 
 export type RootEntry = string | { path: string; package: string }
 
+export type EsbuildBuild = {
+    onLoad(
+        options: { filter: RegExp; namespace?: string },
+        callback: (args: {
+            path: string
+        }) =>
+            | Promise<{ contents: string; loader?: string } | undefined>
+            | { contents: string; loader?: string }
+            | undefined,
+    ): void
+    onResolve(options: { filter: RegExp; namespace?: string }, callback: (args: unknown) => unknown): void
+}
+
+export type EsbuildPlugin = {
+    name: string
+    setup(build: EsbuildBuild): void | Promise<void>
+}
+
 export type BuilderOptions = {
     roots: RootEntry[]
     extractors: StyleExtractor[]
@@ -29,10 +48,49 @@ export type BuilderOptions = {
     runner: Runner
     splitBySource?: boolean
     onDiagnostic?: OnDiagnostic
+    esbuildPlugins?: EsbuildPlugin[]
 }
 
 export class Builder {
     constructor(private options: BuilderOptions) {}
+
+    private loadHandlers:
+        | {
+              filter: RegExp
+              callback: (args: {
+                  path: string
+              }) =>
+                  | Promise<{ contents: string; loader?: string } | undefined>
+                  | { contents: string; loader?: string }
+                  | undefined
+          }[]
+        | undefined
+
+    private async getLoadHandlers() {
+        if (this.loadHandlers) return this.loadHandlers
+        this.loadHandlers = []
+        for (const plugin of this.options.esbuildPlugins ?? []) {
+            await plugin.setup({
+                onLoad: (opts, cb) => {
+                    this.loadHandlers?.push({ filter: opts.filter, callback: cb })
+                },
+                onResolve: () => {
+                    /* empty */
+                },
+            })
+        }
+        return this.loadHandlers
+    }
+
+    private async applyPlugins(source: string, filePath: string): Promise<string> {
+        const handlers = await this.getLoadHandlers()
+        for (const { filter, callback } of handlers) {
+            if (!filter.test(filePath)) continue
+            const result = await callback({ path: filePath })
+            if (result?.contents !== undefined) return result.contents
+        }
+        return source
+    }
 
     private async bundleFiles(files: Record<string, string | null>) {
         // Prepare extracted project
@@ -182,7 +240,13 @@ export class Builder {
             }
         }
 
-        const modules = await Promise.all(files.map(parseFile))
+        const modules = await Promise.all(
+            files.map(async (filePath) => {
+                const source = await fs.readFile(filePath, "utf8")
+                const transformed = await this.applyPlugins(source, filePath)
+                return transformed === source ? parseFile(filePath) : parseSource(transformed, filePath)
+            }),
+        )
 
         return await this.collectStylesFromModules(modules)
     }

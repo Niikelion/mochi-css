@@ -60,7 +60,7 @@ export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>,
  */
 export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
     target: T,
-    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS | string }
 ): MochiStyledComponent<T, V> {
     const styles = css<V>(...(props as Parameters<typeof css<V>>))
     const selector = styles.selector

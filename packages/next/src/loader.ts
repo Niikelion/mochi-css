@@ -22,16 +22,23 @@ function injectImports(
     if (!cssPath) return source
 
     const imports: string[] = []
+    const sourceDir = path.dirname(ctx.resourcePath)
+
+    function toImportPath(absPath: string): string {
+        let rel = path.relative(sourceDir, absPath).replaceAll("\\", "/")
+        if (!rel.startsWith(".")) rel = "./" + rel
+        return rel
+    }
 
     // Import per-file CSS
     const absoluteCssPath = path.resolve(cssPath)
-    imports.push(`import ${JSON.stringify(absoluteCssPath)};`)
+    imports.push(`import ${JSON.stringify(toImportPath(absoluteCssPath))};`)
     ctx.addDependency(absoluteCssPath)
 
     // Import global CSS (keyframes etc.)
     if (manifest.global) {
         const absoluteGlobalPath = path.resolve(manifest.global)
-        imports.push(`import ${JSON.stringify(absoluteGlobalPath)};`)
+        imports.push(`import ${JSON.stringify(toImportPath(absoluteGlobalPath))};`)
         ctx.addDependency(absoluteGlobalPath)
     }
 

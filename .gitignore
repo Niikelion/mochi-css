@@ -16,6 +16,9 @@ node_modules
 #!.yarn/cache
 .pnp.*
 
+**/dist
+**/node_modules
+
 .vs
 .idea
 .turbo

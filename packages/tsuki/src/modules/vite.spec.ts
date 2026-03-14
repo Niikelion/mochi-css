@@ -16,6 +16,7 @@ let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
+    vi.stubGlobal("__VERSION__", "2.1.0")
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-vite-"))
     origCwd = process.cwd()
     process.chdir(tmpDir)

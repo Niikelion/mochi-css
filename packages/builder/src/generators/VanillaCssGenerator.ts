@@ -11,12 +11,14 @@ export class VanillaCssGenerator implements StyleGenerator {
         const validArgs: StyleProps[] = []
         for (const arg of args) {
             if (arg == null || typeof arg !== "object") {
-                this.onDiagnostic?.({
-                    code: "MOCHI_INVALID_STYLE_ARG",
-                    message: `Expected style object, got ${arg === null ? "null" : typeof arg}`,
-                    severity: "warning",
-                    file: source,
-                })
+                if (typeof arg !== "string") {
+                    this.onDiagnostic?.({
+                        code: "MOCHI_INVALID_STYLE_ARG",
+                        message: `Expected style object, got ${arg === null ? "null" : typeof arg}`,
+                        severity: "warning",
+                        file: source,
+                    })
+                }
                 continue
             }
             // Skip MochiCSS instances — they are runtime style handles whose styles

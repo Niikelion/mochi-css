@@ -7,11 +7,10 @@ import {
     BuilderOptions,
     RolldownBundler,
     VmRunner,
-    OnDiagnostic,
     fileHash,
     MochiManifest
 } from "@mochi-css/builder"
-import { loadConfig, resolveConfig, type MochiConfig, type ResolvedConfig } from "@mochi-css/config"
+import { loadConfig, resolveConfig, mergeCallbacks, type MochiConfig, type ResolvedConfig } from "@mochi-css/config"
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -47,8 +46,12 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             resolveConfig(fileConfig, opts, {
                 roots: defaultOptions.roots,
                 extractors: defaultOptions.extractors,
-                splitBySource: opts?.outDir ? true : defaultOptions.splitBySource,
-            })
+                splitBySource: defaultOptions.splitBySource,
+            }).then(resolved => ({
+                ...resolved,
+                outDir: resolved.outDir ?? opts?.outDir,
+                splitBySource: (resolved.outDir ?? opts?.outDir) ? true : resolved.splitBySource,
+            }))
         )
         return resolvedPromise
     }
@@ -75,20 +78,18 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         const resolved = await getResolved()
 
         if (!builder) {
-            const onDiagnostic: OnDiagnostic = (diagnostic) => {
-                resolved.onDiagnostic?.(diagnostic)
-                currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
-                    plugin: pluginName,
-                })
-            }
-
             builder = new Builder({
+                onDiagnostic: mergeCallbacks(resolved.onDiagnostic, (diagnostic) => {
+                    currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
+                        plugin: pluginName,
+                    })
+                }),
                 roots: resolved.roots,
                 extractors: resolved.extractors,
                 bundler: opts?.bundler ?? defaultOptions.bundler,
                 runner: opts?.runner ?? defaultOptions.runner,
-                splitBySource: opts?.outDir ? true : resolved.splitBySource,
-                onDiagnostic,
+                splitBySource: resolved.splitBySource,
+                esbuildPlugins: resolved.esbuildPlugins,
             })
         }
 
@@ -124,8 +125,8 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         })
 
         // Write per-file CSS and manifest to outDir
-        if (opts?.outDir) {
-            const outDir = opts.outDir
+        if (resolved.outDir) {
+            const outDir = resolved.outDir
             await fs.promises.mkdir(outDir, { recursive: true })
 
             const manifest: MochiManifest = { global: css.global, files: css.files ?? {} }

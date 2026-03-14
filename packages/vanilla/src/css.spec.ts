@@ -182,6 +182,31 @@ describe("css", () => {
         expect(empty.toString()).toBe("")
     })
 
+    it("string arg becomes a class name without generating CSS", () => {
+        const styles = css("my-class", { color: "red" })
+        expect(styles.classNames).toContain("my-class")
+        // still has the CSS-generated class
+        expect(styles.classNames.length).toBe(2)
+    })
+
+    it("manual string first: selector includes all class names as CSS selector", () => {
+        const styles = css("my-external-class", { color: "blue" })
+        expect(styles.selector).toBe(styles.classNames.map((n) => `.${n}`).join(","))
+        expect(styles.selector).toContain(".my-external-class")
+    })
+
+    it("injected s- string last: selector includes all class names as CSS selector", () => {
+        const styles = css({ color: "blue" }, "s-Abc12345")
+        expect(styles.selector).toBe(styles.classNames.map((n) => `.${n}`).join(","))
+        expect(styles.classNames).toContain("s-Abc12345")
+    })
+
+    it("no string args: selector returns first class (unchanged behavior)", () => {
+        const styles = css({ color: "blue" })
+        expect(styles.selector).toBe(`.${styles.classNames[0]}`)
+        expect(styles.classNames.length).toBe(1)
+    })
+
     it("merged css preserves variants from a MochiCSS instance passed as arg", () => {
         const base = css({
             color: "red",

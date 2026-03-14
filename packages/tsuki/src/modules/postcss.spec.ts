@@ -17,6 +17,7 @@ let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
+    vi.stubGlobal("__VERSION__", "2.1.0")
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-unit-"))
     origCwd = process.cwd()
 })
@@ -41,10 +42,10 @@ describe("findPostcssConfig", () => {
 })
 
 describe("addToConfig", () => {
-    it("creates postcss.config.mts in cwd when path does not exist", async () => {
+    it("creates postcss.config.mjs in cwd when path does not exist", async () => {
         process.chdir(tmpDir)
         await addToConfig("nonexistent.config.ts")
-        const content = await fs.readFile(path.join(tmpDir, "postcss.config.mts"), "utf-8")
+        const content = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(content).toContain("@mochi-css/postcss")
     })
 
@@ -137,6 +138,17 @@ describe("addToConfig", () => {
         expect(content).toContain("@mochi-css/postcss")
     })
 
+    it("is idempotent for indirect export config — does not duplicate plugin on second call", async () => {
+        const configPath = path.join(tmpDir, "postcss.config.mjs")
+        await fs.writeFile(configPath, `const config = { plugins: { tailwindcss: {} } };\nexport default config\n`)
+        await addToConfig(configPath)
+        const afterFirst = await fs.readFile(configPath, "utf-8")
+        await addToConfig(configPath)
+        const afterSecond = await fs.readFile(configPath, "utf-8")
+        expect(afterFirst).toBe(afterSecond)
+        expect(afterSecond.match(/@mochi-css\/postcss/g)).toHaveLength(1)
+    })
+
     it("throws when default export is not an object", async () => {
         const configPath = path.join(tmpDir, "postcss.config.js")
         await fs.writeFile(configPath, `export default "not-an-object"`)
@@ -204,7 +216,7 @@ describe("addToConfig with pluginOptions", () => {
     it("creates postcss config with outDir when path does not exist", async () => {
         process.chdir(tmpDir)
         await addToConfig("nonexistent.config.ts", { outDir: ".mochi" })
-        const content = await fs.readFile(path.join(tmpDir, "postcss.config.mts"), "utf-8")
+        const content = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(content).toContain("@mochi-css/postcss")
         expect(content).toContain("outDir")
         expect(content).toContain(".mochi")
@@ -217,46 +229,29 @@ describe("createPostcssModule", () => {
     }
     const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
-    it("creates a module that passes outDir to config", async () => {
-        const configPath = path.join(tmpDir, "postcss.config.js")
-        await fs.writeFile(configPath, `export default { plugins: {} }`)
-        vi.mocked(p.confirm).mockResolvedValue(true)
-        vi.mocked(p.isCancel).mockReturnValue(false)
-        vi.mocked(p.text).mockResolvedValue(configPath)
-
-        const module = createPostcssModule({ outDir: ".mochi" })
-        await module.run(ctx)
-
-        const content = await fs.readFile(configPath, "utf-8")
-        expect(content).toContain("outDir")
-        expect(content).toContain(".mochi")
-    })
-
     it("auto mode skips prompts and auto-detects existing config", async () => {
         const configPath = path.join(tmpDir, "postcss.config.js")
         await fs.writeFile(configPath, `export default { plugins: {} }`)
         process.chdir(tmpDir)
 
-        const module = createPostcssModule({ outDir: ".mochi", auto: true })
+        const module = createPostcssModule({ auto: true })
         await module.run(ctx)
 
         expect(p.confirm).not.toHaveBeenCalled()
         expect(p.text).not.toHaveBeenCalled()
         const content = await fs.readFile(configPath, "utf-8")
         expect(content).toContain("@mochi-css/postcss")
-        expect(content).toContain(".mochi")
     })
 
     it("auto mode creates default config when none exists", async () => {
         process.chdir(tmpDir)
 
-        const module = createPostcssModule({ outDir: ".mochi", auto: true })
+        const module = createPostcssModule({ auto: true })
         await module.run(ctx)
 
         expect(p.confirm).not.toHaveBeenCalled()
-        const content = await fs.readFile(path.join(tmpDir, "postcss.config.mts"), "utf-8")
+        const content = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(content).toContain("@mochi-css/postcss")
-        expect(content).toContain(".mochi")
     })
 })
 

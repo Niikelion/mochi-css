@@ -1196,7 +1196,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mochi-css/builder@npm:^2.1.0, @mochi-css/builder@workspace:packages/builder":
+"@mochi-css/builder@npm:^2.0.0, @mochi-css/builder@npm:^2.1.0, @mochi-css/builder@workspace:packages/builder":
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
@@ -1216,7 +1216,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@npm:^2.1.0, @mochi-css/config@workspace:packages/config":
+"@mochi-css/config@npm:^2.0.0, @mochi-css/config@npm:^2.1.0, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
@@ -1235,15 +1235,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/next@workspace:^, @mochi-css/next@workspace:packages/next":
+"@mochi-css/next@npm:^2.0.0, @mochi-css/next@workspace:packages/next":
   version: 0.0.0-use.local
   resolution: "@mochi-css/next@workspace:packages/next"
   dependencies:
     "@mochi-css/builder": "npm:^2.1.0"
     "@mochi-css/config": "npm:^2.1.0"
     "@mochi-css/shared-config": "npm:^1.0.0"
+    "@mochi-css/test": "npm:^1.0.0"
     "@types/node": "npm:^24.8.1"
     typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
   peerDependencies:
     next: ^14 || ^15 || ^16
   languageName: unknown
@@ -1254,8 +1256,11 @@ __metadata:
   resolution: "@mochi-css/nextjs-example@workspace:examples/nextjs"
   dependencies:
     "@eslint/eslintrc": "npm:^3"
-    "@mochi-css/next": "workspace:^"
-    "@mochi-css/postcss": "npm:^2.1.0"
+    "@mochi-css/builder": "npm:^2.0.0"
+    "@mochi-css/config": "npm:^2.0.0"
+    "@mochi-css/next": "npm:^2.0.0"
+    "@mochi-css/postcss": "npm:^2.0.0"
+    "@mochi-css/react": "npm:^2.0.0"
     "@mochi-css/vanilla": "npm:^2.2.0"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
@@ -1269,7 +1274,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/postcss@npm:^2.1.0, @mochi-css/postcss@workspace:packages/postcss":
+"@mochi-css/postcss@npm:^2.0.0, @mochi-css/postcss@workspace:packages/postcss":
   version: 0.0.0-use.local
   resolution: "@mochi-css/postcss@workspace:packages/postcss"
   dependencies:
@@ -1282,7 +1287,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/react@workspace:packages/react":
+"@mochi-css/react@npm:^2.0.0, @mochi-css/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@mochi-css/react@workspace:packages/react"
   dependencies:
@@ -1350,6 +1355,7 @@ __metadata:
     "@types/node": "npm:^24.8.1"
     commander: "npm:^13.1.0"
     cross-spawn: "npm:^7.0.6"
+    dedent: "npm:^1.7.2"
     eslint: "npm:^9.39.2"
     fs-extra: "npm:^11.3.0"
     magicast: "npm:^0.5.1"
@@ -3417,6 +3423,18 @@ __metadata:
     babel-plugin-macros:
       optional: true
   checksum: 10c0/ae29ec1c5bd5216c698c9f23acaa5b720260fd4cef3c8b5af887eb5f8c9e6fdd5fed8668767437b4efea35e2991bd798987717633411a1734807c28255769b78
+  languageName: node
+  linkType: hard
+
+"dedent@npm:^1.7.2":
+  version: 1.7.2
+  resolution: "dedent@npm:1.7.2"
+  peerDependencies:
+    babel-plugin-macros: ^3.1.0
+  peerDependenciesMeta:
+    babel-plugin-macros:
+      optional: true
+  checksum: 10c0/acaff07cac355b93f17b1b17ebbb84d3cc55af6ab4b7814c3f505e061903e168bc6bf9ddce331552d64dee1525f0b4c549c9ade46aebfac6f69caaed74e90751
   languageName: node
   linkType: hard
 

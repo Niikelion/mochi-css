@@ -15,7 +15,7 @@ const RESOLVED_PREFIX = "\0virtual:mochi-css/"
 const GLOBAL_ID = "virtual:mochi-css/global.css"
 const RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
 
-export type MochiViteOptions = Partial<BuilderOptions> & Pick<MochiConfig, "esbuildPlugins" | "plugins">
+export type MochiViteOptions = Partial<BuilderOptions> & Pick<MochiConfig, "plugins">
 
 export function mochiCss(opts?: MochiViteOptions): Plugin {
     let resolved: ResolvedConfig | undefined
@@ -47,6 +47,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 runner: opts?.runner ?? new VmRunner(),
                 splitBySource: resolved.splitBySource,
                 onDiagnostic: resolved.onDiagnostic,
+                esbuildPlugins: resolved.esbuildPlugins,
             }
 
             const builder = new Builder(options)

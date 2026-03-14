@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import * as fs from "fs"
-import { defineConfig, loadConfig, resolveConfig } from "./index"
-import type { MochiConfig, ResolvedConfig, MochiPlugin } from "./index"
+import { defineConfig, loadConfig, resolveConfig, mergeArrays, mergeCallbacks } from "./index"
+import type { MochiConfig, MochiPlugin } from "./index"
 
 vi.mock("fs")
 vi.mock("jiti", () => ({
@@ -27,9 +27,7 @@ describe("loadConfig", () => {
     })
 
     it("loads a config file and returns its default export", async () => {
-        vi.mocked(fs.existsSync).mockImplementation((p) =>
-            String(p).endsWith("mochi.config.ts"),
-        )
+        vi.mocked(fs.existsSync).mockImplementation((p) => String(p).endsWith("mochi.config.ts"))
         const mockConfig: MochiConfig = { roots: ["app"], splitBySource: true }
         const { createJiti } = await import("jiti")
         vi.mocked(createJiti).mockReturnValue({
@@ -41,9 +39,7 @@ describe("loadConfig", () => {
     })
 
     it("returns {} when config module default export is not an object", async () => {
-        vi.mocked(fs.existsSync).mockImplementation((p) =>
-            String(p).endsWith("mochi.config.ts"),
-        )
+        vi.mocked(fs.existsSync).mockImplementation((p) => String(p).endsWith("mochi.config.ts"))
         const { createJiti } = await import("jiti")
         vi.mocked(createJiti).mockReturnValue({
             import: vi.fn().mockResolvedValue({ default: null }),
@@ -54,34 +50,80 @@ describe("loadConfig", () => {
     })
 })
 
+describe("mergeArrays", () => {
+    it("returns undefined when both are undefined", () => {
+        expect(mergeArrays(undefined, undefined)).toBeUndefined()
+    })
+
+    it("returns a when b is undefined", () => {
+        expect(mergeArrays([1, 2], undefined)).toEqual([1, 2])
+    })
+
+    it("returns b when a is undefined", () => {
+        expect(mergeArrays(undefined, [3, 4])).toEqual([3, 4])
+    })
+
+    it("concatenates a and b in order", () => {
+        expect(mergeArrays([1, 2], [3, 4])).toEqual([1, 2, 3, 4])
+    })
+})
+
+describe("mergeCallbacks", () => {
+    it("returns undefined when both are undefined", () => {
+        expect(mergeCallbacks(undefined, undefined)).toBeUndefined()
+    })
+
+    it("returns a when b is undefined", () => {
+        const a = vi.fn()
+        const merged = mergeCallbacks(a, undefined)
+        merged?.("x")
+        expect(a).toHaveBeenCalledWith("x")
+    })
+
+    it("returns b when a is undefined", () => {
+        const b = vi.fn()
+        const merged = mergeCallbacks(undefined, b)
+        merged?.("x")
+        expect(b).toHaveBeenCalledWith("x")
+    })
+
+    it("calls both a and b with the same args", () => {
+        const a = vi.fn()
+        const b = vi.fn()
+        const merged = mergeCallbacks(a, b)
+        merged?.("x", "y")
+        expect(a).toHaveBeenCalledWith("x", "y")
+        expect(b).toHaveBeenCalledWith("x", "y")
+    })
+})
+
 describe("resolveConfig", () => {
     it("fills in defaults when file config is empty", async () => {
-        const result = await resolveConfig(
-            {},
-            undefined,
-            { roots: ["src"], extractors: [], splitBySource: true, esbuildPlugins: [], plugins: [] },
-        )
+        const result = await resolveConfig({}, undefined, {
+            roots: ["src"],
+            extractors: [],
+            splitBySource: true,
+            esbuildPlugins: [],
+        })
         expect(result.roots).toEqual(["src"])
         expect(result.splitBySource).toBe(true)
         expect(result.esbuildPlugins).toEqual([])
-        expect(result.plugins).toEqual([])
     })
 
-    it("gives inline opts priority over file config", async () => {
+    it("merges roots from fileConfig and inlineOpts, overriding defaults", async () => {
         const fileConfig: MochiConfig = { roots: ["lib"], splitBySource: false }
         const inlineOpts: MochiConfig = { roots: ["app"], splitBySource: true }
         const result = await resolveConfig(fileConfig, inlineOpts)
-        expect(result.roots).toEqual(["app"])
+        expect(result.roots).toEqual(["lib", "app"])
         expect(result.splitBySource).toBe(true)
     })
 
-    it("gives file config priority over defaults", async () => {
-        const fileConfig: MochiConfig = { roots: ["lib"] }
-        const result = await resolveConfig(fileConfig, undefined, { roots: ["src"] })
-        expect(result.roots).toEqual(["lib"])
+    it("falls back to defaults roots when neither fileConfig nor inlineOpts provide any", async () => {
+        const result = await resolveConfig({}, undefined, { roots: ["src"] })
+        expect(result.roots).toEqual(["src"])
     })
 
-    it("merges esbuildPlugins as defaults + fileConfig + inlineOpts", async () => {
+    it("merges esbuildPlugins from fileConfig and inlineOpts, overriding defaults", async () => {
         const pluginA = { name: "a", setup: vi.fn() }
         const pluginB = { name: "b", setup: vi.fn() }
         const pluginC = { name: "c", setup: vi.fn() }
@@ -90,7 +132,13 @@ describe("resolveConfig", () => {
             { esbuildPlugins: [pluginC] },
             { esbuildPlugins: [pluginA] },
         )
-        expect(result.esbuildPlugins).toEqual([pluginA, pluginB, pluginC])
+        expect(result.esbuildPlugins).toEqual([pluginB, pluginC])
+    })
+
+    it("falls back to defaults esbuildPlugins when neither fileConfig nor inlineOpts provide any", async () => {
+        const pluginA = { name: "a", setup: vi.fn() }
+        const result = await resolveConfig({}, undefined, { esbuildPlugins: [pluginA] })
+        expect(result.esbuildPlugins).toEqual([pluginA])
     })
 
     it("runs onConfigResolved hooks sequentially, passing updated config to each", async () => {
@@ -122,6 +170,5 @@ describe("resolveConfig", () => {
         expect(result.splitBySource).toBe(false)
         expect(result.onDiagnostic).toBeUndefined()
         expect(result.esbuildPlugins).toEqual([])
-        expect(result.plugins).toEqual([])
     })
 })

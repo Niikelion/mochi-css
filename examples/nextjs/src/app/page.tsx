@@ -14,7 +14,7 @@ function bar() {
 
 const Title = styled("div", {
     height: 20,
-    "@(max-width: 100px)": {
+    "@media (width <= 100px)": {
         height: 10
     },
     variants: {

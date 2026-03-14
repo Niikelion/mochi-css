@@ -3,6 +3,8 @@ import fs from "fs/promises"
 import * as p from "@clack/prompts"
 import { parseModule, generateCode } from "magicast"
 import type { Module, ModuleContext } from "@/types"
+import { mochiPackage } from "@/version"
+import dedent from "dedent"
 
 const nextConfigNames = ["next.config.ts", "next.config.mts", "next.config.js", "next.config.mjs"]
 
@@ -10,9 +12,11 @@ export function findNextConfig(): string | undefined {
     return nextConfigNames.find((name) => fsExtra.existsSync(name))
 }
 
-const defaultNextConfig = /* language=typescript */ `import { withMochi } from "@mochi-css/next"
+// noinspection TypeScriptCheckImport
+const defaultNextConfig = /* language=typescript */ dedent`
+    import { withMochi } from "@mochi-css/next"
 
-export default withMochi({})
+    export default withMochi({})
 `
 
 function wrapExportDefault(mod: ReturnType<typeof parseModule>, configPath: string): void {
@@ -80,6 +84,6 @@ export const nextModule: Module = {
             p.log.success("Added withMochi() to next config")
         }
 
-        ctx.requirePackage("@mochi-css/next")
+        ctx.requirePackage(mochiPackage("@mochi-css/next"))
     },
 }

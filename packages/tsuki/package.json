@@ -31,6 +31,7 @@
         "@clack/prompts": "^1.0.1",
         "commander": "^13.1.0",
         "cross-spawn": "^7.0.6",
+        "dedent": "^1.7.2",
         "fs-extra": "^11.3.0",
         "magicast": "^0.5.1",
         "package-manager-detector": "^1.6.0",

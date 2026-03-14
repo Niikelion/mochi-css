@@ -21,11 +21,18 @@ describe("VanillaCssGenerator", () => {
             )
         })
 
-        it("reports diagnostic for non-object args", () => {
+        it("reports diagnostic for non-object, non-string args", () => {
             const onDiagnostic = vi.fn()
             const gen = new VanillaCssGenerator(onDiagnostic)
-            gen.collectArgs("a.ts", ["string", 42])
-            expect(onDiagnostic).toHaveBeenCalledTimes(2)
+            gen.collectArgs("a.ts", [42])
+            expect(onDiagnostic).toHaveBeenCalledTimes(1)
+        })
+
+        it("does not report diagnostic for string args", () => {
+            const onDiagnostic = vi.fn()
+            const gen = new VanillaCssGenerator(onDiagnostic)
+            gen.collectArgs("a.ts", ["my-class", "s-Abc12345"])
+            expect(onDiagnostic).not.toHaveBeenCalled()
         })
 
         it("does not collect when all args are invalid", async () => {
