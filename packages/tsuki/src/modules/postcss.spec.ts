@@ -183,42 +183,42 @@ describe("addToConfig", () => {
 })
 
 describe("addToConfig with pluginOptions", () => {
-    it("adds plugin with outDir option to plain JS config", async () => {
+    it("adds plugin with tmpDir option to plain JS config", async () => {
         const configPath = path.join(tmpDir, "postcss.config.js")
         await fs.writeFile(configPath, `export default { plugins: {} }`)
-        await addToConfig(configPath, { outDir: ".mochi" })
+        await addToConfig(configPath, { tmpDir: ".mochi" })
         const content = await fs.readFile(configPath, "utf-8")
         expect(content).toContain("@mochi-css/postcss")
-        expect(content).toContain("outDir")
+        expect(content).toContain("tmpDir")
         expect(content).toContain(".mochi")
     })
 
-    it("adds plugin with outDir option to indirect export config", async () => {
+    it("adds plugin with tmpDir option to indirect export config", async () => {
         const configPath = path.join(tmpDir, "postcss.config.mjs")
         await fs.writeFile(configPath, `const config = { plugins: { tailwindcss: {} } };\nexport default config\n`)
-        await addToConfig(configPath, { outDir: ".mochi" })
+        await addToConfig(configPath, { tmpDir: ".mochi" })
         const content = await fs.readFile(configPath, "utf-8")
         expect(content).toContain("@mochi-css/postcss")
-        expect(content).toContain("outDir")
+        expect(content).toContain("tmpDir")
         expect(content).toContain(".mochi")
     })
 
-    it("adds plugin with outDir option to JSON config", async () => {
+    it("adds plugin with tmpDir option to JSON config", async () => {
         const configPath = path.join(tmpDir, ".postcssrc.json")
         await fs.writeFile(configPath, JSON.stringify({ plugins: {} }))
-        await addToConfig(configPath, { outDir: ".mochi" })
+        await addToConfig(configPath, { tmpDir: ".mochi" })
         const parsed = JSON.parse(await fs.readFile(configPath, "utf-8")) as {
-            plugins: Record<string, { outDir?: string }>
+            plugins: Record<string, { tmpDir?: string }>
         }
-        expect(parsed.plugins["@mochi-css/postcss"]).toEqual({ outDir: ".mochi" })
+        expect(parsed.plugins["@mochi-css/postcss"]).toEqual({ tmpDir: ".mochi" })
     })
 
-    it("creates postcss config with outDir when path does not exist", async () => {
+    it("creates postcss config with tmpDir when path does not exist", async () => {
         process.chdir(tmpDir)
-        await addToConfig("nonexistent.config.ts", { outDir: ".mochi" })
+        await addToConfig("nonexistent.config.ts", { tmpDir: ".mochi" })
         const content = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(content).toContain("@mochi-css/postcss")
-        expect(content).toContain("outDir")
+        expect(content).toContain("tmpDir")
         expect(content).toContain(".mochi")
     })
 })

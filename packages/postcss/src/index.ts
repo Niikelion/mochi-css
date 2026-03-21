@@ -8,9 +8,8 @@ import {
     RolldownBundler,
     VmRunner,
     fileHash,
-    MochiManifest
 } from "@mochi-css/builder"
-import { loadConfig, resolveConfig, mergeCallbacks, type MochiConfig, type ResolvedConfig } from "@mochi-css/config"
+import { loadConfig, resolveConfig, mergeCallbacks, FullContext, type Config } from "@mochi-css/config"
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -22,35 +21,51 @@ type DiskManifest = {
     files: Record<string, string>
 }
 
-type Options = Partial<BuilderOptions> & Pick<MochiConfig, "esbuildPlugins" | "plugins"> & {
+/**
+ * Options for the Mochi CSS PostCSS plugin.
+ *
+ * Most options are loaded automatically from `mochi.config.ts` — see `@mochi-css/config` for the full list.
+ * Only the fields below are specific to the PostCSS integration.
+ *
+ * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
+ */
+type Options = Partial<Pick<BuilderOptions, "runner" | "bundler">> & Partial<Config> & {
+    /** Pattern matching the global CSS file that Mochi styles are injected into. Default: `/\/globals\.css$/` */
     globalCss?: RegExp
-    outDir?: string
 }
 
 const pluginName = "postcss-mochi-css"
 
 const defaultOptions = {
     globalCss: /\/globals\.css$/,
-    roots: ["src"] as BuilderOptions["roots"],
     extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner(),
-    splitBySource: false,
 }
 
+/**
+ * PostCSS plugin that extracts Mochi CSS styles from TypeScript/TSX source files at build time
+ * and injects the generated CSS into your global stylesheet.
+ *
+ * Shared config is loaded automatically from `mochi.config.ts`. Pass plugin-specific options
+ * (`globalCss`, `tmpDir`) directly in your PostCSS config.
+ *
+ * @example
+ * ```js
+ * // postcss.config.js
+ * module.exports = {
+ *     plugins: { '@mochi-css/postcss': { tmpDir: '.mochi' } }
+ * }
+ * ```
+ */
 const creator: PluginCreator<Options> = (opts?: Options) => {
-    let resolvedPromise: Promise<ResolvedConfig> | undefined
+    let resolvedPromise: Promise<Config> | undefined
 
     const getResolved = () => {
         resolvedPromise ??= loadConfig().then(fileConfig =>
-            resolveConfig(fileConfig, opts, {
-                roots: defaultOptions.roots,
-                extractors: defaultOptions.extractors,
-                splitBySource: defaultOptions.splitBySource,
-            }).then(resolved => ({
+            resolveConfig(fileConfig, opts, defaultOptions).then(resolved => ({
                 ...resolved,
-                outDir: resolved.outDir ?? opts?.outDir,
-                splitBySource: (resolved.outDir ?? opts?.outDir) ? true : resolved.splitBySource,
+                tmpDir: resolved.tmpDir ?? opts?.tmpDir,
             }))
         )
         return resolvedPromise
@@ -78,6 +93,10 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         const resolved = await getResolved()
 
         if (!builder) {
+            const context = new FullContext()
+            for (const plugin of resolved.plugins) {
+                plugin.onLoad?.(context)
+            }
             builder = new Builder({
                 onDiagnostic: mergeCallbacks(resolved.onDiagnostic, (diagnostic) => {
                     currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
@@ -88,8 +107,8 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                 extractors: resolved.extractors,
                 bundler: opts?.bundler ?? defaultOptions.bundler,
                 runner: opts?.runner ?? defaultOptions.runner,
-                splitBySource: resolved.splitBySource,
-                esbuildPlugins: resolved.esbuildPlugins,
+                splitCss: resolved.splitCss,
+                filePreProcess: ({ content, filePath }) => context.sourceTransform.transform(content, { filePath }),
             })
         }
 
@@ -124,28 +143,41 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             node.source = root.source
         })
 
-        // Write per-file CSS and manifest to outDir
-        if (resolved.outDir) {
-            const outDir = resolved.outDir
-            await fs.promises.mkdir(outDir, { recursive: true })
+        // Write per-file CSS and manifest to tmpDir
+        if (resolved.tmpDir) {
+            const tmpDir = resolved.tmpDir
+            await fs.promises.mkdir(tmpDir, { recursive: true })
 
-            const manifest: MochiManifest = { global: css.global, files: css.files ?? {} }
+            const existingCssFiles = new Set(
+                (await fs.promises.readdir(tmpDir))
+                    .filter(f => f.endsWith(".css") && f !== "global.css")
+                    .map(f => path.resolve(tmpDir, f))
+            )
+
             const diskManifest: DiskManifest = { files: {} }
+            const writtenCssPaths = new Set<string>()
 
-            if (manifest.global) {
-                const globalPath = path.resolve(outDir, "global.css")
-                await fs.promises.writeFile(globalPath, manifest.global, "utf-8")
+            if (css.global) {
+                const globalPath = path.resolve(tmpDir, "global.css")
+                await fs.promises.writeFile(globalPath, css.global, "utf-8")
                 diskManifest.global = globalPath
             }
 
-            for (const [source, fileCss] of Object.entries(manifest.files)) {
+            for (const [source, fileCss] of Object.entries(css.files ?? {})) {
                 const hash = fileHash(source)
-                const cssPath = path.resolve(outDir, `${hash}.css`)
+                const cssPath = path.resolve(tmpDir, `${hash}.css`)
                 await fs.promises.writeFile(cssPath, fileCss, "utf-8")
                 diskManifest.files[source] = cssPath
+                writtenCssPaths.add(cssPath)
             }
 
-            const manifestPath = path.resolve(outDir, "manifest.json")
+            for (const existingPath of existingCssFiles) {
+                if (!writtenCssPaths.has(existingPath)) {
+                    await fs.promises.unlink(existingPath)
+                }
+            }
+
+            const manifestPath = path.resolve(tmpDir, "manifest.json")
             await fs.promises.writeFile(manifestPath, JSON.stringify(diskManifest), "utf-8")
         }
     }

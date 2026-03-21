@@ -20,9 +20,9 @@ const defaultMochiConfigBase = /* language=typescript */ dedent`
     export default defineConfig({})
 `
 
-function defaultMochiConfigWithOptions(outDir: string | undefined, styledId: boolean): string {
+function defaultMochiConfigWithOptions(tmpDir: string | undefined, styledId: boolean): string {
     const lines: string[] = []
-    if (outDir !== undefined) lines.push(`    outDir: ${JSON.stringify(outDir)},`)
+    if (tmpDir !== undefined) lines.push(`    tmpDir: ${JSON.stringify(tmpDir)},`)
     if (styledId) lines.push(`    plugins: [styledIdPlugin()],`)
 
     if (!styledId && lines.length === 0) return defaultMochiConfigBase
@@ -111,20 +111,20 @@ function getConfigObject(mod: ReturnType<typeof parseModule>): Record<string, un
     return undefined
 }
 
-async function addOutDirToExistingConfig(configPath: string, outDir: string): Promise<void> {
+async function addTmpDirToExistingConfig(configPath: string, tmpDir: string): Promise<void> {
     const content = await fs.readFile(configPath, "utf-8")
     const mod = parseModule(content)
     const obj = getConfigObject(mod)
-    if (!obj) throw new Error(`Failed to add outDir to ${configPath}`)
+    if (!obj) throw new Error(`Failed to add tmpDir to ${configPath}`)
 
-    const hasOutDir = (obj["properties"] as Record<string, unknown>[]).some((prop) => getPropKeyName(prop) === "outDir")
-    if (hasOutDir) return
+    const hasTmpDir = (obj["properties"] as Record<string, unknown>[]).some((prop) => getPropKeyName(prop) === "tmpDir")
+    if (hasTmpDir) return
 
     obj["properties"] = [
         {
             type: "ObjectProperty",
-            key: { type: "StringLiteral", value: "outDir" },
-            value: { type: "StringLiteral", value: outDir },
+            key: { type: "StringLiteral", value: "tmpDir" },
+            value: { type: "StringLiteral", value: tmpDir },
             computed: false,
             shorthand: false,
         },
@@ -138,12 +138,12 @@ async function addOutDirToExistingConfig(configPath: string, outDir: string): Pr
 export interface MochiConfigModuleOptions {
     /** Whether to include styledIdPlugin for stable component selectors */
     styledId?: boolean
-    /** Output directory for generated CSS files */
-    outDir?: string
+    /** Intermediate directory for generated CSS files */
+    tmpDir?: string
 }
 
 export function createMochiConfigModule(options: MochiConfigModuleOptions = {}): Module {
-    const { styledId = false, outDir } = options
+    const { styledId = false, tmpDir } = options
 
     return {
         id: "mochi-config",
@@ -154,15 +154,15 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
 
             if (!existing) {
                 const configPath = "mochi.config.ts"
-                await fs.writeFile(configPath, defaultMochiConfigWithOptions(outDir, styledId))
+                await fs.writeFile(configPath, defaultMochiConfigWithOptions(tmpDir, styledId))
                 p.log.success("Created mochi.config.ts")
             } else {
-                if (outDir !== undefined) {
+                if (tmpDir !== undefined) {
                     try {
-                        await addOutDirToExistingConfig(existing, outDir)
-                        p.log.success(`Added outDir to ${existing}`)
+                        await addTmpDirToExistingConfig(existing, tmpDir)
+                        p.log.success(`Added tmpDir to ${existing}`)
                     } catch {
-                        p.log.warn(`Could not automatically add outDir to ${existing} — add it manually`)
+                        p.log.warn(`Could not automatically add tmpDir to ${existing} — add it manually`)
                     }
                 }
                 if (styledId) {
@@ -176,7 +176,6 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
             }
 
             ctx.requirePackage(mochiPackage("@mochi-css/config"))
-            if (styledId) ctx.requirePackage(mochiPackage("@mochi-css/builder"))
         },
     }
 }

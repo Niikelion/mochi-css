@@ -83,18 +83,18 @@ describe("createMochiConfigModule", () => {
         expect(afterSecond.match(/styledIdPlugin/g)).toHaveLength(2) // import + call
     })
 
-    it("is idempotent — does not duplicate outDir on second call", async () => {
+    it("is idempotent — does not duplicate tmpDir on second call", async () => {
         const configPath = path.join(tmpDir, "mochi.config.ts")
         await fs.writeFile(
             configPath,
             `import { defineConfig } from "@mochi-css/config"\nexport default defineConfig({})\n`,
         )
-        await createMochiConfigModule({ outDir: ".mochi" }).run(ctx)
+        await createMochiConfigModule({ tmpDir: ".mochi" }).run(ctx)
         const afterFirst = await fs.readFile(configPath, "utf-8")
-        await createMochiConfigModule({ outDir: ".mochi" }).run(ctx)
+        await createMochiConfigModule({ tmpDir: ".mochi" }).run(ctx)
         const afterSecond = await fs.readFile(configPath, "utf-8")
         expect(afterFirst).toBe(afterSecond)
-        expect(afterSecond.match(/outDir/g)).toHaveLength(1)
+        expect(afterSecond.match(/tmpDir/g)).toHaveLength(1)
     })
 
     it("skips modification when styledId is false and config already exists", async () => {
@@ -112,9 +112,9 @@ describe("createMochiConfigModule", () => {
         expect(requirePackage).toHaveBeenCalledWith("@mochi-css/config@^2.0.0")
     })
 
-    it("requires @mochi-css/builder when styledId: true", async () => {
+    it("does not explicitly require @mochi-css/builder (it installs transitively)", async () => {
         const requirePackage = vi.fn()
         await createMochiConfigModule({ styledId: true }).run({ ...ctx, requirePackage })
-        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/builder@^2.0.0")
+        expect(requirePackage).not.toHaveBeenCalledWith(expect.stringContaining("@mochi-css/builder"))
     })
 })

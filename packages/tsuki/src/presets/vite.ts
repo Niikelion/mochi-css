@@ -8,7 +8,7 @@ export const vitePreset: Preset = {
     id: "vite",
     name: "Vite",
     setup(runner) {
-        runner.register(createMochiConfigModule({ styledId: true, outDir: ".mochi" }))
+        runner.register(createMochiConfigModule({ styledId: true, tmpDir: ".mochi" }))
         runner.register(createPostcssModule())
         runner.register(viteModule)
         runner.register(createUiFrameworkModule())

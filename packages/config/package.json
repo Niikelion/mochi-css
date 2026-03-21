@@ -28,6 +28,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
+        "@mochi-css/vanilla": "^2.1.0",
+        "@swc/core": "^1.15.13",
         "jiti": "^2.6.1"
     },
     "peerDependencies": {
@@ -38,7 +40,9 @@
         "@mochi-css/builder": "^2.1.0",
         "@mochi-css/shared-config": "^1.0.0",
         "@mochi-css/test": "^1.0.0",
+        "@swc/types": "^0.1.25",
         "@types/node": "^24.8.1",
+        "dedent": "^1.7.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",
         "typescript": "^5.9.3",

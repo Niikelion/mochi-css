@@ -313,7 +313,7 @@ describe("Builder", () => {
                 extractors: [mochiCssFunctionExtractor],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                splitBySource: true,
+                splitCss: true,
             })
 
             const generators = await builder.collectMochiStyles()
@@ -346,7 +346,7 @@ describe("Builder", () => {
                 extractors: [mochiCssFunctionExtractor],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                splitBySource: true,
+                splitCss: true,
             })
 
             const generators = await builder.collectMochiStyles()
@@ -356,6 +356,39 @@ describe("Builder", () => {
 
             const allCss = Object.values(result.files ?? {}).join("\n")
             expect(allCss).toContain("color: green")
+        } finally {
+            await fs.rm(dir, { recursive: true, force: true })
+        }
+    })
+
+    it("filePreProcess transforms source before parsing", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-preprocess-"))
+        try {
+            await fs.writeFile(
+                path.join(dir, "comp.ts"),
+                dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    // REPLACE_ME
+                `,
+            )
+
+            const builder = new Builder({
+                roots: [dir],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                splitCss: true,
+                filePreProcess: ({ content }) =>
+                    content.replace("// REPLACE_ME", `export const x = css({ color: "purple" })`),
+            })
+
+            const generators = await builder.collectMochiStyles()
+            const generator = generators.get("@mochi-css/vanilla:css")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
+
+            const allCss = Object.values(result.files ?? {}).join("\n")
+            expect(allCss).toContain("color: purple")
         } finally {
             await fs.rm(dir, { recursive: true, force: true })
         }

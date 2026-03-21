@@ -40,7 +40,7 @@ afterEach(async () => {
 })
 
 describe("vite preset integration", () => {
-    it("sets up postcss with outDir and vite config", async () => {
+    it("sets up postcss with tmpDir and vite config", async () => {
         await fs.writeFile(path.join(tmpDir, "postcss.config.js"), `export default { plugins: {} }`)
         await fs.writeFile(path.join(tmpDir, "vite.config.ts"), `export default defineConfig({ plugins: [] })`)
 
@@ -54,7 +54,7 @@ describe("vite preset integration", () => {
         expect(postcssContent).toContain("@mochi-css/postcss")
 
         const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
-        expect(mochiContent).toContain("outDir")
+        expect(mochiContent).toContain("tmpDir")
         expect(mochiContent).toContain(".mochi")
 
         const viteContent = await fs.readFile(path.join(tmpDir, "vite.config.ts"), "utf-8")
@@ -77,7 +77,7 @@ describe("nextjs preset integration", () => {
         expect(postcssContent).toContain("@mochi-css/postcss")
 
         const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
-        expect(mochiContent).toContain("outDir")
+        expect(mochiContent).toContain("tmpDir")
         expect(mochiContent).toContain(".mochi")
 
         const nextContent = await fs.readFile(path.join(tmpDir, "next.config.ts"), "utf-8")
@@ -97,6 +97,6 @@ describe("nextjs preset integration", () => {
         expect(postcssContent).toContain("@mochi-css/postcss")
 
         const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
-        expect(mochiContent).toContain("outDir")
+        expect(mochiContent).toContain("tmpDir")
     })
 })

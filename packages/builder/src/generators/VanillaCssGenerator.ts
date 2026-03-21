@@ -3,22 +3,25 @@ import { CSSObject, StyleProps, isMochiCSS } from "@mochi-css/vanilla"
 import { OnDiagnostic, getErrorMessage } from "@/diagnostics"
 
 export class VanillaCssGenerator implements StyleGenerator {
-    private readonly collectedStyles: { source: string; args: StyleProps[] }[] = []
+    private readonly collectedStyles: { source: string; args: StyleProps[]; stableId?: string }[] = []
 
     constructor(private readonly onDiagnostic?: OnDiagnostic) {}
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: StyleProps[] = []
+        let stableId: string | undefined
         for (const arg of args) {
+            if (typeof arg === "string") {
+                stableId = arg
+                continue
+            }
             if (arg == null || typeof arg !== "object") {
-                if (typeof arg !== "string") {
-                    this.onDiagnostic?.({
-                        code: "MOCHI_INVALID_STYLE_ARG",
-                        message: `Expected style object, got ${arg === null ? "null" : typeof arg}`,
-                        severity: "warning",
-                        file: source,
-                    })
-                }
+                this.onDiagnostic?.({
+                    code: "MOCHI_INVALID_STYLE_ARG",
+                    message: `Expected style object, got ${arg === null ? "null" : typeof arg}`,
+                    severity: "warning",
+                    file: source,
+                })
                 continue
             }
             // Skip MochiCSS instances — they are runtime style handles whose styles
@@ -27,13 +30,13 @@ export class VanillaCssGenerator implements StyleGenerator {
             validArgs.push(arg as StyleProps)
         }
         if (validArgs.length > 0) {
-            this.collectedStyles.push({ source, args: validArgs })
+            this.collectedStyles.push({ source, args: validArgs, stableId })
         }
     }
 
     async generateStyles(): Promise<{ files: Record<string, string> }> {
         const filesCss = new Map<string, Set<string>>()
-        for (const { source, args } of this.collectedStyles) {
+        for (const { source, args, stableId } of this.collectedStyles) {
             let css = filesCss.get(source)
             if (!css) {
                 css = new Set<string>()
@@ -41,7 +44,7 @@ export class VanillaCssGenerator implements StyleGenerator {
             }
             for (const style of args) {
                 try {
-                    const styleCss = new CSSObject(style).asCssString()
+                    const styleCss = new CSSObject(style, stableId).asCssString()
                     css.add(styleCss)
                 } catch (err) {
                     const message = getErrorMessage(err)

@@ -1,7 +1,5 @@
 import * as SWC from "@swc/core"
 import { shortHash } from "@mochi-css/vanilla"
-import { MochiPlugin } from "@mochi-css/config"
-import { EsbuildPlugin } from "@/Builder"
 
 const STABLE_ID_RE = /^s-[0-9A-Za-z_-]+$/
 
@@ -118,37 +116,4 @@ export function transformStyledIds(source: string, filePath: string): string {
     })
 
     return result
-}
-
-/**
- * Returns a MochiPlugin that injects stable `s-` class IDs into every `styled()` call
- * via an esbuild onLoad hook (used for both extraction and bundling phases).
- */
-export function styledIdPlugin(): MochiPlugin {
-    return {
-        name: "mochi-styled-ids",
-        onConfigResolved(config) {
-            const esbuildPlugin: EsbuildPlugin = {
-                name: "mochi-styled-ids",
-                setup(build) {
-                    build.onLoad({ filter: /\.(tsx?|jsx?)$/ }, async (args) => {
-                        const { readFile } = await import("fs/promises")
-                        const source = await readFile(args.path, "utf8")
-                        const loader = args.path.endsWith(".tsx")
-                            ? "tsx"
-                            : args.path.endsWith(".jsx")
-                              ? "jsx"
-                              : args.path.endsWith(".ts")
-                                ? "ts"
-                                : "js"
-                        return { contents: transformStyledIds(source, args.path), loader }
-                    })
-                },
-            }
-            return {
-                ...config,
-                esbuildPlugins: [...config.esbuildPlugins, esbuildPlugin],
-            }
-        },
-    }
 }

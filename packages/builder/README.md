@@ -27,7 +27,7 @@ import {
 import { writeFile } from "fs/promises"
 
 const builder = new Builder({
-    rootDir: "./src",
+    roots: ["./src"],
     extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner(),
@@ -50,10 +50,12 @@ if (files) {
 
 ## How It Works
 
-The builder performs two-phase processing:
+The builder performs multiphase processing:
 
-1. **Analysis** — Scans TypeScript/TSX source files, builds a dependency graph, and identifies all style function calls and the variables they depend on.
-2. **Extraction** — Generates minimal executable code containing only the relevant style expressions, bundles it, executes it in an isolated VM context, and captures the style arguments passed to each extractor. Generators then convert those arguments to CSS.
+1. **Preprocessing** - Runs the optional `filePreProcess` callback on every source file before parsing.
+2. **Analysis** - Scans the source files, builds a dependency graph, and identifies all style function calls and the variables they depend on.
+3. **Extraction** - Generates minimal executable code containing only the relevant style expressions, bundles it, executes it in an isolated VM context, and captures the style arguments passed to each extractor.
+4. **Generation** - Generates CSS code using extracted arguments and registered generators.
 
 ---
 
@@ -83,20 +85,19 @@ class Builder {
 
 #### `BuilderOptions`
 
-| Option          | Type               | Description                                              |
-|-----------------|--------------------|----------------------------------------------------------|
-| `rootDir`       | `string`           | Directory scanned recursively for `.ts`/`.tsx` files     |
-| `extractors`    | `StyleExtractor[]` | Extractors to use (use `defaultExtractors` for vanilla)  |
-| `bundler`       | `Bundler`          | Bundler implementation — use `RolldownBundler`           |
-| `runner`        | `Runner`           | Code runner implementation — use `VmRunner`              |
-| `splitBySource` | `boolean`          | If `true`, CSS is split per source file; default `false` |
-| `onDiagnostic`  | `OnDiagnostic`     | Optional callback for warnings and errors                |
+| Option           | Type       | Description                                                                                                                                           |
+|------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `bundler`        | `Bundler`  | Bundler implementation - defaults to `RolldownBundler`                                                                                                |
+| `runner`         | `Runner`   | Code runner implementation - defaults to `VmRunner`                                                                                                   |
+| `filePreProcess` | `function` | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string. |
+
+For all other options, see [`MochiConfig`](../config/README.md) - they can be set in `mochi.config.ts` and are picked up automatically by integrations.
 
 #### CSS output
 
-When `splitBySource` is `false` (default), all generated CSS is merged into a single `global` string.
+When `splitCss` is `false` (default), all generated CSS is merged into a single `global` string.
 
-When `splitBySource` is `true`, the `files` map contains per-source-file CSS keyed by the source file path, and any truly global styles (from `globalCss`) are in `global`.
+When `splitCss` is `true`, the `files` map contains per-source-file CSS keyed by the source file path, and any truly global styles (from `globalCss`) are in `global`.
 
 ---
 
@@ -104,10 +105,10 @@ When `splitBySource` is `true`, the `files` map contains per-source-file CSS key
 
 A pre-configured array of extractors for the `@mochi-css/vanilla` package. Handles:
 
-- `css()` — component-scoped styles
-- `styled()` — styled component styles
-- `keyframes()` — CSS animations (scoped per file)
-- `globalCss()` — global styles
+- `css()` - component-scoped styles
+- `styled()` - styled component styles
+- `keyframes()` - CSS animations (scoped per file)
+- `globalCss()` - global styles
 
 Pass this directly to `BuilderOptions.extractors` unless you need a custom setup.
 
@@ -152,7 +153,7 @@ interface StyleGenerator {
 }
 ```
 
-Returning a `Record<string, StyleGenerator>` from `collectArgs` enables derived extractor patterns — each key corresponds to a property name in the destructuring of the call's return value.
+Returning a `Record<string, StyleGenerator>` from `collectArgs` enables derived extractor patterns - each key corresponds to a property name in the destructuring of the call's return value.
 
 ---
 
@@ -203,6 +204,29 @@ Recursively discover all `.ts` and `.tsx` files in a directory.
 
 ```typescript
 async function findAllFiles(dir: string): Promise<string[]>
+```
+
+---
+
+### `styledIdPlugin`
+
+A `MochiPlugin` that injects a stable, unique `s-` prefixed class ID as the last argument of every `styled()` call before parsing.
+This enables more precise component targeting.
+
+It works via the source transform pipeline: when loaded, it registers a transform on `context.sourceTransform` that rewrites matching `.ts`, `.tsx`, `.js`, and `.jsx` files.
+
+```typescript
+import { styledIdPlugin } from "@mochi-css/config"
+```
+
+Add it to your `mochi.config.ts`:
+
+```typescript
+import { defineConfig, styledIdPlugin } from "@mochi-css/config"
+
+export default defineConfig({
+    plugins: [styledIdPlugin()],
+})
 ```
 
 ---
@@ -279,7 +303,7 @@ const myExtractor: StyleExtractor = {
 
 // Use alongside default extractors
 const builder = new Builder({
-    rootDir: "./src",
+    roots: ["./src"],
     extractors: [...defaultExtractors, myExtractor],
     bundler: new RolldownBundler(),
     runner: new VmRunner(),

@@ -12,7 +12,8 @@
 **A near zero-runtime CSS-in-JS solution with build-time style extraction**
 
 Mochi-CSS brings the ergonomics of CSS-in-JS without paying the substantial runtime cost.
-Styles are statically extracted at build time through a PostCSS plugin, making your shipped bundle smaller, predictable, and framework-agnostic.
+Styles are statically extracted at build time through a PostCSS plugin,
+making your shipped bundle smaller, predictable, and framework-agnostic.
 
 ---
 
@@ -33,28 +34,20 @@ Styles are statically extracted at build time through a PostCSS plugin, making y
 ## 📦 Installation
 
 ```bash
-npm i @mochi-css/vanilla
-npm i @mochi-css/postcss --save-dev
+npx @mochi-css/tsuki
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-Add the Mochi-CSS PostCSS plugin to your `postcss.config.js`:
-```js
-module.exports = {
-  plugins: {
-    '@mochi-css/postcss': {}
-  }
-}
-```
+After running `tsuki` should have all the plugins installed.
 
 Create `src/globals.css` file and import it in your project.
 After that, you can go wild with your styles!
 
 ```tsx
-import { styled } from "@mochi-css/vanilla";
+import { styled } from "@mochi-css/react";
 
 const Title = styled("h1", {
   fontSize: 32,
@@ -66,7 +59,8 @@ export default function App() {
 }
 ```
 
-At build time, the PostCSS plugin extracts the styles into a static `.css` file. No runtime style injection or providers required.
+At build time, the PostCSS plugin extracts the styles into a static `.css` file.
+No runtime style injection or providers required.
 
 ---
 
@@ -75,9 +69,12 @@ At build time, the PostCSS plugin extracts the styles into a static `.css` file.
 Detailed documentation about different parts of Mochi-CSS can be found here:
 
 - [**@mochi-css/vanilla**](packages/vanilla/README.md) - core package that provides styling functions
-- [**@mochi-css/postcss**](packages/postcss/README.md) - postcss plugin
-- [**@mochi-css/builder**](packages/builder/README.md) - utilities for extracting styles from source code and generating CSS from them
+- [**@mochi-css/config**](packages/config/README.md) - configuration definition; read to learn more about available options
 - [**@mochi-css/tsuki**](packages/tsuki/README.md) - installer for Mochi-CSS
+- [**@mochi-css/postcss**](packages/postcss/README.md) - postcss plugin
+- [**@mochi-css/next**](packages/next/README.md) - Next.JS plugin
+- [**@mochi-css/vite**](packages/vite/README.md) - Vite plugin
+- [**@mochi-css/builder**](packages/builder/README.md) - utilities for extracting styles from source code and generating CSS from them
 
 ---
 
@@ -107,14 +104,15 @@ Benchmarks and performance comparisons will be released at a later stage.
 
 Status legend
 
-🚧 In Progress — actively being worked on
-🕒 Queued — planned, not yet in development
+🚧 In Progress - actively being worked on
+🕒 Queued - planned, not yet in development
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, feedback, and ideas are welcome! Please open issues and PRs to help shape Mochi-CSS.
+Contributions, feedback, and ideas are welcome!
+Please open issues and PRs to help shape Mochi-CSS.
 
 You can also support me on [my Patreon](https://www.patreon.com/Niikelion).
 

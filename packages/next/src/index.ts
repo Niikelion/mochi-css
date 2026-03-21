@@ -1,16 +1,23 @@
 import path from "path"
 import { NextConfig } from "next"
-import { type MochiConfig } from "@mochi-css/config"
 
 const MOCHI_DIR = ".mochi"
 const MANIFEST_FILE = "manifest.json"
 
-export type MochiNextOptions = Pick<MochiConfig, "esbuildPlugins" | "plugins"> & {
+export type MochiNextOptions = {
+    /**
+     * Path to the `manifest.json` file produced by the PostCSS plugin's `tmpDir` option.
+     * The webpack/Turbopack loader reads this file to inject per-route CSS imports.
+     * Defaults to `.mochi/manifest.json` relative to the project root.
+     */
     manifestPath?: string
 }
 
 /**
  * Wraps your Next.js config with Mochi CSS loaders.
+ *
+ * The loader automatically reads `mochi.config.ts` from the project root and applies
+ * any registered source transforms (e.g. `styledIdPlugin`) before Next.js compiles each file.
  *
  * Turbopack support requires you to explicitly opt in via your config:
  * - Next.js 15.3+ / 16: add `turbopack: {}` to your next.config
@@ -25,13 +32,13 @@ export function withMochi(nextConfig: NextConfig, opts?: MochiNextOptions): Next
         use: [
             {
                 loader: loaderPath,
-                options: { manifestPath },
+                options: { manifestPath, cwd: process.cwd() },
             },
         ],
     }
 
     const turbopackRule = {
-        loaders: [{ loader: loaderPath, options: { manifestPath } }],
+        loaders: [{ loader: loaderPath, options: { manifestPath, cwd: process.cwd() } }],
     }
 
     // Next.js 15.3+ / 16: top-level turbopack key (only if user already has it)

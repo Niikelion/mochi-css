@@ -8,7 +8,7 @@ export const nextjsPreset: Preset = {
     id: "nextjs",
     name: "Next.js",
     setup(runner) {
-        runner.register(createMochiConfigModule({ styledId: true, outDir: ".mochi" }))
+        runner.register(createMochiConfigModule({ styledId: true, tmpDir: ".mochi" }))
         runner.register(createPostcssModule({ auto: true }))
         runner.register(nextModule)
         runner.register(createUiFrameworkModule({ auto: true }))

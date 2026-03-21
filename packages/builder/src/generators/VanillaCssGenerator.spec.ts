@@ -43,6 +43,38 @@ describe("VanillaCssGenerator", () => {
         })
     })
 
+    describe("stableId (string arg)", () => {
+        it("uses string arg as the CSS class name", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }, "s-abc"])
+            const result = await gen.generateStyles()
+            expect(result.files["a.ts"]).toContain(".s-abc")
+            expect(result.files["a.ts"]).not.toMatch(/\.c[0-9a-f]+/)
+        })
+
+        it("uses last string arg as stableId when multiple strings provided", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }, "s-first", "s-last"])
+            const result = await gen.generateStyles()
+            expect(result.files["a.ts"]).toContain(".s-last")
+            expect(result.files["a.ts"]).not.toContain(".s-first")
+        })
+
+        it("ignores string when no style objects are present", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", ["s-abc"])
+            const result = await gen.generateStyles()
+            expect(result.files).toEqual({})
+        })
+
+        it("generates hash-based class name when no string arg provided", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }])
+            const result = await gen.generateStyles()
+            expect(result.files["a.ts"]).toMatch(/\.c[0-9a-f]+/)
+        })
+    })
+
     describe("generateStyles", () => {
         it("accumulates styles from same source across multiple collectArgs calls", async () => {
             const gen = new VanillaCssGenerator()

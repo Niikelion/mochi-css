@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { transformStyledIds } from "./styledIdTransform"
 import { shortHash } from "@mochi-css/vanilla"
+import dedent from "dedent"
 
 const FILE = "/project/src/Button.tsx"
 
@@ -63,22 +64,29 @@ describe("transformStyledIds", () => {
         expect(result).toMatch(/styled\('section', \{ padding: 16 }, 's-[0-9A-Za-z_-]+'\)/)
     })
 
+    it("uses index-based ID for inline expression statement styled calls", () => {
+        const source = `styled('div', { margin: 0 })`
+        const result = transformStyledIds(source, FILE)
+        expect(result).toMatch(/styled\('div', \{ margin: 0 }, 's-[0-9A-Za-z_-]+'\)/)
+    })
+
     it("does not inject into function declaration following a multiline styled call", () => {
-        const source = [
-            `import { styled } from "@mochi-css/react"`,
-            ``,
-            `const Box = styled("div", {`,
-            `    backgroundColor: "green",`,
-            `    color: "white",`,
-            `    width: 500,`,
-            `    height: 500`,
-            `})`,
-            ``,
-            `export default function Subpage() {`,
-            `    return <Box>Test</Box>`,
-            `}`,
-            ``,
-        ].join("\n")
+        // noinspection TypeScriptCheckImport,TypeScriptMissingConfigOption
+        const source = /* language=tsx */ dedent`
+            import { styled } from "@mochi-css/react"
+            
+            const Box = styled("div", {
+                backgroundColor: "green",
+                color: "white",
+                width: 500,
+                height: 500
+            })
+            
+            export default function Subpage() {
+                return <Box>Test</Box>
+            }
+        `
+
         const result = transformStyledIds(source, "/project/src/Subpage.tsx")
         expect(result).not.toMatch(/function Subpage\(,/)
         const styledIdx = result.indexOf("styled(")

@@ -8,17 +8,46 @@ import {
     fileHash,
     type MochiManifest,
 } from "@mochi-css/builder"
-import { loadConfig, resolveConfig, type MochiConfig, type ResolvedConfig } from "@mochi-css/config"
+import { loadConfig, resolveConfig, FullContext, type Config } from "@mochi-css/config"
 
 const VIRTUAL_PREFIX = "virtual:mochi-css/"
 const RESOLVED_PREFIX = "\0virtual:mochi-css/"
 const GLOBAL_ID = "virtual:mochi-css/global.css"
 const RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
 
-export type MochiViteOptions = Partial<BuilderOptions> & Pick<MochiConfig, "plugins">
+/**
+ * Inline options for the Mochi CSS Vite plugin.
+ *
+ * Most options are loaded automatically from `mochi.config.ts` — see `@mochi-css/config` for the full list.
+ * Inline options passed here are merged on top of the file config.
+ *
+ * The only options unique to the Vite integration are `bundler` and `runner`.
+ *
+ * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
+ */
+export type MochiViteOptions = Partial<BuilderOptions> & Pick<Config, "plugins">
 
+/**
+ * Vite plugin that statically extracts Mochi CSS styles from TypeScript/TSX source files
+ * and serves them as virtual CSS modules.
+ *
+ * `mochi.config.ts` is loaded automatically from the Vite project root — you only need to
+ * pass `opts` when you want to override individual options inline.
+ *
+ * @example
+ * ```ts
+ * // vite.config.ts
+ * import { defineConfig } from "vite"
+ * import { mochiCss } from "@mochi-css/vite"
+ *
+ * export default defineConfig({
+ *     plugins: [mochiCss()],
+ * })
+ * ```
+ */
 export function mochiCss(opts?: MochiViteOptions): Plugin {
-    let resolved: ResolvedConfig | undefined
+    let resolved: Config | undefined
+    let context: FullContext | undefined
 
     let manifest: MochiManifest | undefined
     // Map from hash to source path for resolving virtual modules
@@ -33,21 +62,26 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             resolved = await resolveConfig(fileConfig, opts, {
                 roots: ["src"],
                 extractors: defaultExtractors,
-                splitBySource: true,
+                splitCss: true,
             })
         },
 
         async buildStart() {
             if (!resolved) return
 
+            context = new FullContext()
+            const buildContext = context
+            for (const plugin of resolved.plugins) {
+                plugin.onLoad?.(buildContext)
+            }
             const options: BuilderOptions = {
                 roots: resolved.roots,
                 extractors: resolved.extractors,
                 bundler: opts?.bundler ?? new RolldownBundler(),
                 runner: opts?.runner ?? new VmRunner(),
-                splitBySource: resolved.splitBySource,
+                splitCss: resolved.splitCss,
                 onDiagnostic: resolved.onDiagnostic,
-                esbuildPlugins: resolved.esbuildPlugins,
+                filePreProcess: ({ content, filePath }) => buildContext.sourceTransform.transform(content, { filePath }),
             }
 
             const builder = new Builder(options)
@@ -87,26 +121,27 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             return undefined
         },
 
-        transform(code, id) {
-            if (!manifest) return undefined
+        async transform(code, id) {
+            // Skip non-source files (CSS, JSON, assets, etc.)
+            if (!/\.(ts|tsx|js|jsx)$/.test(id)) return undefined
 
-            // Only process source files that have styles
-            const css = manifest.files[id]
-            if (css === undefined) return undefined
+            // Apply source transforms (e.g. styledIdPlugin injects s-xxx IDs)
+            const transformed = context
+                ? await context.sourceTransform.transform(code, { filePath: id })
+                : code
 
-            const hash = fileHash(id)
-            const imports: string[] = []
-
-            // Import per-file CSS
-            imports.push(`import "${VIRTUAL_PREFIX}${hash}.css";`)
-
-            // Import global CSS (keyframes etc.) - bundler deduplicates
-            if (manifest.global) {
-                imports.push(`import "${GLOBAL_ID}";`)
+            // If this file has no CSS in the manifest, return transform result only
+            if (!manifest || manifest.files[id] === undefined) {
+                return transformed !== code ? { code: transformed, map: null } : undefined
             }
 
+            // Inject CSS import statements
+            const hash = fileHash(id)
+            const imports: string[] = [`import "${VIRTUAL_PREFIX}${hash}.css";`]
+            if (manifest.global) imports.push(`import "${GLOBAL_ID}";`)
+
             return {
-                code: imports.join("\n") + "\n" + code,
+                code: imports.join("\n") + "\n" + transformed,
                 map: null,
             }
         },

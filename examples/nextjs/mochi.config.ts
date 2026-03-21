@@ -1,7 +1,7 @@
-import { defineConfig } from "@mochi-css/config"
-import { styledIdPlugin } from "@mochi-css/builder"
+import { defineConfig, styledIdPlugin } from "@mochi-css/config"
 
 export default defineConfig({
-    outDir: ".mochi",
+    tmpDir: ".mochi",
+    splitCss: true,
     plugins: [styledIdPlugin()],
 })

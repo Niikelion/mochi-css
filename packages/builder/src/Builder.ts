@@ -23,73 +23,50 @@ export type CollectCssOptions = {
 
 export type RootEntry = string | { path: string; package: string }
 
-export type EsbuildBuild = {
-    onLoad(
-        options: { filter: RegExp; namespace?: string },
-        callback: (args: {
-            path: string
-        }) =>
-            | Promise<{ contents: string; loader?: string } | undefined>
-            | { contents: string; loader?: string }
-            | undefined,
-    ): void
-    onResolve(options: { filter: RegExp; namespace?: string }, callback: (args: unknown) => unknown): void
-}
-
-export type EsbuildPlugin = {
-    name: string
-    setup(build: EsbuildBuild): void | Promise<void>
-}
-
+/**
+ * Options for constructing a {@link Builder}.
+ *
+ * When used via an integration (Vite, PostCSS, Next.js), most of these fields are sourced
+ * from `mochi.config.ts` via `resolveConfig` — you typically only need to supply `bundler`
+ * and `runner` explicitly.
+ */
 export type BuilderOptions = {
+    /** Directories (or named root entries) scanned recursively for `.ts`/`.tsx` source files. */
     roots: RootEntry[]
+    /** Style extractors that identify and capture style function calls. Use `defaultExtractors` for vanilla Mochi CSS. */
     extractors: StyleExtractor[]
+    /**
+     * Bundler used to bundle the extracted minimal source code into a single executable module.
+     * Use `RolldownBundler` unless you need a custom bundler.
+     */
     bundler: Bundler
+    /**
+     * Runner used to execute the bundled code in an isolated context.
+     * Use `VmRunner` unless you need a custom runner.
+     */
     runner: Runner
-    splitBySource?: boolean
+    /** When `true`, CSS is split per source file instead of merged into one global output. Default: `false`. */
+    splitCss?: boolean
+    /** Callback invoked for warnings and non-fatal errors during extraction. */
     onDiagnostic?: OnDiagnostic
-    esbuildPlugins?: EsbuildPlugin[]
+    /** Preprocessing hook that runs on every loaded file before parsing. */
+    filePreProcess?(params: { content: string; filePath: string }): string | Promise<string>
 }
 
+/**
+ * Orchestrates the full Mochi CSS extraction pipeline:
+ * scan source files → build dependency graph → extract style call arguments
+ * → bundle → execute → generate CSS.
+ *
+ * Use {@link Builder.collectMochiCss} for the common case of getting CSS strings directly.
+ * Use {@link Builder.collectMochiStyles} when you need the raw generators before CSS is produced.
+ * Use {@link Builder.collectStylesFromModules} to supply pre-parsed modules (useful in tests).
+ */
 export class Builder {
     constructor(private options: BuilderOptions) {}
 
-    private loadHandlers:
-        | {
-              filter: RegExp
-              callback: (args: {
-                  path: string
-              }) =>
-                  | Promise<{ contents: string; loader?: string } | undefined>
-                  | { contents: string; loader?: string }
-                  | undefined
-          }[]
-        | undefined
-
-    private async getLoadHandlers() {
-        if (this.loadHandlers) return this.loadHandlers
-        this.loadHandlers = []
-        for (const plugin of this.options.esbuildPlugins ?? []) {
-            await plugin.setup({
-                onLoad: (opts, cb) => {
-                    this.loadHandlers?.push({ filter: opts.filter, callback: cb })
-                },
-                onResolve: () => {
-                    /* empty */
-                },
-            })
-        }
-        return this.loadHandlers
-    }
-
-    private async applyPlugins(source: string, filePath: string): Promise<string> {
-        const handlers = await this.getLoadHandlers()
-        for (const { filter, callback } of handlers) {
-            if (!filter.test(filePath)) continue
-            const result = await callback({ path: filePath })
-            if (result?.contents !== undefined) return result.contents
-        }
-        return source
+    private async preTransformFile(content: string, filePath: string): Promise<string> {
+        return this.options.filePreProcess ? await this.options.filePreProcess({ content, filePath }) : content
     }
 
     private async bundleFiles(files: Record<string, string | null>) {
@@ -243,7 +220,7 @@ export class Builder {
         const modules = await Promise.all(
             files.map(async (filePath) => {
                 const source = await fs.readFile(filePath, "utf8")
-                const transformed = await this.applyPlugins(source, filePath)
+                const transformed = await this.preTransformFile(source, filePath)
                 return transformed === source ? parseFile(filePath) : parseSource(transformed, filePath)
             }),
         )
@@ -272,7 +249,7 @@ export class Builder {
             }
         }
 
-        if (!this.options.splitBySource) {
+        if (!this.options.splitCss) {
             // Merge files into global CSS
             const allCss = [...globalCss]
             const sortedFiles = Object.keys(files).sort()

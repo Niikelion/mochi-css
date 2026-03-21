@@ -24,29 +24,22 @@ module.exports = {
 }
 ```
 
-Then create a `src/globals.css` file and import it in your project entry point. The plugin will scan your source files and inject all extracted Mochi-CSS styles into that file at build time.
+Then create a `src/globals.css` file and import it in your project entry point.
+The plugin will scan your source files and inject all extracted global styles into that file at build time.
 
 ---
 
 ## Options
 
-| Option         | Type               | Default             | Description                                                                            |
-|----------------|--------------------|---------------------|----------------------------------------------------------------------------------------|
-| `rootDir`      | `string`           | `"src"`             | Directory to scan for source files                                                     |
-| `globalCss`    | `RegExp`           | `/\/globals\.css$/` | Pattern that identifies the global CSS file to insert styles into                      |
-| `outDir`       | `string`           | —                   | When set, writes per-file CSS and a manifest to this directory (enables CSS splitting) |
-| `extractors`   | `StyleExtractor[]` | `defaultExtractors` | Controls which functions are extracted                                                 |
-| `bundler`      | `Bundler`          | `RolldownBundler`   | Bundler used to prepare source files for execution                                     |
-| `runner`       | `Runner`           | `VmRunner`          | Runner used to execute bundled source files                                            |
-| `onDiagnostic` | `OnDiagnostic`     | —                   | Callback for extracting diagnostics (warnings/errors)                                  |
+Most options are read automatically from `mochi.config.ts`.
+See [`@mochi-css/config`](../config/README.md) for the full list.
 
-### `rootDir`
+The following options are specific to the PostCSS plugin:
 
-Defines where the plugin looks for source files to scan. Adjust this if your sources live outside `src/`:
-
-```js
-'@mochi-css/postcss': { rootDir: 'app' }
-```
+| Option      | Type      | Default             | Description                                                                            |
+|-------------|-----------|---------------------|----------------------------------------------------------------------------------------|
+| `globalCss` | `RegExp`  | `/\/globals\.css$/` | Pattern that identifies the global CSS file to insert styles into                      |
+| `tmpDir`    | `string`  | -                   | When set, writes per-file CSS and a manifest to this directory (enables CSS splitting) |
 
 ### `globalCss`
 
@@ -56,13 +49,13 @@ Controls where Mochi-CSS inserts global styles. Useful when your globals file ha
 '@mochi-css/postcss': { globalCss: /\/base\.css$/ }
 ```
 
-### `outDir` — CSS splitting
+### `tmpDir` — CSS splitting
 
-When `outDir` is set, the plugin additionally writes per-source-file CSS to disk instead of inlining everything into the globals file.
+When `tmpDir` is set, the plugin additionally writes per-source-file CSS to disk instead of inlining everything into the globals file.
 This enables framework integrations (e.g. `@mochi-css/vite`, `@mochi-css/next`) to load only the styles needed for the current route.
 
 ```js
-'@mochi-css/postcss': { outDir: '.mochi' }
+'@mochi-css/postcss': { tmpDir: '.mochi' }
 ```
 
 After each build the output directory contains:
