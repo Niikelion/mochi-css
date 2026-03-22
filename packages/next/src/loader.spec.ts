@@ -1,41 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { createPatch } from "diff"
 
-const { mockTransform, mockLoadConfig, mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
-    mockTransform: vi.fn(async (source: string, _opts: { filePath: string }) => source),
-    mockLoadConfig: vi.fn(async () => ({})),
-    mockExistsSync: vi.fn((_p: string) => false),
+const { mockStatSync, mockReadFileSync } = vi.hoisted(() => ({
+    mockStatSync: vi.fn((_p: string) => undefined as { mtimeMs: number } | undefined),
     mockReadFileSync: vi.fn((_p: string, _enc: string) => "{}"),
-}))
-
-vi.mock("@mochi-css/config", () => ({
-    loadConfig: mockLoadConfig,
-    FullContext: class {
-        sourceTransform = {
-            transform: (source: string, opts: { filePath: string }) => mockTransform(source, opts),
-        }
-    },
 }))
 
 vi.mock("fs", () => ({
     default: {
-        existsSync: (p: string) => mockExistsSync(p),
+        statSync: (p: string, _opts?: unknown) => mockStatSync(p),
         readFileSync: (p: string, enc: string) => mockReadFileSync(p, enc),
     },
 }))
 
-import mochiLoader, { resetContext } from "./loader.js"
+import mochiLoader from "./loader.js"
 
-function makeCtx(overrides?: {
-    resourcePath?: string
-    manifestPath?: string
-    cwd?: string
-}) {
+let testMtime = 0
+function nextMtime() {
+    return ++testMtime
+}
+
+function makeCtx(overrides?: { resourcePath?: string; manifestPath?: string }) {
     const callback = vi.fn()
     const ctx = {
         resourcePath: overrides?.resourcePath ?? "/project/src/App.tsx",
         getOptions: () => ({
             manifestPath: overrides?.manifestPath ?? "/project/.mochi/manifest.json",
-            cwd: overrides?.cwd,
         }),
         addDependency: vi.fn(),
         async: () => callback,
@@ -46,54 +36,101 @@ function makeCtx(overrides?: {
 describe("mochiLoader", () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        resetContext()
-        mockLoadConfig.mockResolvedValue({})
-        mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source)
-        mockExistsSync.mockReturnValue(false)
+        mockStatSync.mockReturnValue(undefined)
     })
 
-    it("passes source through unchanged when no plugins", async () => {
+    it("passes source through unchanged when manifest does not exist", () => {
         const { ctx, callback } = makeCtx()
         mochiLoader.call(ctx, "const x = 1")
-
-        await vi.waitUntil(() => callback.mock.calls.length > 0)
         expect(callback).toHaveBeenCalledWith(null, "const x = 1")
     })
 
-    it("applies source transform from plugin", async () => {
-        mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source + "\n//transformed")
+    it("passes source through unchanged when manifest has no sourcemod for this file", () => {
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(JSON.stringify({ files: {} }))
 
         const { ctx, callback } = makeCtx()
         mochiLoader.call(ctx, "const x = 1")
-
-        await vi.waitUntil(() => callback.mock.calls.length > 0)
-        expect(callback).toHaveBeenCalledWith(null, "const x = 1\n//transformed")
+        expect(callback).toHaveBeenCalledWith(null, "const x = 1")
     })
 
-    it("injects CSS import after transform", async () => {
+    it("applies sourcemod from manifest", () => {
+        const resourcePath = "/project/src/App.tsx"
+        const original = "const x = 1\n"
+        const modified = "const x = 2\n"
+        const sourcemod = createPatch(resourcePath, original, modified)
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({ files: {}, sourcemods: { [resourcePath]: sourcemod } }),
+        )
+
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, original)
+        expect(callback).toHaveBeenCalledWith(null, modified)
+    })
+
+    it("passes source through unchanged when sourcemod does not apply (stale)", () => {
+        const resourcePath = "/project/src/App.tsx"
+        const original = "const x = 1\n"
+        const staleSource = "const old = 0\n"
+        const sourcemod = createPatch(resourcePath, staleSource, staleSource + "//extra\n")
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({ files: {}, sourcemods: { [resourcePath]: sourcemod } }),
+        )
+
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, original)
+        // applyPatch returns false when patch doesn't apply — falls back to original
+        expect(callback).toHaveBeenCalledWith(null, original)
+    })
+
+    it("injects CSS import from manifest", () => {
         const manifestPath = "/project/.mochi/manifest.json"
         const resourcePath = "/project/src/App.tsx"
 
-        mockExistsSync.mockReturnValue(true)
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(
             JSON.stringify({ files: { [resourcePath]: "/project/.mochi/abc123.css" } }),
         )
-        mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source + "\n//transformed")
 
         const { ctx, callback } = makeCtx({ resourcePath, manifestPath })
         mochiLoader.call(ctx, "const x = 1")
 
-        await vi.waitUntil(() => callback.mock.calls.length > 0)
         const result = callback.mock.calls[0]?.[1] as string
-        expect(result).toContain("//transformed")
         expect(result).toContain("abc123.css")
     })
 
-    it("injects global CSS import when manifest has global styles", async () => {
+    it("injects CSS import with sourcemod applied", () => {
+        const manifestPath = "/project/.mochi/manifest.json"
+        const resourcePath = "/project/src/App.tsx"
+        const original = "const x = 1\n"
+        const modified = "const x = 2\n"
+        const sourcemod = createPatch(resourcePath, original, modified)
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({
+                files: { [resourcePath]: "/project/.mochi/abc123.css" },
+                sourcemods: { [resourcePath]: sourcemod },
+            }),
+        )
+
+        const { ctx, callback } = makeCtx({ resourcePath, manifestPath })
+        mochiLoader.call(ctx, original)
+
+        const result = callback.mock.calls[0]?.[1] as string
+        expect(result).toContain("abc123.css")
+        expect(result).toContain("const x = 2")
+    })
+
+    it("injects global CSS import when manifest has global styles", () => {
         const manifestPath = "/project/.mochi/manifest.json"
         const resourcePath = "/project/src/App.tsx"
 
-        mockExistsSync.mockReturnValue(true)
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(
             JSON.stringify({
                 files: { [resourcePath]: "/project/.mochi/abc123.css" },
@@ -104,55 +141,64 @@ describe("mochiLoader", () => {
         const { ctx, callback } = makeCtx({ resourcePath, manifestPath })
         mochiLoader.call(ctx, "const x = 1")
 
-        await vi.waitUntil(() => callback.mock.calls.length > 0)
         const result = callback.mock.calls[0]?.[1] as string
         expect(result).toContain("abc123.css")
         expect(result).toContain("global.css")
     })
 
-    it("tracks manifest and CSS file as webpack dependencies", async () => {
+    it("tracks manifest and CSS file as webpack dependencies", () => {
         const manifestPath = "/project/.mochi/manifest.json"
         const resourcePath = "/project/src/App.tsx"
 
-        mockExistsSync.mockReturnValue(true)
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(
             JSON.stringify({ files: { [resourcePath]: "/project/.mochi/abc123.css" } }),
         )
 
-        const { ctx, callback } = makeCtx({ resourcePath, manifestPath })
+        const { ctx } = makeCtx({ resourcePath, manifestPath })
         mochiLoader.call(ctx, "const x = 1")
 
-        await vi.waitUntil(() => callback.mock.calls.length > 0)
         expect(ctx.addDependency).toHaveBeenCalledWith(manifestPath)
         expect(ctx.addDependency).toHaveBeenCalledWith(expect.stringContaining("abc123.css"))
     })
 
-    it("resetContext() clears the singleton so next call uses fresh config", async () => {
-        // First call — uses passthrough transform
-        const { ctx: ctx1, callback: cb1 } = makeCtx()
-        mochiLoader.call(ctx1, "first")
-        await vi.waitUntil(() => cb1.mock.calls.length > 0)
-        expect(cb1).toHaveBeenCalledWith(null, "first")
-
-        // Reset and set up a transform for the second call
-        resetContext()
-        mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source + "//v2")
-
-        const { ctx: ctx2, callback: cb2 } = makeCtx()
-        mochiLoader.call(ctx2, "second")
-        await vi.waitUntil(() => cb2.mock.calls.length > 0)
-        expect(cb2).toHaveBeenCalledWith(null, "second//v2")
-    })
-
-    it("calls callback with error when initContext rejects", async () => {
-        mockLoadConfig.mockRejectedValue(new Error("config load failed"))
+    it("calls callback with error when manifest is invalid JSON", () => {
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue("not valid json")
 
         const { ctx, callback } = makeCtx()
         mochiLoader.call(ctx, "const x = 1")
 
-        await vi.waitUntil(() => callback.mock.calls.length > 0)
-        const err = callback.mock.calls[0]?.[0]
-        expect(err).toBeInstanceOf(Error)
-        expect((err as Error).message).toBe("config load failed")
+        expect(callback.mock.calls[0]?.[0]).toBeInstanceOf(Error)
+    })
+
+    it("caches manifest across calls with the same mtime", () => {
+        const manifestPath = "/project/.mochi/manifest.json"
+        const mtime = nextMtime()
+        mockStatSync.mockReturnValue({ mtimeMs: mtime })
+        mockReadFileSync.mockReturnValue(JSON.stringify({ files: {} }))
+
+        const { ctx: ctx1 } = makeCtx({ manifestPath })
+        const { ctx: ctx2 } = makeCtx({ manifestPath })
+        mochiLoader.call(ctx1, "const x = 1")
+        mochiLoader.call(ctx2, "const x = 2")
+
+        // readFileSync called only once — second invocation used the cache
+        expect(mockReadFileSync).toHaveBeenCalledTimes(1)
+    })
+
+    it("re-reads manifest when mtime changes", () => {
+        const manifestPath = "/project/.mochi/manifest.json"
+        mockReadFileSync.mockReturnValue(JSON.stringify({ files: {} }))
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        const { ctx: ctx1 } = makeCtx({ manifestPath })
+        mochiLoader.call(ctx1, "const x = 1")
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        const { ctx: ctx2 } = makeCtx({ manifestPath })
+        mochiLoader.call(ctx2, "const x = 2")
+
+        expect(mockReadFileSync).toHaveBeenCalledTimes(2)
     })
 })

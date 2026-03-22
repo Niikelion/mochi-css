@@ -1,5 +1,6 @@
 import path from "path"
 import fs from "fs/promises"
+import { createPatch } from "diff"
 import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
 import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
@@ -217,21 +218,27 @@ export class Builder {
             }
         }
 
+        const sourcemods: Record<string, string> = {}
+
         const modules = await Promise.all(
             files.map(async (filePath) => {
                 const source = await fs.readFile(filePath, "utf8")
                 const transformed = await this.preTransformFile(source, filePath)
+                if (transformed !== source) {
+                    sourcemods[filePath] = createPatch(filePath, source, transformed)
+                }
                 return transformed === source ? parseFile(filePath) : parseSource(transformed, filePath)
             }),
         )
 
-        return await this.collectStylesFromModules(modules)
+        const generators = await this.collectStylesFromModules(modules)
+        return { generators, sourcemods }
     }
 
     public async collectMochiCss(
         options?: CollectCssOptions,
-    ): Promise<{ global?: string; files?: Record<string, string> }> {
-        const generators = await this.collectMochiStyles(options?.onDep)
+    ): Promise<{ global?: string; files?: Record<string, string>; sourcemods?: Record<string, string> }> {
+        const { generators, sourcemods } = await this.collectMochiStyles(options?.onDep)
 
         // Collect and merge results from all generators
         const globalCss: string[] = []
@@ -249,6 +256,8 @@ export class Builder {
             }
         }
 
+        const resultSourcemods = Object.keys(sourcemods).length > 0 ? sourcemods : undefined
+
         if (!this.options.splitCss) {
             // Merge files into global CSS
             const allCss = [...globalCss]
@@ -259,12 +268,14 @@ export class Builder {
             }
             return {
                 global: allCss.length > 0 ? allCss.join("\n\n") : undefined,
+                sourcemods: resultSourcemods,
             }
         }
 
         return {
             global: globalCss.length > 0 ? globalCss.join("\n\n") : undefined,
             files: Object.keys(files).length > 0 ? files : undefined,
+            sourcemods: resultSourcemods,
         }
     }
 }

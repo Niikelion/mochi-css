@@ -316,7 +316,7 @@ describe("Builder", () => {
                 splitCss: true,
             })
 
-            const generators = await builder.collectMochiStyles()
+            const { generators } = await builder.collectMochiStyles()
             const generator = generators.get("@mochi-css/vanilla:css")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
@@ -349,7 +349,7 @@ describe("Builder", () => {
                 splitCss: true,
             })
 
-            const generators = await builder.collectMochiStyles()
+            const { generators } = await builder.collectMochiStyles()
             const generator = generators.get("@mochi-css/vanilla:css")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
@@ -382,7 +382,7 @@ describe("Builder", () => {
                     content.replace("// REPLACE_ME", `export const x = css({ color: "purple" })`),
             })
 
-            const generators = await builder.collectMochiStyles()
+            const { generators } = await builder.collectMochiStyles()
             const generator = generators.get("@mochi-css/vanilla:css")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)

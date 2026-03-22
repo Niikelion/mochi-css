@@ -1,5 +1,6 @@
 import path from "path"
 import { NextConfig } from "next"
+import { startCssWatcher } from "./watcher.js"
 
 const MOCHI_DIR = ".mochi"
 const MANIFEST_FILE = "manifest.json"
@@ -25,6 +26,13 @@ export type MochiNextOptions = {
  */
 export function withMochi(nextConfig: NextConfig, opts?: MochiNextOptions): NextConfig {
     const manifestPath = opts?.manifestPath ?? path.resolve(MOCHI_DIR, MANIFEST_FILE)
+
+    if (process.env.NODE_ENV !== "production") {
+        const tmpDir = path.dirname(manifestPath)
+        startCssWatcher(tmpDir).catch(err => {
+            console.error("[mochi-css] watcher error:", err instanceof Error ? err.message : err)
+        })
+    }
     const loaderPath = require.resolve("@mochi-css/next/loader")
 
     const loaderRule = {

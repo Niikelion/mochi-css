@@ -11,6 +11,16 @@ import {
 } from "@mochi-css/builder"
 import { loadConfig, resolveConfig, mergeCallbacks, FullContext, type Config } from "@mochi-css/config"
 
+async function writeIfChanged(filePath: string, content: string): Promise<void> {
+    try {
+        const existing = await fs.promises.readFile(filePath, "utf-8")
+        if (existing === content) return
+    } catch {
+        // file doesn't exist yet — fall through to write
+    }
+    await fs.promises.writeFile(filePath, content, "utf-8")
+}
+
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
     return path.extname(filePath ?? "") === '.css'
@@ -19,6 +29,7 @@ function isValidCssFilePath(file: string) {
 type DiskManifest = {
     global?: string
     files: Record<string, string>
+    sourcemods?: Record<string, string>
 }
 
 /**
@@ -154,19 +165,19 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                     .map(f => path.resolve(tmpDir, f))
             )
 
-            const diskManifest: DiskManifest = { files: {} }
+            const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
             const writtenCssPaths = new Set<string>()
 
             if (css.global) {
                 const globalPath = path.resolve(tmpDir, "global.css")
-                await fs.promises.writeFile(globalPath, css.global, "utf-8")
+                await writeIfChanged(globalPath, css.global)
                 diskManifest.global = globalPath
             }
 
             for (const [source, fileCss] of Object.entries(css.files ?? {})) {
                 const hash = fileHash(source)
                 const cssPath = path.resolve(tmpDir, `${hash}.css`)
-                await fs.promises.writeFile(cssPath, fileCss, "utf-8")
+                await writeIfChanged(cssPath, fileCss)
                 diskManifest.files[source] = cssPath
                 writtenCssPaths.add(cssPath)
             }
@@ -178,7 +189,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             }
 
             const manifestPath = path.resolve(tmpDir, "manifest.json")
-            await fs.promises.writeFile(manifestPath, JSON.stringify(diskManifest), "utf-8")
+            await writeIfChanged(manifestPath, JSON.stringify(diskManifest))
         }
     }
 

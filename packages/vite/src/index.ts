@@ -1,4 +1,5 @@
-import type { Plugin } from "vite"
+import { applyPatch } from "diff"
+import type { Plugin, ViteDevServer } from "vite"
 import {
     Builder,
     BuilderOptions,
@@ -48,6 +49,8 @@ export type MochiViteOptions = Partial<BuilderOptions> & Pick<Config, "plugins">
 export function mochiCss(opts?: MochiViteOptions): Plugin {
     let resolved: Config | undefined
     let context: FullContext | undefined
+    let builder: Builder | undefined
+    let server: ViteDevServer | undefined
 
     let manifest: MochiManifest | undefined
     // Map from hash to source path for resolving virtual modules
@@ -84,9 +87,14 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 filePreProcess: ({ content, filePath }) => buildContext.sourceTransform.transform(content, { filePath }),
             }
 
-            const builder = new Builder(options)
+            builder = new Builder(options)
             const result = await builder.collectMochiCss()
-            manifest = { global: result.global, files: result.files ?? {} }
+            // Normalize keys to forward slashes so Vite's id values (always forward-slash) match on Windows
+            const normalizedFiles: Record<string, string> = {}
+            for (const [source, css] of Object.entries(result.files ?? {})) {
+                normalizedFiles[source.replaceAll("\\", "/")] = css
+            }
+            manifest = { global: result.global, files: normalizedFiles, sourcemods: result.sourcemods }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -121,27 +129,91 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             return undefined
         },
 
+        configureServer(s) {
+            server = s
+        },
+
+        async handleHotUpdate(ctx) {
+            if (!/\.(ts|tsx|js|jsx)$/.test(ctx.file)) return
+            if (!context || !builder || !manifest) return
+
+            const oldManifest = manifest
+
+            const result = await builder.collectMochiCss()
+            const normalizedFiles: Record<string, string> = {}
+            for (const [source, css] of Object.entries(result.files ?? {})) {
+                normalizedFiles[source.replaceAll("\\", "/")] = css
+            }
+            manifest = { global: result.global, files: normalizedFiles, sourcemods: result.sourcemods }
+
+            hashToSource.clear()
+            for (const source of Object.keys(manifest.files)) {
+                hashToSource.set(fileHash(source), source)
+            }
+
+            const invalidated: NonNullable<ReturnType<typeof ctx.server.moduleGraph.getModuleById>>[] = []
+
+            if (oldManifest.global !== manifest.global) {
+                const mod = ctx.server.moduleGraph.getModuleById(RESOLVED_GLOBAL_ID)
+                if (mod) {
+                    ctx.server.moduleGraph.invalidateModule(mod)
+                    invalidated.push(mod)
+                }
+            }
+
+            const allSources = new Set([
+                ...Object.keys(oldManifest.files),
+                ...Object.keys(manifest.files),
+            ])
+            for (const source of allSources) {
+                if (oldManifest.files[source] !== manifest.files[source]) {
+                    const hash = fileHash(source)
+                    const mod = ctx.server.moduleGraph.getModuleById(`${RESOLVED_PREFIX}${hash}.css`)
+                    if (mod) {
+                        ctx.server.moduleGraph.invalidateModule(mod)
+                        invalidated.push(mod)
+                    }
+                }
+            }
+
+            return [...ctx.modules, ...invalidated]
+        },
+
+        async watchChange(id, change) {
+            if (change.event !== "delete") return
+            if (!/\.(ts|tsx|js|jsx)$/.test(id)) return
+            if (!manifest) return
+
+            delete manifest.files[id]
+            delete manifest.sourcemods?.[id]
+            hashToSource.delete(fileHash(id))
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(server?.hot ?? (server as any)?.ws)?.send({ type: "full-reload" })
+        },
+
         async transform(code, id) {
             // Skip non-source files (CSS, JSON, assets, etc.)
             if (!/\.(ts|tsx|js|jsx)$/.test(id)) return undefined
 
-            // Apply source transforms (e.g. styledIdPlugin injects s-xxx IDs)
-            const transformed = context
-                ? await context.sourceTransform.transform(code, { filePath: id })
-                : code
+            // Vite normalizes ids to forward slashes; manifest keys are also normalized in buildStart
+            const normalizedId = id.replaceAll("\\", "/")
+
+            // Apply sourcemod from manifest (produced by builder at build time, refreshed by handleHotUpdate)
+            const sourcemod = manifest?.sourcemods?.[normalizedId]
+            const transformed = sourcemod ? (applyPatch(code, sourcemod) || code) : code
 
             // If this file has no CSS in the manifest, return transform result only
-            if (!manifest || manifest.files[id] === undefined) {
-                return transformed !== code ? { code: transformed, map: null } : undefined
+            if (!manifest || manifest.files[normalizedId] === undefined) {
+                return transformed !== code ? { code: transformed as string, map: null } : undefined
             }
 
             // Inject CSS import statements
-            const hash = fileHash(id)
+            const hash = fileHash(normalizedId)
             const imports: string[] = [`import "${VIRTUAL_PREFIX}${hash}.css";`]
             if (manifest.global) imports.push(`import "${GLOBAL_ID}";`)
 
             return {
-                code: imports.join("\n") + "\n" + transformed,
+                code: imports.join("\n") + "\n" + (transformed as string),
                 map: null,
             }
         },

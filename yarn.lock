@@ -1205,8 +1205,10 @@ __metadata:
     "@mochi-css/vanilla": "npm:^2.1.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
+    "@types/diff": "npm:^8.0.0"
     "@types/node": "npm:^24.8.1"
     dedent: "npm:^1.7.1"
+    diff: "npm:^8.0.3"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
     rolldown: "npm:1.0.0-beta.59"
@@ -1247,7 +1249,9 @@ __metadata:
     "@mochi-css/config": "npm:^2.1.0"
     "@mochi-css/shared-config": "npm:^1.0.0"
     "@mochi-css/test": "npm:^1.0.0"
+    "@types/diff": "npm:^8.0.0"
     "@types/node": "npm:^24.8.1"
+    diff: "npm:^8.0.3"
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.0.15"
   peerDependencies:
@@ -1408,7 +1412,9 @@ __metadata:
     "@mochi-css/config": "npm:^2.1.0"
     "@mochi-css/shared-config": "npm:^1.0.0"
     "@mochi-css/test": "npm:^1.0.0"
+    "@types/diff": "npm:^8.0.0"
     "@types/node": "npm:^24.8.1"
+    diff: "npm:^8.0.3"
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.0.15"
   peerDependencies:
@@ -2201,6 +2207,15 @@ __metadata:
   version: 4.0.2
   resolution: "@types/deep-eql@npm:4.0.2"
   checksum: 10c0/bf3f811843117900d7084b9d0c852da9a044d12eb40e6de73b552598a6843c21291a8a381b0532644574beecd5e3491c5ff3a0365ab86b15d59862c025384844
+  languageName: node
+  linkType: hard
+
+"@types/diff@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "@types/diff@npm:8.0.0"
+  dependencies:
+    diff: "npm:*"
+  checksum: 10c0/c6e3376abeac8bc77b33252afc239a3cfc2729ecf59abcf00fa0f0eca8c505fd3a375a99a64afecdbb97fbec77b9a6aa8a8918f4d53fd5b45638d609343717cc
   languageName: node
   linkType: hard
 
@@ -3498,6 +3513,13 @@ __metadata:
   version: 2.1.2
   resolution: "detect-libc@npm:2.1.2"
   checksum: 10c0/acc675c29a5649fa1fb6e255f993b8ee829e510b6b56b0910666949c80c364738833417d0edb5f90e4e46be17228b0f2b66a010513984e18b15deeeac49369c4
+  languageName: node
+  linkType: hard
+
+"diff@npm:*, diff@npm:^8.0.3":
+  version: 8.0.3
+  resolution: "diff@npm:8.0.3"
+  checksum: 10c0/d29321c70d3545fdcb56c5fdd76028c3f04c012462779e062303d4c3c531af80d2c360c26b871e6e2b9a971d2422d47e1779a859106c4cac4b5d2d143df70e20
   languageName: node
   linkType: hard
 

@@ -12,6 +12,7 @@ export interface Config {
     onDiagnostic?: OnDiagnostic
     plugins: Plugin<Config>[]
     tmpDir?: string
+    debug?: boolean
 }
 
 export type MochiPlugin = Plugin<Config>
@@ -33,6 +34,8 @@ export async function resolveConfig(
         splitCss: inlineConfig?.splitCss ?? fileConfig.splitCss ?? defaults?.splitCss ?? false,
         onDiagnostic: mergeCallbacks(fileConfig.onDiagnostic, inlineConfig?.onDiagnostic),
         plugins,
+        tmpDir: inlineConfig?.tmpDir ?? fileConfig.tmpDir ?? defaults?.tmpDir,
+        debug: inlineConfig?.debug ?? fileConfig.debug ?? defaults?.debug,
     }
 
     return await makePipeline(
