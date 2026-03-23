@@ -1,4 +1,3 @@
-import { applyPatch } from "diff"
 import type { Plugin, ViteDevServer } from "vite"
 import {
     Builder,
@@ -84,7 +83,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 runner: opts?.runner ?? new VmRunner(),
                 splitCss: resolved.splitCss,
                 onDiagnostic: resolved.onDiagnostic,
-                filePreProcess: ({ content, filePath }) => buildContext.sourceTransform.transform(content, { filePath }),
+                astPostProcessors: buildContext.getAnalysisHooks(),
             }
 
             builder = new Builder(options)
@@ -94,7 +93,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             for (const [source, css] of Object.entries(result.files ?? {})) {
                 normalizedFiles[source.replaceAll("\\", "/")] = css
             }
-            manifest = { global: result.global, files: normalizedFiles, sourcemods: result.sourcemods }
+            manifest = { global: result.global, files: normalizedFiles }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -144,7 +143,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             for (const [source, css] of Object.entries(result.files ?? {})) {
                 normalizedFiles[source.replaceAll("\\", "/")] = css
             }
-            manifest = { global: result.global, files: normalizedFiles, sourcemods: result.sourcemods }
+            manifest = { global: result.global, files: normalizedFiles }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -185,7 +184,6 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             if (!manifest) return
 
             delete manifest.files[id]
-            delete manifest.sourcemods?.[id]
             hashToSource.delete(fileHash(id))
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ;(server?.hot ?? (server as any)?.ws)?.send({ type: "full-reload" })
@@ -194,13 +192,13 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
         async transform(code, id) {
             // Skip non-source files (CSS, JSON, assets, etc.)
             if (!/\.(ts|tsx|js|jsx)$/.test(id)) return undefined
+            if (!context) return undefined
 
             // Vite normalizes ids to forward slashes; manifest keys are also normalized in buildStart
             const normalizedId = id.replaceAll("\\", "/")
 
-            // Apply sourcemod from manifest (produced by builder at build time, refreshed by handleHotUpdate)
-            const sourcemod = manifest?.sourcemods?.[normalizedId]
-            const transformed = sourcemod ? (applyPatch(code, sourcemod) || code) : code
+            // Apply registered source transforms (e.g. styledIdPlugin for runtime s- id injection)
+            const transformed = await context.sourceTransform.transform(code, { filePath: normalizedId })
 
             // If this file has no CSS in the manifest, return transform result only
             if (!manifest || manifest.files[normalizedId] === undefined) {

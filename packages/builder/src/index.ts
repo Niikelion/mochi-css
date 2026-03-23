@@ -14,7 +14,9 @@ export const defaultExtractors = [
 
 export * from "./Bundler"
 export * from "./Runner"
+export * from "./ProjectIndex"
 export * from "./Builder"
+export * from "./AstProxy"
 export * from "./findAllFiles"
 export * from "./extractRelevantSymbols"
 export * from "./moduleMinimizer"

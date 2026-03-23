@@ -1,14 +1,14 @@
 import * as SWC from "@swc/core"
 import { shortHash } from "@mochi-css/vanilla"
 
-const STABLE_ID_RE = /^s-[0-9A-Za-z_-]+$/
+export const STABLE_ID_RE = /^s-[0-9A-Za-z_-]+$/
 
-type StyledCall = {
+export type StyledCall = {
     call: SWC.CallExpression
     varName: string | null
 }
 
-function collectStyledCalls(ast: SWC.Module): StyledCall[] {
+export function collectStyledCalls(ast: SWC.Module): StyledCall[] {
     const results: StyledCall[] = []
 
     function visitExpr(expr: SWC.Expression, varName: string | null): void {

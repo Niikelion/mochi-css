@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { FullContext } from "./Context"
+import type { AstPostProcessor } from "@mochi-css/builder"
 
 describe("FullContext", () => {
     it("exposes a sourceTransform pipeline", () => {
@@ -60,5 +61,37 @@ describe("FullContext", () => {
         const ctx1 = new FullContext()
         const ctx2 = new FullContext()
         expect(ctx1.sourceTransform).not.toBe(ctx2.sourceTransform)
+    })
+
+    it("exposes an analysisTransform hook provider", () => {
+        const ctx = new FullContext()
+        expect(ctx.analysisTransform).toBeDefined()
+        expect(typeof ctx.analysisTransform.register).toBe("function")
+    })
+
+    it("getAnalysisHooks returns registered hooks", () => {
+        const ctx = new FullContext()
+        const hook = vi.fn()
+        ctx.analysisTransform.register(hook)
+        const hooks = ctx.getAnalysisHooks()
+        expect(hooks).toHaveLength(1)
+        expect(typeof hooks[0]).toBe("function")
+    })
+
+    it("getAnalysisHooks returns each registered hook directly", async () => {
+        const ctx = new FullContext()
+        const hook = vi.fn<AstPostProcessor>()
+        ctx.analysisTransform.register(hook)
+        const hooks = ctx.getAnalysisHooks()
+        const fakeIndex = {} as Parameters<AstPostProcessor>[0]
+        const fakeContext = {} as Parameters<AstPostProcessor>[1]
+        await hooks[0]?.(fakeIndex, fakeContext)
+        expect(hook).toHaveBeenCalledWith(fakeIndex, fakeContext)
+    })
+
+    it("creates an independent analysisTransform per FullContext instance", () => {
+        const ctx1 = new FullContext()
+        const ctx2 = new FullContext()
+        expect(ctx1.analysisTransform).not.toBe(ctx2.analysisTransform)
     })
 })

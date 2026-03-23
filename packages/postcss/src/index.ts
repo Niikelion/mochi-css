@@ -120,6 +120,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                 runner: opts?.runner ?? defaultOptions.runner,
                 splitCss: resolved.splitCss,
                 filePreProcess: ({ content, filePath }) => context.sourceTransform.transform(content, { filePath }),
+                astPostProcessors: context.getAnalysisHooks(),
             })
         }
 

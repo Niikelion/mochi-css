@@ -11,6 +11,13 @@ import { StyleGenerator } from "@/generators/StyleGenerator"
 import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
 import { getExtractorId, extractRelevantSymbols } from "@/extractRelevantSymbols"
+import { wrapIndexWithProxies } from "@/AstProxy"
+
+export type AnalysisContext = {
+    onDiagnostic?: OnDiagnostic
+}
+
+export type AstPostProcessor = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
 
 const rootFileSuffix = dedent`
     declare global {
@@ -52,6 +59,8 @@ export type BuilderOptions = {
     onDiagnostic?: OnDiagnostic
     /** Preprocessing hook that runs on every loaded file before parsing. */
     filePreProcess?(params: { content: string; filePath: string }): string | Promise<string>
+    /** Handlers that run after analysis, before CSS generation. Each handler may mutate AST nodes via a proxy layer. */
+    astPostProcessors?: AstPostProcessor[]
 }
 
 /**
@@ -192,6 +201,18 @@ export class Builder {
         const index = new ProjectIndex(modules, this.options.extractors, resolveImport, onDiagnostic)
         index.discoverCrossFileDerivedExtractors()
         index.propagateUsages()
+
+        for (const handler of this.options.astPostProcessors ?? []) {
+            const proxied = wrapIndexWithProxies(index)
+            await handler(index, { onDiagnostic })
+            const dirtyFiles = proxied.getDirtyFiles()
+            if (dirtyFiles.size === 0) continue
+            index.reanalyzeFiles(dirtyFiles)
+            index.resetCrossFileState()
+            index.discoverCrossFileDerivedExtractors()
+            index.propagateUsages()
+        }
+
         const resultingFiles = extractRelevantSymbols(index)
 
         // Create a generator for each extractor

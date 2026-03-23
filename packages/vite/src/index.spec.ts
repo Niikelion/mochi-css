@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { createPatch } from "diff"
 
 const { mockTransform, mockLoadConfig, mockCollectMochiCss } = vi.hoisted(() => ({
     mockTransform: vi.fn(async (source: string, _opts: { filePath: string }) => source),
     mockLoadConfig: vi.fn(async () => ({})),
-    mockCollectMochiCss: vi.fn(async (): Promise<{ files: Record<string, string>; global: string | undefined; sourcemods?: Record<string, string> }> => ({ files: {}, global: undefined })),
+    mockCollectMochiCss: vi.fn(async (): Promise<{ files: Record<string, string>; global: string | undefined }> => ({ files: {}, global: undefined })),
 }))
 
 vi.mock("@mochi-css/config", () => ({
@@ -20,6 +19,9 @@ vi.mock("@mochi-css/config", () => ({
     FullContext: class {
         sourceTransform = {
             transform: (source: string, opts: { filePath: string }) => mockTransform(source, opts),
+        }
+        getAnalysisHooks() {
+            return []
         }
     },
 }))
@@ -90,7 +92,7 @@ describe("mochiCss vite plugin transform", () => {
         mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source)
     })
 
-    async function setupPlugin(manifestOverride?: { files: Record<string, string>; global: string | undefined; sourcemods?: Record<string, string> }) {
+    async function setupPlugin(manifestOverride?: { files: Record<string, string>; global: string | undefined }) {
         const plugin = mochiCss()
         const hooks = getHooks(plugin)
 
@@ -104,13 +106,11 @@ describe("mochiCss vite plugin transform", () => {
         return hooks
     }
 
-    it("applies sourcemod from manifest to source files", async () => {
-        const original = "const x = 1\n"
-        const modified = "const x = 1\n//transformed\n"
-        const sourcemod = createPatch("/src/App.tsx", original, modified)
-        const hooks = await setupPlugin({ files: {}, global: undefined, sourcemods: { "/src/App.tsx": sourcemod } })
+    it("applies source transform to source files", async () => {
+        mockTransform.mockImplementation(async (source: string) => source + "//transformed")
+        const hooks = await setupPlugin({ files: {}, global: undefined })
 
-        const result = await hooks.transform(original, "/src/App.tsx")
+        const result = await hooks.transform("const x = 1", "/src/App.tsx")
         expect(result).not.toBeUndefined()
         expect(result?.code).toContain("//transformed")
     })
@@ -123,17 +123,14 @@ describe("mochiCss vite plugin transform", () => {
         expect(result).toBeUndefined()
     })
 
-    it("injects CSS import alongside sourcemod", async () => {
-        const original = "const x = 1\n"
-        const modified = "const x = 1\n//transformed\n"
-        const sourcemod = createPatch("/src/App.tsx", original, modified)
+    it("injects CSS import alongside source transform", async () => {
+        mockTransform.mockImplementation(async (source: string) => source + "//transformed")
         const hooks = await setupPlugin({
             files: { "/src/App.tsx": ".s-abc { color: red; }" },
             global: undefined,
-            sourcemods: { "/src/App.tsx": sourcemod },
         })
 
-        const result = await hooks.transform(original, "/src/App.tsx")
+        const result = await hooks.transform("const x = 1", "/src/App.tsx")
         expect(result).not.toBeUndefined()
         expect(result?.code).toContain("//transformed")
         expect(result?.code).toContain("virtual:mochi-css/")

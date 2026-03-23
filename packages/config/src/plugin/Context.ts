@@ -4,6 +4,7 @@ import {
     TransformationHookProvider,
 } from "./TransformationPipeline"
 import { globExToRegex } from "./globEx"
+import type { AstPostProcessor } from "@mochi-css/builder"
 
 type FileTransformOptions = {
     filePath: string
@@ -32,10 +33,32 @@ function makeFilePipeline(): FilteredTransformationPipeline<string, FileTransfor
     return new FilteredTransformationPipeline<string, FileTransformData, [FileTransformOptions]>(fileFilter)
 }
 
+export interface AnalysisTransformHookProvider {
+    register(hook: AstPostProcessor): void
+}
+
+class AnalysisHookCollector implements AnalysisTransformHookProvider {
+    private readonly hooks: AstPostProcessor[] = []
+
+    register(hook: AstPostProcessor): void {
+        this.hooks.push(hook)
+    }
+
+    getHooks(): AstPostProcessor[] {
+        return [...this.hooks]
+    }
+}
+
 export interface PluginContext {
     readonly sourceTransform: FileTransformationHookProvider
+    readonly analysisTransform: AnalysisTransformHookProvider
 }
 
 export class FullContext implements PluginContext {
     readonly sourceTransform = makeFilePipeline()
+    readonly analysisTransform = new AnalysisHookCollector()
+
+    public getAnalysisHooks(): AstPostProcessor[] {
+        return this.analysisTransform.getHooks()
+    }
 }
