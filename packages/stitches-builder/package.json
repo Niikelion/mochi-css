@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/stitches-builder",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -30,7 +30,7 @@
     "dependencies": {
         "@mochi-css/builder": "^3.0.0",
         "@mochi-css/config": "^3.0.0",
-        "@mochi-css/stitches": "^0.0.0"
+        "@mochi-css/stitches": "^0.1.0"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",
