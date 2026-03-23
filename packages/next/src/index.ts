@@ -27,7 +27,7 @@ export type MochiNextOptions = {
 export function withMochi(nextConfig: NextConfig, opts?: MochiNextOptions): NextConfig {
     const manifestPath = opts?.manifestPath ?? path.resolve(MOCHI_DIR, MANIFEST_FILE)
 
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env["NODE_ENV"] !== "production") {
         const tmpDir = path.dirname(manifestPath)
         startCssWatcher(tmpDir).catch(err => {
             console.error("[mochi-css] watcher error:", err instanceof Error ? err.message : err)
