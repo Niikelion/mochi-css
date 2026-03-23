@@ -1,3 +1,3 @@
 
-import { prettierConfig } from "@mochi-css/config/prettier"
+import { prettierConfig } from "@mochi-css/shared-config/prettier"
 export default prettierConfig

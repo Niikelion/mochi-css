@@ -3,7 +3,9 @@ import fs from "fs/promises"
 import * as p from "@clack/prompts"
 import { parseModule, generateCode } from "magicast"
 import type { Module, ModuleContext } from "@/types"
-import { getPropKeyName, type ObjNode } from "./ast"
+import { mochiPackage } from "@/version"
+import { getPluginsElements, type ObjNode } from "./ast"
+import dedent from "dedent"
 
 const viteConfigNames = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs"]
 
@@ -11,35 +13,15 @@ export function findViteConfig(): string | undefined {
     return viteConfigNames.find((name) => fsExtra.existsSync(name))
 }
 
-const defaultViteConfig = /* language=typescript */ `import { defineConfig } from "vite"
-import { mochiCss } from "@mochi-css/vite"
+// noinspection TypeScriptCheckImport
+const defaultViteConfig = /* language=typescript */ dedent`
+    import { defineConfig } from "vite"
+    import { mochiCss } from "@mochi-css/vite"
 
-export default defineConfig({
-    plugins: [mochiCss()],
-})
-`
-
-function getPluginsElements(obj: ObjNode, configPath: string): Record<string, unknown>[] {
-    const existing = obj.properties.find((prop) => getPropKeyName(prop) === "plugins")
-
-    if (existing) {
-        const value = existing["value"] as Record<string, unknown>
-        if (value["type"] !== "ArrayExpression") {
-            throw new Error(`Unrecognized plugins config type in ${configPath}`)
-        }
-        return value["elements"] as Record<string, unknown>[]
-    }
-
-    const elements: Record<string, unknown>[] = []
-    obj.properties.push({
-        type: "ObjectProperty",
-        key: { type: "Identifier", name: "plugins" },
-        value: { type: "ArrayExpression", elements },
-        computed: false,
-        shorthand: false,
+    export default defineConfig({
+        plugins: [mochiCss()],
     })
-    return elements
-}
+`
 
 function addPluginCallToObj(obj: ObjNode, configPath: string): void {
     const elements = getPluginsElements(obj, configPath)
@@ -143,6 +125,6 @@ export const viteModule: Module = {
             p.log.success("Added mochiCss() to vite config")
         }
 
-        ctx.requirePackage("@mochi-css/vite")
+        ctx.requirePackage(mochiPackage("@mochi-css/vite"))
     },
 }

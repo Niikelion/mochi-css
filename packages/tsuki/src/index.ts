@@ -14,6 +14,7 @@ interface CliOptions {
     postcss?: string | true
     vite?: string | true
     next?: string | true
+    framework?: string
 }
 
 program
@@ -26,6 +27,7 @@ program
     .option("--postcss [path]", "Enable PostCSS module; optionally specify config path")
     .option("--vite [path]", "Use the given Vite config path instead of prompting")
     .option("--next [path]", "Use the given Next.js config path instead of prompting")
+    .addOption(new Option("--framework <framework>", "UI framework to install support for").choices(["react"]))
     .action(async (options: CliOptions) => {
         p.intro(pc.cyan("Installing Mochi-CSS..."))
 
@@ -65,6 +67,7 @@ program
             else if (presetId === "nextjs") moduleOptions.postcss = true
             if (options.vite !== undefined) moduleOptions.vite = options.vite
             if (options.next !== undefined) moduleOptions.next = options.next
+            if (options.framework !== undefined) moduleOptions.framework = options.framework
 
             await runner.run({
                 nonInteractive,

@@ -20,15 +20,22 @@
         }
     },
     "scripts": {
-        "build": "tsc --noEmit && tsdown"
+        "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage"
     },
     "devDependencies": {
-        "@mochi-css/config": "^1.0.0",
+        "@mochi-css/shared-config": "^1.0.0",
+        "@mochi-css/test": "^1.0.0",
+        "@types/diff": "^8.0.0",
         "@types/node": "^24.8.1",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/builder": "^2.1.0"
+        "@mochi-css/builder": "^2.1.0",
+        "@mochi-css/config": "^2.1.0",
+        "diff": "^8.0.3"
     },
     "peerDependencies": {
         "vite": "^5.0.0 || ^6.0.0"

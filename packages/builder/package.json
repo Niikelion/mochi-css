@@ -28,9 +28,10 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
-        "@mochi-css/config": "^1.0.0",
+        "@mochi-css/shared-config": "^1.0.0",
         "@mochi-css/test": "^1.0.0",
         "@swc/types": "^0.1.25",
+        "@types/diff": "^8.0.0",
         "@types/node": "^24.8.1",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",
@@ -41,6 +42,7 @@
         "@mochi-css/vanilla": "^2.1.0",
         "@swc/core": "^1.15.13",
         "dedent": "^1.7.1",
+        "diff": "^8.0.3",
         "rolldown": "1.0.0-beta.59",
         "zod": "^4.3.6"
     }

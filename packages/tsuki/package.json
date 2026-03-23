@@ -3,6 +3,7 @@
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "version": "2.1.0",
     "license": "MIT",
+    "type": "module",
     "bin": "./dist/index.js",
     "files": [
         "/dist"
@@ -17,7 +18,7 @@
         "format": "prettier --write"
     },
     "devDependencies": {
-        "@mochi-css/config": "^1.0.0",
+        "@mochi-css/shared-config": "^1.0.0",
         "@mochi-css/test": "^1.0.0",
         "@types/cross-spawn": "^6.0.6",
         "@types/fs-extra": "^11.0.4",
@@ -31,6 +32,7 @@
         "@clack/prompts": "^1.0.1",
         "commander": "^13.1.0",
         "cross-spawn": "^7.0.6",
+        "dedent": "^1.7.2",
         "fs-extra": "^11.3.0",
         "magicast": "^0.5.1",
         "package-manager-detector": "^1.6.0",

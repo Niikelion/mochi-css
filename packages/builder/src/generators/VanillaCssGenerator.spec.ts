@@ -21,11 +21,18 @@ describe("VanillaCssGenerator", () => {
             )
         })
 
-        it("reports diagnostic for non-object args", () => {
+        it("reports diagnostic for non-object, non-string args", () => {
             const onDiagnostic = vi.fn()
             const gen = new VanillaCssGenerator(onDiagnostic)
-            gen.collectArgs("a.ts", ["string", 42])
-            expect(onDiagnostic).toHaveBeenCalledTimes(2)
+            gen.collectArgs("a.ts", [42])
+            expect(onDiagnostic).toHaveBeenCalledTimes(1)
+        })
+
+        it("does not report diagnostic for string args", () => {
+            const onDiagnostic = vi.fn()
+            const gen = new VanillaCssGenerator(onDiagnostic)
+            gen.collectArgs("a.ts", ["my-class", "s-Abc12345"])
+            expect(onDiagnostic).not.toHaveBeenCalled()
         })
 
         it("does not collect when all args are invalid", async () => {
@@ -33,6 +40,38 @@ describe("VanillaCssGenerator", () => {
             gen.collectArgs("a.ts", [null, "invalid"])
             const result = await gen.generateStyles()
             expect(result.files).toEqual({})
+        })
+    })
+
+    describe("stableId (string arg)", () => {
+        it("uses string arg as the CSS class name", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }, "s-abc"])
+            const result = await gen.generateStyles()
+            expect(result.files["a.ts"]).toContain(".s-abc")
+            expect(result.files["a.ts"]).not.toMatch(/\.c[0-9a-f]+/)
+        })
+
+        it("uses last string arg as stableId when multiple strings provided", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }, "s-first", "s-last"])
+            const result = await gen.generateStyles()
+            expect(result.files["a.ts"]).toContain(".s-last")
+            expect(result.files["a.ts"]).not.toContain(".s-first")
+        })
+
+        it("ignores string when no style objects are present", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", ["s-abc"])
+            const result = await gen.generateStyles()
+            expect(result.files).toEqual({})
+        })
+
+        it("generates hash-based class name when no string arg provided", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }])
+            const result = await gen.generateStyles()
+            expect(result.files["a.ts"]).toMatch(/\.c[0-9a-f]+/)
         })
     })
 
