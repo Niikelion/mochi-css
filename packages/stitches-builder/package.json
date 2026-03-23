@@ -35,9 +35,11 @@
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "@mochi-css/shared-config": "^2.0.0",
         "@swc/types": "^0.1.25",
         "@types/node": "^24.8.1",
         "@vitest/coverage-v8": "^4.0.15",
+        "eslint": "^9",
         "prettier": "^3.8.1",
         "tsdown": "^0.15.7",
         "typescript": "^5.9.3",

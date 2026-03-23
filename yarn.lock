@@ -1218,7 +1218,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@npm:*, @mochi-css/config@npm:^1.0.0, @mochi-css/config@npm:^3.0.0, @mochi-css/config@workspace:packages/config":
+"@mochi-css/config@npm:*, @mochi-css/config@npm:^3.0.0, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
@@ -1252,10 +1252,9 @@ __metadata:
     "@types/diff": "npm:^8.0.0"
     "@types/node": "npm:^24.8.1"
     diff: "npm:^8.0.3"
+    next: "npm:^14 || ^15 || ^16"
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.0.15"
-  peerDependencies:
-    next: ^14 || ^15 || ^16
   languageName: unknown
   linkType: soft
 
@@ -1341,16 +1340,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:packages/test":
-  version: 0.0.0-use.local
-  resolution: "@mochi-css/test@workspace:packages/test"
-  dependencies:
-    "@vitest/coverage-v8": "npm:^4.0.15"
-    vite-tsconfig-paths: "npm:^5.1.4"
-    vitest: "npm:^4.0.15"
-  languageName: unknown
-  linkType: soft
-
 "@mochi-css/stitches-builder@workspace:packages/stitches-builder":
   version: 0.0.0-use.local
   resolution: "@mochi-css/stitches-builder@workspace:packages/stitches-builder"
@@ -1359,10 +1348,12 @@ __metadata:
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/builder": "npm:^3.0.0"
     "@mochi-css/config": "npm:^3.0.0"
+    "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/stitches": "npm:^0.0.0"
     "@swc/types": "npm:^0.1.25"
     "@types/node": "npm:^24.8.1"
     "@vitest/coverage-v8": "npm:^4.0.15"
+    eslint: "npm:^9"
     prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
@@ -1380,12 +1371,13 @@ __metadata:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/config": "npm:*"
-    "@mochi-css/vanilla": "npm:^2.1.0"
+    "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/vanilla": "npm:^3.0.0"
     "@types/react": "npm:^19.2.2"
     "@types/react-dom": "npm:^19.2.3"
     "@vitest/coverage-v8": "npm:^4.0.15"
     clsx: "npm:^2.1.1"
-    eslint: "npm:^9.39.2"
+    eslint: "npm:^9"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-prettier: "npm:^5.5.5"
     happy-dom: "npm:^20.6.3"
@@ -1395,6 +1387,16 @@ __metadata:
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.21.0"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:packages/test":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/test@workspace:packages/test"
+  dependencies:
+    "@vitest/coverage-v8": "npm:^4.0.15"
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
   languageName: unknown
@@ -1500,6 +1502,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/env@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/env@npm:16.2.1"
+  checksum: 10c0/9eb3c0ca653f786395127022675f193f623e1bcbb4dadf179a4de2120394936f399ba446fe6df9133763817b6dd5db9e8aadf3f5d43b70dbdf5e7cc28068b3ef
+  languageName: node
+  linkType: hard
+
 "@next/eslint-plugin-next@npm:16.1.6":
   version: 16.1.6
   resolution: "@next/eslint-plugin-next@npm:16.1.6"
@@ -1516,9 +1525,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-darwin-arm64@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-darwin-arm64@npm:16.2.1"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@next/swc-darwin-x64@npm:16.1.6":
   version: 16.1.6
   resolution: "@next/swc-darwin-x64@npm:16.1.6"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@next/swc-darwin-x64@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-darwin-x64@npm:16.2.1"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
@@ -1530,9 +1553,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-linux-arm64-gnu@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-linux-arm64-gnu@npm:16.2.1"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@next/swc-linux-arm64-musl@npm:16.1.6":
   version: 16.1.6
   resolution: "@next/swc-linux-arm64-musl@npm:16.1.6"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@next/swc-linux-arm64-musl@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-linux-arm64-musl@npm:16.2.1"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
@@ -1544,9 +1581,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-linux-x64-gnu@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-linux-x64-gnu@npm:16.2.1"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@next/swc-linux-x64-musl@npm:16.1.6":
   version: 16.1.6
   resolution: "@next/swc-linux-x64-musl@npm:16.1.6"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@next/swc-linux-x64-musl@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-linux-x64-musl@npm:16.2.1"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
@@ -1558,9 +1609,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-win32-arm64-msvc@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-win32-arm64-msvc@npm:16.2.1"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@next/swc-win32-x64-msvc@npm:16.1.6":
   version: 16.1.6
   resolution: "@next/swc-win32-x64-msvc@npm:16.1.6"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@next/swc-win32-x64-msvc@npm:16.2.1":
+  version: 16.2.1
+  resolution: "@next/swc-win32-x64-msvc@npm:16.2.1"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -3095,6 +3160,15 @@ __metadata:
   bin:
     baseline-browser-mapping: dist/cli.js
   checksum: 10c0/569928db78bcd081953d7db79e4243a59a579a34b4ae1806b9b42d3b7f84e5bc40e6e82ae4fa06e7bef8291bf747b33b3f9ef5d3c6e1e420cb129d9295536129
+  languageName: node
+  linkType: hard
+
+"baseline-browser-mapping@npm:^2.9.19":
+  version: 2.10.10
+  resolution: "baseline-browser-mapping@npm:2.10.10"
+  bin:
+    baseline-browser-mapping: dist/cli.cjs
+  checksum: 10c0/39dee9d955a5e017852f338cb9057feee8d938c82f217d63158f04ccdbbc1c19e80bbed8d15223e3d410ee8b3703829d41fd7eb345e6e44230034ea9adaf8a1d
   languageName: node
   linkType: hard
 
@@ -5786,6 +5860,66 @@ __metadata:
   languageName: node
   linkType: hard
 
+"next@npm:^14 || ^15 || ^16":
+  version: 16.2.1
+  resolution: "next@npm:16.2.1"
+  dependencies:
+    "@next/env": "npm:16.2.1"
+    "@next/swc-darwin-arm64": "npm:16.2.1"
+    "@next/swc-darwin-x64": "npm:16.2.1"
+    "@next/swc-linux-arm64-gnu": "npm:16.2.1"
+    "@next/swc-linux-arm64-musl": "npm:16.2.1"
+    "@next/swc-linux-x64-gnu": "npm:16.2.1"
+    "@next/swc-linux-x64-musl": "npm:16.2.1"
+    "@next/swc-win32-arm64-msvc": "npm:16.2.1"
+    "@next/swc-win32-x64-msvc": "npm:16.2.1"
+    "@swc/helpers": "npm:0.5.15"
+    baseline-browser-mapping: "npm:^2.9.19"
+    caniuse-lite: "npm:^1.0.30001579"
+    postcss: "npm:8.4.31"
+    sharp: "npm:^0.34.5"
+    styled-jsx: "npm:5.1.6"
+  peerDependencies:
+    "@opentelemetry/api": ^1.1.0
+    "@playwright/test": ^1.51.1
+    babel-plugin-react-compiler: "*"
+    react: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+    react-dom: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
+    sass: ^1.3.0
+  dependenciesMeta:
+    "@next/swc-darwin-arm64":
+      optional: true
+    "@next/swc-darwin-x64":
+      optional: true
+    "@next/swc-linux-arm64-gnu":
+      optional: true
+    "@next/swc-linux-arm64-musl":
+      optional: true
+    "@next/swc-linux-x64-gnu":
+      optional: true
+    "@next/swc-linux-x64-musl":
+      optional: true
+    "@next/swc-win32-arm64-msvc":
+      optional: true
+    "@next/swc-win32-x64-msvc":
+      optional: true
+    sharp:
+      optional: true
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+    "@playwright/test":
+      optional: true
+    babel-plugin-react-compiler:
+      optional: true
+    sass:
+      optional: true
+  bin:
+    next: dist/bin/next
+  checksum: 10c0/902c936546f64e2dbbdeacc6599a3d6f9beae334b0aa8f2a439439b573369f1d49530fafc817f7ac1dcbcc0b5a42c44287ee293c5c91590773e190c416b48db9
+  languageName: node
+  linkType: hard
+
 "next@npm:^16.1.6":
   version: 16.1.6
   resolution: "next@npm:16.1.6"
@@ -6859,7 +6993,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sharp@npm:^0.34.4":
+"sharp@npm:^0.34.4, sharp@npm:^0.34.5":
   version: 0.34.5
   resolution: "sharp@npm:0.34.5"
   dependencies:
