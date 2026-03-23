@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { RefMap } from "@/ProjectIndex"
+import { ProjectIndex, RefMap } from "@/ProjectIndex"
+import { parseSource } from "@/parse"
+import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
 
 describe("RefMap", () => {
     it("stores and retrieves by ref", () => {
@@ -75,5 +77,61 @@ describe("RefMap", () => {
         map.set({ name: "b", id: 2 }, 20)
         expect(map.find((v) => v > 15)).toBe(20)
         expect(map.find((v) => v > 100)).toBeUndefined()
+    })
+})
+
+describe("ProjectIndex.reanalyzeFiles", () => {
+    it("replaces FileInfo analysis after AST mutation", async () => {
+        const module = await parseSource(
+            `import { css } from "@mochi-css/vanilla"
+export const s = css({ color: "red" })`,
+            "test.ts",
+        )
+        const index = new ProjectIndex([module], [mochiCssFunctionExtractor], () => null)
+
+        // Verify initial extraction found the style expression
+        const before = index.files.find(([p]) => p === "test.ts")?.[1]
+        expect.assert(before !== undefined)
+        expect(before.extractedExpressions.get(mochiCssFunctionExtractor)?.length).toBe(1)
+
+        // Re-analyze immediately — should still find 1 style expression
+        index.reanalyzeFiles(new Set(["test.ts"]))
+        const after = index.files.find(([p]) => p === "test.ts")?.[1]
+        expect.assert(after !== undefined)
+        expect(after.extractedExpressions.get(mochiCssFunctionExtractor)?.length).toBe(1)
+        // usedBindings is reset
+        expect(after.usedBindings.size).toBe(0)
+    })
+
+    it("skips file paths not in the index", async () => {
+        const module = await parseSource(`export const x = 1`, "a.ts")
+        const index = new ProjectIndex([module], [], () => null)
+
+        // Should not throw for unknown paths
+        expect(() => {
+            index.reanalyzeFiles(new Set(["nonexistent.ts"]))
+        }).not.toThrow()
+    })
+})
+
+describe("ProjectIndex.resetCrossFileState", () => {
+    it("clears usedBindings after propagateUsages", async () => {
+        // Use a local variable in the style call so usedBindings gets populated
+        const module = await parseSource(
+            `import { css } from "@mochi-css/vanilla"
+const primary = "red"
+export const s = css({ color: primary })`,
+            "test.ts",
+        )
+        const index = new ProjectIndex([module], [mochiCssFunctionExtractor], () => null)
+        index.propagateUsages()
+
+        const fileInfo = index.files.find(([p]) => p === "test.ts")?.[1]
+        expect.assert(fileInfo !== undefined)
+        expect(fileInfo.usedBindings.size).toBeGreaterThan(0)
+
+        index.resetCrossFileState()
+
+        expect(fileInfo.usedBindings.size).toBe(0)
     })
 })

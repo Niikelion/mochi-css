@@ -6,7 +6,7 @@ const pkg = fsExtra.readJsonSync("./package.json");
 
 export default defineConfig({
     entry: "src/index.ts",
-    format: ["cjs"],
+    format: ["esm"],
     dts: false,
     clean: true,
     skipNodeModulesBundle: true,

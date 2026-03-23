@@ -1,8 +1,7 @@
-import { defineConfig } from "vitest/config"
-import tsconfigPaths from "vite-tsconfig-paths"
+import { mergeConfig } from "vitest/config"
+import { vitestConfig } from "@mochi-css/test/vitest"
 
-export default defineConfig({
-    plugins: [tsconfigPaths()],
+export default mergeConfig(vitestConfig, {
     test: {
         pool: "forks",
     },

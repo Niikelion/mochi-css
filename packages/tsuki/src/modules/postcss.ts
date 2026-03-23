@@ -4,16 +4,13 @@ import path from "path"
 import * as p from "@clack/prompts"
 import { parseModule, generateCode, ProxifiedValue } from "magicast"
 import type { Module, ModuleContext } from "@/types"
+import { mochiPackage } from "@/version"
 import { getPropKeyName, optionsToAstProperties, type ObjNode } from "./ast"
 
 const postcssConfigNames = [
-    "postcss.config.mts",
-    "postcss.config.ts",
     "postcss.config.mjs",
     "postcss.config.js",
     "postcss.config.cjs",
-    ".postcssrc.mts",
-    ".postcssrc.ts",
     ".postcssrc.mjs",
     ".postcssrc.js",
     ".postcssrc.cjs",
@@ -37,7 +34,7 @@ function defaultPostcssConfig(pluginOptions: Record<string, string | number | bo
 }
 
 async function askForPath(): Promise<string | false> {
-    const defaultConfig = findPostcssConfig() ?? "postcss.config.js"
+    const defaultConfig = findPostcssConfig() ?? "postcss.config.mjs"
 
     const configPath = await p.text({
         message: "Path to PostCSS config",
@@ -90,6 +87,9 @@ function addPluginToNamedVar(
                 | undefined
 
             if (!pluginsProp) throw new Error(`Failed to find plugins object in ${configPath}`)
+
+            const alreadyAdded = pluginsProp.value.properties.some((prop) => getPropKeyName(prop) === pluginName)
+            if (alreadyAdded) return
 
             pluginsProp.value.properties.push({
                 type: "ObjectProperty",
@@ -146,7 +146,6 @@ async function addPostcssPlugin(
 }
 
 export interface PostcssModuleOptions {
-    outDir?: string
     /** Skip the "Do you use PostCSS?" confirmation and autoconfigure. */
     auto?: boolean
 }
@@ -156,7 +155,7 @@ export async function addToConfig(
     pluginOptions: Record<string, string | number | boolean> = {},
 ): Promise<void> {
     if (!fsExtra.existsSync(configPath)) {
-        await fsExtra.writeFile("postcss.config.mts", defaultPostcssConfig(pluginOptions))
+        await fsExtra.writeFile("postcss.config.mjs", defaultPostcssConfig(pluginOptions))
         return
     }
 
@@ -179,9 +178,6 @@ export async function addToConfig(
 }
 
 export function createPostcssModule(options: PostcssModuleOptions = {}): Module {
-    const pluginOptions: Record<string, string | number | boolean> = {}
-    if (options.outDir !== undefined) pluginOptions["outDir"] = options.outDir
-
     return {
         id: "postcss",
         name: "PostCSS",
@@ -210,10 +206,10 @@ export function createPostcssModule(options: PostcssModuleOptions = {}): Module 
                 configPath = selected
             }
 
-            await addToConfig(configPath, pluginOptions)
+            await addToConfig(configPath)
             p.log.success("Added mochi plugin to the postcss config")
 
-            ctx.requirePackage("@mochi-css/postcss")
+            ctx.requirePackage(mochiPackage("@mochi-css/postcss"))
         },
     }
 }

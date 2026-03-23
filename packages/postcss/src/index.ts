@@ -7,10 +7,19 @@ import {
     BuilderOptions,
     RolldownBundler,
     VmRunner,
-    OnDiagnostic,
     fileHash,
-    MochiManifest
 } from "@mochi-css/builder"
+import { loadConfig, resolveConfig, mergeCallbacks, FullContext, type Config } from "@mochi-css/config"
+
+async function writeIfChanged(filePath: string, content: string): Promise<void> {
+    try {
+        const existing = await fs.promises.readFile(filePath, "utf-8")
+        if (existing === content) return
+    } catch {
+        // file doesn't exist yet — fall through to write
+    }
+    await fs.promises.writeFile(filePath, content, "utf-8")
+}
 
 function isValidCssFilePath(file: string) {
     const [filePath] = file.split('?')
@@ -20,42 +29,64 @@ function isValidCssFilePath(file: string) {
 type DiskManifest = {
     global?: string
     files: Record<string, string>
+    sourcemods?: Record<string, string>
 }
 
-type Options = Partial<BuilderOptions> & {
+/**
+ * Options for the Mochi CSS PostCSS plugin.
+ *
+ * Most options are loaded automatically from `mochi.config.ts` — see `@mochi-css/config` for the full list.
+ * Only the fields below are specific to the PostCSS integration.
+ *
+ * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
+ */
+type Options = Partial<Pick<BuilderOptions, "runner" | "bundler">> & Partial<Config> & {
+    /** Pattern matching the global CSS file that Mochi styles are injected into. Default: `/\/globals\.css$/` */
     globalCss?: RegExp
-    outDir?: string
 }
 
 const pluginName = "postcss-mochi-css"
 
-const defaultOptions: Required<Omit<Options, 'onDiagnostic' | 'outDir'>> = {
+const defaultOptions = {
     globalCss: /\/globals\.css$/,
-    roots: ["src"],
     extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner(),
-    splitBySource: false,
 }
 
+/**
+ * PostCSS plugin that extracts Mochi CSS styles from TypeScript/TSX source files at build time
+ * and injects the generated CSS into your global stylesheet.
+ *
+ * Shared config is loaded automatically from `mochi.config.ts`. Pass plugin-specific options
+ * (`globalCss`, `tmpDir`) directly in your PostCSS config.
+ *
+ * @example
+ * ```js
+ * // postcss.config.js
+ * module.exports = {
+ *     plugins: { '@mochi-css/postcss': { tmpDir: '.mochi' } }
+ * }
+ * ```
+ */
 const creator: PluginCreator<Options> = (opts?: Options) => {
-    const options = Object.assign({}, defaultOptions, opts)
+    let resolvedPromise: Promise<Config> | undefined
 
-    // When outDir is set, force splitBySource
-    if (options.outDir) {
-        options.splitBySource = true
+    const getResolved = () => {
+        resolvedPromise ??= loadConfig().then(fileConfig =>
+            resolveConfig(fileConfig, opts, defaultOptions).then(resolved => ({
+                ...resolved,
+                tmpDir: resolved.tmpDir ?? opts?.tmpDir,
+            }))
+        )
+        return resolvedPromise
     }
 
+    let builder: Builder | undefined
     let currentResult: Result | undefined
-    const onDiagnostic: OnDiagnostic = (diagnostic) => {
-        options.onDiagnostic?.(diagnostic)
-        currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
-            plugin: pluginName,
-        })
-    }
-
-    const builder = new Builder({ ...options, onDiagnostic })
     let builderGuard: Promise<void> | undefined
+
+    const globalCssRegex = opts?.globalCss ?? defaultOptions.globalCss
 
     const postcssProcess: TransformCallback = async (root, result) => {
         currentResult = result
@@ -67,14 +98,37 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         const normalizedPath = filePath.replaceAll(path.win32.sep, path.posix.sep)
 
         // Reset lastIndex to handle regexes with /g flag correctly
-        options.globalCss.lastIndex = 0
-        if (!options.globalCss.test(normalizedPath)) return
+        globalCssRegex.lastIndex = 0
+        if (!globalCssRegex.test(normalizedPath)) return
+
+        const resolved = await getResolved()
+
+        if (!builder) {
+            const context = new FullContext()
+            for (const plugin of resolved.plugins) {
+                plugin.onLoad?.(context)
+            }
+            builder = new Builder({
+                onDiagnostic: mergeCallbacks(resolved.onDiagnostic, (diagnostic) => {
+                    currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
+                        plugin: pluginName,
+                    })
+                }),
+                roots: resolved.roots,
+                extractors: resolved.extractors,
+                bundler: opts?.bundler ?? defaultOptions.bundler,
+                runner: opts?.runner ?? defaultOptions.runner,
+                splitCss: resolved.splitCss,
+                filePreProcess: ({ content, filePath }) => context.sourceTransform.transform(content, { filePath }),
+                astPostProcessors: context.getAnalysisHooks(),
+            })
+        }
 
         // Watch all root directories so new files trigger a rebuild
-        for (const root of options.roots) {
+        for (const rootEntry of resolved.roots) {
             result.messages.push({
                 type: "dir-dependency",
-                dir: path.resolve(typeof root === "string" ? root : root.path),
+                dir: path.resolve(typeof rootEntry === "string" ? rootEntry : rootEntry.path),
                 glob: "**/*.{ts,tsx}",
                 plugin: pluginName,
                 parent: result.opts.from
@@ -82,10 +136,10 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         }
 
         const css = await builder.collectMochiCss({
-            onDep: filePath => {
+            onDep: depPath => {
                 result.messages.push({
                     type: "dependency",
-                    file: filePath,
+                    file: depPath,
                     plugin: pluginName,
                     parent: result.opts.from
                 })
@@ -101,29 +155,42 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             node.source = root.source
         })
 
-        // Write per-file CSS and manifest to outDir
-        if (options.outDir) {
-            const outDir = options.outDir
-            await fs.promises.mkdir(outDir, { recursive: true })
+        // Write per-file CSS and manifest to tmpDir
+        if (resolved.tmpDir) {
+            const tmpDir = resolved.tmpDir
+            await fs.promises.mkdir(tmpDir, { recursive: true })
 
-            const manifest: MochiManifest = { global: css.global, files: css.files ?? {} }
-            const diskManifest: DiskManifest = { files: {} }
+            const existingCssFiles = new Set(
+                (await fs.promises.readdir(tmpDir))
+                    .filter(f => f.endsWith(".css") && f !== "global.css")
+                    .map(f => path.resolve(tmpDir, f))
+            )
 
-            if (manifest.global) {
-                const globalPath = path.resolve(outDir, "global.css")
-                await fs.promises.writeFile(globalPath, manifest.global, "utf-8")
+            const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
+            const writtenCssPaths = new Set<string>()
+
+            if (css.global) {
+                const globalPath = path.resolve(tmpDir, "global.css")
+                await writeIfChanged(globalPath, css.global)
                 diskManifest.global = globalPath
             }
 
-            for (const [source, fileCss] of Object.entries(manifest.files)) {
+            for (const [source, fileCss] of Object.entries(css.files ?? {})) {
                 const hash = fileHash(source)
-                const cssPath = path.resolve(outDir, `${hash}.css`)
-                await fs.promises.writeFile(cssPath, fileCss, "utf-8")
+                const cssPath = path.resolve(tmpDir, `${hash}.css`)
+                await writeIfChanged(cssPath, fileCss)
                 diskManifest.files[source] = cssPath
+                writtenCssPaths.add(cssPath)
             }
 
-            const manifestPath = path.resolve(outDir, "manifest.json")
-            await fs.promises.writeFile(manifestPath, JSON.stringify(diskManifest), "utf-8")
+            for (const existingPath of existingCssFiles) {
+                if (!writtenCssPaths.has(existingPath)) {
+                    await fs.promises.unlink(existingPath)
+                }
+            }
+
+            const manifestPath = path.resolve(tmpDir, "manifest.json")
+            await writeIfChanged(manifestPath, JSON.stringify(diskManifest))
         }
     }
 

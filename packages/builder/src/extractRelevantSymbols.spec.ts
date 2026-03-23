@@ -5,7 +5,8 @@ import * as SWC from "@swc/core"
 import { parseSource } from "@/parse"
 import { ProjectIndex, ResolveImport, RefMap, FileInfo, DerivedExtractorBinding, BindingInfo } from "@/ProjectIndex"
 import { extractRelevantSymbols } from "@/extractRelevantSymbols"
-import { mochiCssFunctionExtractor, mochiStyledFunctionExtractor } from "@/extractors/VanillaCssExtractor"
+import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
+import { mochiStyledFunctionExtractor } from "@/extractors/ReactStyledExtractor"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
@@ -295,7 +296,8 @@ describe("extractRelevantSymbols", () => {
         // noinspection JSUnusedLocalSymbols
         const module = await parseSource(
             /* language=typescript */ dedent`
-                import { css, styled } from "@mochi-css/vanilla"
+                import { css } from "@mochi-css/vanilla"
+                import { styled } from "@mochi-css/react"
                 const color = "red"
                 css({ color })
                 styled("div")
@@ -308,7 +310,7 @@ describe("extractRelevantSymbols", () => {
 
         expect(result["empty-args.ts"]).toContain(`extractors["@mochi-css/vanilla:css"]`)
         // styled had no style args → no extractor call generated for it
-        expect(result["empty-args.ts"]).not.toContain(`extractors["@mochi-css/vanilla:styled"]`)
+        expect(result["empty-args.ts"]).not.toContain(`extractors["@mochi-css/react:styled"]`)
     })
 
     it("deduplicates shared moduleItems and sorts by source position", async () => {

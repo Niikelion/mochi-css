@@ -1,5 +1,17 @@
 # @mochi-css/vanilla
 
+## 3.0.0
+
+### Major Changes
+
+- a674152: Small cleanup, no functional or interface change.
+
+## 2.2.0
+
+### Minor Changes
+
+- 27a1717: styled is no longer exported from @mochi-css/vanilla — import it from @mochi-css/react instead
+
 ## 2.1.0
 
 ### Minor Changes

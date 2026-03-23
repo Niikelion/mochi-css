@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest"
-import fs from "fs/promises"
-import fsExtra from "fs-extra"
-import path from "path"
-import os from "os"
+import * as fs from "fs/promises"
+import * as fsExtra from "fs-extra"
+import * as path from "path"
+import * as os from "os"
 import { spawn } from "child_process"
 import { fileURLToPath } from "url"
 
@@ -25,8 +25,11 @@ function runTsuki(cwd: string, args: string[]): Promise<void> {
             stdio: ["pipe", "pipe", "pipe"],
         })
         // Close stdin immediately so clack prompts receive EOF and cancel cleanly
-        proc.stdin?.end()
-        proc.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`tsuki exited ${code}`))))
+        proc.stdin.end()
+        proc.on("close", (code) => {
+            if (code === 0) resolve()
+            else reject(new Error(`tsuki exited ${code}`))
+        })
         proc.on("error", reject)
     })
 }
@@ -68,7 +71,9 @@ describe("smoke", () => {
 
             const postcss = await fs.readFile(path.join(tmpDir, "postcss.config.js"), "utf-8")
             expect(postcss).toContain("@mochi-css/postcss")
-            expect(postcss).toContain(".mochi")
+
+            const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+            expect(mochi).toContain(".mochi")
 
             const vite = await fs.readFile(path.join(tmpDir, "vite.config.ts"), "utf-8")
             expect(vite).toContain("mochiCss()")
@@ -84,7 +89,9 @@ describe("smoke", () => {
 
             const postcss = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
             expect(postcss).toContain("@mochi-css/postcss")
-            expect(postcss).toContain(".mochi")
+
+            const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+            expect(mochi).toContain(".mochi")
 
             const next = await fs.readFile(path.join(tmpDir, "next.config.mjs"), "utf-8")
             expect(next).toContain("withMochi")
@@ -123,7 +130,7 @@ describe("smoke", () => {
             await copyFixture("empty", tmpDir)
             await runTsuki(tmpDir, ["--no-interactive", "--preset", "lib", "--postcss"])
 
-            const postcss = await fs.readFile(path.join(tmpDir, "postcss.config.mts"), "utf-8")
+            const postcss = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
             expect(postcss).toContain("@mochi-css/postcss")
         },
         TIMEOUT,

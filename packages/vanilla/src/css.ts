@@ -7,6 +7,16 @@
 import clsx from "clsx"
 import { CSSObject, AllVariants, DefaultVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@/cssObject"
 
+const MOCHI_CSS_TYPEOF = Symbol.for("mochi-css.MochiCSS")
+
+export function isMochiCSS(value: unknown): value is MochiCSS {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        (value as Record<string, unknown>)["$$typeof"] === MOCHI_CSS_TYPEOF
+    )
+}
+
 /**
  * Runtime representation of a CSS style definition with variant support.
  * Holds generated class names and provides methods to compute the final
@@ -21,16 +31,6 @@ import { CSSObject, AllVariants, DefaultVariants, MergeCSSVariants, MochiCSSProp
  * }))
  * styles.variant({ size: 'large' }) // Returns combined class names
  */
-const MOCHI_CSS_TYPEOF = Symbol.for("mochi-css.MochiCSS")
-
-export function isMochiCSS(value: unknown): value is MochiCSS {
-    return (
-        typeof value === "object" &&
-        value !== null &&
-        (value as Record<string, unknown>)["$$typeof"] === MOCHI_CSS_TYPEOF
-    )
-}
-
 export class MochiCSS<V extends AllVariants = DefaultVariants> {
     readonly $$typeof = MOCHI_CSS_TYPEOF
 
@@ -77,6 +77,18 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
                 return variantGroup[defaultKey.toString()]
             }),
         )
+    }
+
+    /**
+     * Returns the CSS selector for this style (e.g. `.abc123`).
+     * Useful for targeting this component from another style.
+     */
+    get selector(): string {
+        return this.classNames.map((n) => `.${n}`).join()
+    }
+
+    toString(): string {
+        return this.selector
     }
 
     /**
@@ -157,12 +169,17 @@ export function mergeMochiCss<V extends AllVariants[]>(
 }
 
 export function css<V extends AllVariants[]>(
-    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS | string }
 ): MochiCSS<MergeCSSVariants<V>> {
     const cssToMerge: MochiCSS<AllVariants>[] = []
     for (const p of props) {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (p == null || typeof p !== "object") continue
+        if (p == null) continue
+        if (typeof p === "string") {
+            cssToMerge.push(new MochiCSS([p], {}, {}))
+            continue
+        }
+        if (typeof p !== "object") continue
         if (p instanceof MochiCSS) {
             cssToMerge.push(p)
         } else {

@@ -584,9 +584,85 @@ function extractData(
 
 export type ResolveImport = (fromFile: string, importSource: string) => string | null
 
+function bindingKey(filePath: string, ref: Ref): string {
+    return `${filePath}:${ref.name}:${ref.id}`
+}
+
+function propagateUsagesFromRef(
+    analyzedBindings: Set<string>,
+    filesInfo: Map<string, FileInfo>,
+    fileInfo: FileInfo,
+    ref: Ref,
+): void {
+    if (ref.id === undefined) return
+
+    const key = bindingKey(fileInfo.filePath, ref)
+    if (analyzedBindings.has(key)) return
+    analyzedBindings.add(key)
+
+    const localImport = fileInfo.localImports.get(ref)
+    if (localImport) {
+        const importedFileInfo = filesInfo.get(localImport.sourcePath)
+        const exportedRef = importedFileInfo?.exports.get(localImport.exportName)
+        if (importedFileInfo && exportedRef) {
+            propagateUsagesFromRef(analyzedBindings, filesInfo, importedFileInfo, exportedRef)
+        }
+        const importBinding = fileInfo.moduleBindings.get(ref)
+        if (importBinding) fileInfo.usedBindings.add(importBinding)
+        return
+    }
+
+    const binding = fileInfo.moduleBindings.get(ref)
+    if (!binding) return
+
+    propagateUsagesFromBinding(analyzedBindings, filesInfo, fileInfo, binding)
+}
+
+function propagateUsagesFromBinding(
+    analyzedBindings: Set<string>,
+    filesInfo: Map<string, FileInfo>,
+    fileInfo: FileInfo,
+    binding: BindingInfo,
+): void {
+    if (fileInfo.usedBindings.has(binding)) return
+    fileInfo.usedBindings.add(binding)
+
+    if (binding.declarator.type === "variable" && binding.declarator.declarator.init) {
+        visit.expression(
+            binding.declarator.declarator.init,
+            {
+                identifier(node) {
+                    propagateUsagesFromRef(analyzedBindings, filesInfo, fileInfo, idToRef(node))
+                },
+            },
+            null,
+        )
+    }
+}
+
+function propagateUsagesFromExpr(
+    analyzedBindings: Set<string>,
+    filesInfo: Map<string, FileInfo>,
+    fileInfo: FileInfo,
+    expr: SWC.Expression,
+): void {
+    visit.expression(
+        expr,
+        {
+            identifier(node) {
+                propagateUsagesFromRef(analyzedBindings, filesInfo, fileInfo, idToRef(node))
+            },
+        },
+        null,
+    )
+}
+
 export class ProjectIndex {
     private filesInfo = new Map<string, FileInfo>()
     private analyzedBindings = new Set<string>()
+    private readonly extractorLookup: Map<string, Map<string, StyleExtractor>>
+    private readonly resolveImport: ResolveImport
+    private readonly onDiagnostic: OnDiagnostic | undefined
     public readonly extractors: StyleExtractor[]
 
     public get files(): [string, FileInfo][] {
@@ -600,11 +676,13 @@ export class ProjectIndex {
         onDiagnostic?: OnDiagnostic,
     ) {
         this.extractors = extractors
+        this.resolveImport = resolveImport
+        this.onDiagnostic = onDiagnostic
 
-        const extractorLookup = new Map<string, Map<string, StyleExtractor>>()
+        this.extractorLookup = new Map<string, Map<string, StyleExtractor>>()
         for (const extractor of extractors) {
             const importScope = getOrInsert(
-                extractorLookup,
+                this.extractorLookup,
                 extractor.importPath,
                 () => new Map<string, StyleExtractor>(),
             )
@@ -612,13 +690,45 @@ export class ProjectIndex {
         }
 
         for (const module of modules) {
-            const data = extractData(module.ast, module.filePath, extractorLookup, resolveImport, onDiagnostic)
+            const data = extractData(
+                module.ast,
+                module.filePath,
+                this.extractorLookup,
+                this.resolveImport,
+                this.onDiagnostic,
+            )
 
             this.filesInfo.set(module.filePath, {
                 ...module,
                 ...data,
                 usedBindings: new Set<BindingInfo>(),
             })
+        }
+    }
+
+    public reanalyzeFiles(dirtyFilePaths: Set<string>): void {
+        for (const filePath of dirtyFilePaths) {
+            const existing = this.filesInfo.get(filePath)
+            if (!existing) continue
+            const fresh = extractData(
+                existing.ast,
+                filePath,
+                this.extractorLookup,
+                this.resolveImport,
+                this.onDiagnostic,
+            )
+            this.filesInfo.set(filePath, {
+                ...existing,
+                ...fresh,
+                usedBindings: new Set(),
+            })
+        }
+    }
+
+    public resetCrossFileState(): void {
+        this.analyzedBindings.clear()
+        for (const fileInfo of this.filesInfo.values()) {
+            fileInfo.usedBindings.clear()
         }
     }
 
@@ -686,75 +796,12 @@ export class ProjectIndex {
         )
     }
 
-    private getBindingKey(filePath: string, ref: Ref): string {
-        return `${filePath}:${ref.name}:${ref.id}`
-    }
-
     public propagateUsages() {
         for (const fileInfo of this.filesInfo.values()) {
             for (const expr of fileInfo.styleExpressions) {
-                this.propagateUsagesFromExpr(fileInfo, expr)
+                propagateUsagesFromExpr(this.analyzedBindings, this.filesInfo, fileInfo, expr)
             }
         }
-    }
-
-    public propagateUsagesFromExpr(fileInfo: FileInfo, expr: SWC.Expression) {
-        visit.expression(
-            expr,
-            {
-                identifier(node, { context }) {
-                    context.propagateUsagesFromRef(fileInfo, idToRef(node))
-                },
-            },
-            this,
-        )
-    }
-
-    public propagateUsagesFromBinding(fileInfo: FileInfo, binding: BindingInfo) {
-        if (fileInfo.usedBindings.has(binding)) return
-        fileInfo.usedBindings.add(binding)
-
-        // For variable bindings, propagate through the initializer
-        if (binding.declarator.type === "variable" && binding.declarator.declarator.init) {
-            visit.expression(
-                binding.declarator.declarator.init,
-                {
-                    identifier(node, { context }) {
-                        context.propagateUsagesFromRef(fileInfo, idToRef(node))
-                    },
-                },
-                this,
-            )
-        }
-    }
-
-    public propagateUsagesFromRef(fileInfo: FileInfo, ref: Ref) {
-        if (ref.id === undefined) return
-
-        // Deduplication check
-        const bindingKey = this.getBindingKey(fileInfo.filePath, ref)
-        if (this.analyzedBindings.has(bindingKey)) return
-        this.analyzedBindings.add(bindingKey)
-
-        // Check if it's a local import - follow recursively
-        const localImport = fileInfo.localImports.get(ref)
-        if (localImport) {
-            const importedFileInfo = this.filesInfo.get(localImport.sourcePath)
-            const exportedRef = importedFileInfo?.exports.get(localImport.exportName)
-            if (importedFileInfo && exportedRef) {
-                this.propagateUsagesFromRef(importedFileInfo, exportedRef)
-            }
-            // Also mark the import binding itself as used
-            const importBinding = fileInfo.moduleBindings.get(ref)
-            if (importBinding) fileInfo.usedBindings.add(importBinding)
-            return
-        }
-
-        // Check if it's a module-level binding
-        const binding = fileInfo.moduleBindings.get(ref)
-        if (!binding) return
-
-        this.propagateUsagesFromBinding(fileInfo, binding)
     }
 
     public static extractImportSpecs(node: SWC.ImportDeclaration): ImportSpec[] {

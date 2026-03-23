@@ -148,13 +148,14 @@ export class CssObjectBlock {
 
     /**
      * Creates a new CSS block from style properties.
-     * Generates a unique class name based on the content hash.
+     * Generates a unique class name based on the content hash, or uses the provided class name.
      * @param styles - The style properties to compile
+     * @param className - Optional stable class name; if omitted, a content-hash-based name is generated
      */
-    constructor(styles: StyleProps) {
+    constructor(styles: StyleProps, className?: string) {
         const blocks = CssObjectSubBlock.fromProps(styles)
 
-        this.className = "c" + shortHash(blocks.map((b) => b.hash).join("+"))
+        this.className = className ?? "c" + shortHash(blocks.map((b) => b.hash).join("+"))
         this.subBlocks = blocks
     }
 
@@ -274,9 +275,17 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
     /**
      * Creates a new CSSObject from style props.
      * Compiles main styles and all variant options into CSS blocks.
+     * @param props - Base style props plus variant definitions
+     * @param props.variants - Named variant groups, each mapping variant values to style props
+     * @param props.defaultVariants - Default value for each variant when none is provided at runtime
+     * @param props.compoundVariants - Style props applied when a specific combination of variants is active
+     * @param className - Optional stable class name for the main block
      */
-    public constructor({ variants, defaultVariants, compoundVariants, ...props }: MochiCSSProps<V>) {
-        this.mainBlock = new CssObjectBlock(props as StyleProps)
+    public constructor(
+        { variants, defaultVariants, compoundVariants, ...props }: MochiCSSProps<V>,
+        className?: string,
+    ) {
+        this.mainBlock = new CssObjectBlock(props as StyleProps, className)
         this.variantBlocks = {} as typeof this.variantBlocks
         this.variantDefaults = defaultVariants ?? {}
         this.compoundVariants = []
