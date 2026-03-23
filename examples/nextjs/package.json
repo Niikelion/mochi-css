@@ -1,28 +1,31 @@
 {
-  "name": "@mochi-css/nextjs-example",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build-example": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint --config eslint.config.mjs"
-  },
-  "dependencies": {
-    "@mochi-css/postcss": "^2.1.0",
-    "@mochi-css/vanilla": "^2.1.0",
-    "next": "^16.1.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@mochi-css/next": "workspace:^",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "^16.1.6",
-    "typescript": "^5"
-  }
+    "name": "@mochi-css/nextjs-example",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build-example": "next build",
+        "start": "next start",
+        "lint": "eslint --config eslint.config.mjs"
+    },
+    "dependencies": {
+        "@mochi-css/react": "^3.0.0",
+        "@mochi-css/vanilla": "^3.0.0",
+        "next": "^16.1.6",
+        "react": "19.1.0",
+        "react-dom": "19.1.0"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3",
+        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/config": "^3.0.0",
+        "@mochi-css/next": "^3.0.0",
+        "@mochi-css/postcss": "^3.0.0",
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "eslint": "^9",
+        "eslint-config-next": "^16.1.6",
+        "typescript": "^5"
+    }
 }

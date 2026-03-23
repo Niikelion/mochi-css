@@ -1,8 +1,9 @@
 {
     "name": "@mochi-css/tsuki",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "license": "MIT",
+    "type": "module",
     "bin": "./dist/index.js",
     "files": [
         "/dist"
@@ -17,27 +18,21 @@
         "format": "prettier --write"
     },
     "devDependencies": {
-        "@eslint/js": "^9.18.0",
-        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
         "@types/cross-spawn": "^6.0.6",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "^24.8.1",
-        "@vitest/coverage-v8": "^4.0.15",
         "eslint": "^9.39.2",
-        "eslint-config-prettier": "^10.1.8",
-        "eslint-plugin-prettier": "^5.5.5",
-        "jiti": "^2.6.1",
         "prettier": "^3.8.1",
-        "tsdown": "^0.15.7",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.21.0",
-        "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.0.15"
     },
     "dependencies": {
         "@clack/prompts": "^1.0.1",
         "commander": "^13.1.0",
         "cross-spawn": "^7.0.6",
+        "dedent": "^1.7.2",
         "fs-extra": "^11.3.0",
         "magicast": "^0.5.1",
         "package-manager-detector": "^1.6.0",

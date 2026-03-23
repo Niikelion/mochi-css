@@ -18,7 +18,17 @@ vi.mock("@/modules/next", () => ({
     nextModule: { id: "next", name: "Next.js", run: vi.fn() },
 }))
 
+vi.mock("@/modules/mochiConfig", () => ({
+    createMochiConfigModule: vi.fn().mockReturnValue({ id: "mochi-config", name: "Mochi Config", run: vi.fn() }),
+}))
+
+vi.mock("@/modules/uiFramework", () => ({
+    createUiFrameworkModule: vi.fn().mockReturnValue({ id: "ui-framework", name: "UI Framework", run: vi.fn() }),
+}))
+
 import { createPostcssModule } from "@/modules/postcss"
+import { createMochiConfigModule } from "@/modules/mochiConfig"
+import { createUiFrameworkModule } from "@/modules/uiFramework"
 import { libPreset, vitePreset, nextjsPreset } from "./index"
 
 afterEach(() => {
@@ -52,33 +62,61 @@ describe("libPreset", () => {
 })
 
 describe("vitePreset", () => {
-    it("registers postcss module and vite module", () => {
+    it("registers mochi-config, postcss, vite, and ui-framework modules", () => {
         const { runner, modules } = makeRunner()
         vitePreset.setup(runner)
-        expect(modules).toHaveLength(2)
-        expect(modules.at(0)?.id).toBe("postcss")
-        expect(modules.at(1)?.id).toBe("vite")
+        expect(modules).toHaveLength(4)
+        expect(modules.at(0)?.id).toBe("mochi-config")
+        expect(modules.at(1)?.id).toBe("postcss")
+        expect(modules.at(2)?.id).toBe("vite")
+        expect(modules.at(3)?.id).toBe("ui-framework")
     })
 
-    it("calls createPostcssModule with outDir: .mochi", () => {
+    it("calls createMochiConfigModule with styledId: true and tmpDir: .mochi", () => {
         const { runner } = makeRunner()
         vitePreset.setup(runner)
-        expect(createPostcssModule).toHaveBeenCalledWith({ outDir: ".mochi" })
+        expect(createMochiConfigModule).toHaveBeenCalledWith({ styledId: true, tmpDir: ".mochi" })
+    })
+
+    it("calls createPostcssModule with no options", () => {
+        const { runner } = makeRunner()
+        vitePreset.setup(runner)
+        expect(createPostcssModule).toHaveBeenCalledWith()
+    })
+
+    it("calls createUiFrameworkModule with no args", () => {
+        const { runner } = makeRunner()
+        vitePreset.setup(runner)
+        expect(createUiFrameworkModule).toHaveBeenCalledWith()
     })
 })
 
 describe("nextjsPreset", () => {
-    it("registers postcss module and next module", () => {
+    it("registers mochi-config, postcss, next, and ui-framework modules", () => {
         const { runner, modules } = makeRunner()
         nextjsPreset.setup(runner)
-        expect(modules).toHaveLength(2)
-        expect(modules.at(0)?.id).toBe("postcss")
-        expect(modules.at(1)?.id).toBe("next")
+        expect(modules).toHaveLength(4)
+        expect(modules.at(0)?.id).toBe("mochi-config")
+        expect(modules.at(1)?.id).toBe("postcss")
+        expect(modules.at(2)?.id).toBe("next")
+        expect(modules.at(3)?.id).toBe("ui-framework")
     })
 
-    it("calls createPostcssModule with outDir: .mochi and auto: true", () => {
+    it("calls createMochiConfigModule with styledId: true and tmpDir: .mochi", () => {
         const { runner } = makeRunner()
         nextjsPreset.setup(runner)
-        expect(createPostcssModule).toHaveBeenCalledWith({ outDir: ".mochi", auto: true })
+        expect(createMochiConfigModule).toHaveBeenCalledWith({ styledId: true, tmpDir: ".mochi" })
+    })
+
+    it("calls createPostcssModule with auto: true", () => {
+        const { runner } = makeRunner()
+        nextjsPreset.setup(runner)
+        expect(createPostcssModule).toHaveBeenCalledWith({ auto: true })
+    })
+
+    it("calls createUiFrameworkModule with auto: true", () => {
+        const { runner } = makeRunner()
+        nextjsPreset.setup(runner)
+        expect(createUiFrameworkModule).toHaveBeenCalledWith({ auto: true })
     })
 })

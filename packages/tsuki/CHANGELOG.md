@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 3.0.0
+
+### Major Changes
+
+- a674152: Updated to reflect the changes to other packages.
+
 ## 2.1.0
 
 ### Minor Changes

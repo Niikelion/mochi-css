@@ -14,6 +14,8 @@ import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
 import { CallExpression, Expression } from "@swc/core"
+import { AstPostProcessor } from "@/Builder"
+import { ProjectIndex } from "@/ProjectIndex"
 
 function createMockParentExtractor(importPath: string, symbolName: string, derivedNames: string[]): StyleExtractor {
     const derivedExtractors = new Map<string, StyleExtractor>()
@@ -313,10 +315,10 @@ describe("Builder", () => {
                 extractors: [mochiCssFunctionExtractor],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                splitBySource: true,
+                splitCss: true,
             })
 
-            const generators = await builder.collectMochiStyles()
+            const { generators } = await builder.collectMochiStyles()
             const generator = generators.get("@mochi-css/vanilla:css")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
@@ -346,16 +348,49 @@ describe("Builder", () => {
                 extractors: [mochiCssFunctionExtractor],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                splitBySource: true,
+                splitCss: true,
             })
 
-            const generators = await builder.collectMochiStyles()
+            const { generators } = await builder.collectMochiStyles()
             const generator = generators.get("@mochi-css/vanilla:css")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
 
             const allCss = Object.values(result.files ?? {}).join("\n")
             expect(allCss).toContain("color: green")
+        } finally {
+            await fs.rm(dir, { recursive: true, force: true })
+        }
+    })
+
+    it("filePreProcess transforms source before parsing", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-preprocess-"))
+        try {
+            await fs.writeFile(
+                path.join(dir, "comp.ts"),
+                dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    // REPLACE_ME
+                `,
+            )
+
+            const builder = new Builder({
+                roots: [dir],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                splitCss: true,
+                filePreProcess: ({ content }) =>
+                    content.replace("// REPLACE_ME", `export const x = css({ color: "purple" })`),
+            })
+
+            const { generators } = await builder.collectMochiStyles()
+            const generator = generators.get("@mochi-css/vanilla:css")
+            const result = await generator?.generateStyles()
+            expect.assert(result !== undefined)
+
+            const allCss = Object.values(result.files ?? {}).join("\n")
+            expect(allCss).toContain("color: purple")
         } finally {
             await fs.rm(dir, { recursive: true, force: true })
         }
@@ -628,6 +663,89 @@ describe("Builder", () => {
                     message: expect.stringContaining("must not use rest spread") as string,
                 }),
             )
+        })
+    })
+
+    describe("astPostProcessors", () => {
+        function makeBuilder(astPostProcessors: AstPostProcessor[]) {
+            return new Builder({
+                roots: ["./"],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                astPostProcessors,
+            })
+        }
+
+        it("calls the handler with the ProjectIndex", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            let receivedIndex: ProjectIndex | undefined
+            const handler: AstPostProcessor = (index) => {
+                receivedIndex = index
+            }
+
+            await makeBuilder([handler]).collectStylesFromModules([module])
+
+            expect(receivedIndex).toBeDefined()
+            expect(receivedIndex?.files.length).toBe(1)
+        })
+
+        it("pipeline is unaffected when astPostProcessors array is empty", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            const generators = await makeBuilder([]).collectStylesFromModules([module])
+            const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
+            const css = Object.values(result?.files ?? {}).join("")
+            expect(css).toContain("color: red")
+        })
+
+        it("handler mutations to the AST are reflected in CSS output", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            const handler: AstPostProcessor = (index) => {
+                for (const [, fileInfo] of index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "ExportDeclaration") continue
+                        if (item.declaration.type !== "VariableDeclaration") continue
+                        const init = item.declaration.declarations[0]?.init
+                        if (init?.type !== "CallExpression") continue
+                        const arg = init.arguments[0]?.expression
+                        if (arg?.type !== "ObjectExpression") continue
+                        const prop = arg.properties[0]
+                        if (prop?.type !== "KeyValueProperty") continue
+                        const val = prop.value
+                        if (val.type === "StringLiteral") {
+                            val.value = "blue"
+                            val.raw = '"blue"'
+                        }
+                    }
+                }
+            }
+
+            const generators = await makeBuilder([handler]).collectStylesFromModules([module])
+            const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
+            const css = Object.values(result?.files ?? {}).join("")
+            expect(css).toContain("color: blue")
+            expect(css).not.toContain("color: red")
         })
     })
 })

@@ -18,14 +18,15 @@ vi.mock("../src/install", () => ({
 }))
 
 import * as p from "@clack/prompts"
-import { installPackages } from "../src/install"
-import { ModuleRunner } from "../src/runner"
-import { postcssModule } from "../src/modules/postcss"
+import { installPackages } from "@/install"
+import { ModuleRunner } from "@/runner"
+import { postcssModule } from "@/modules"
 
 let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
+    vi.stubGlobal("__VERSION__", "2.1.0")
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-integration-"))
     origCwd = process.cwd()
 
@@ -55,6 +56,6 @@ describe("postcss integration", () => {
         const modified = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(modified).toContain("@mochi-css/postcss")
         expect(modified).toContain("tailwindcss")
-        expect(installPackages).toHaveBeenCalledWith([{ name: "@mochi-css/postcss", dev: true }], false)
+        expect(installPackages).toHaveBeenCalledWith([{ name: "@mochi-css/postcss@^2.0.0", dev: true }], false)
     })
 })

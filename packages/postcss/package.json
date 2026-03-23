@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/postcss",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -23,14 +23,13 @@
         "build": "tsc --noEmit && tsdown"
     },
     "devDependencies": {
-        "@arethetypeswrong/cli": "^0.18.2",
-        "@gamedev-sensei/ts-config": "^2.1.0",
-        "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "@mochi-css/shared-config": "^2.0.0",
         "@types/node": "^24.8.1",
-        "tsdown": "^0.15.7"
+        "typescript": "^5.9.3"
     },
     "dependencies": {
-        "@mochi-css/builder": "^2.1.0",
+        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/config": "^3.0.0",
         "postcss": "^8.5.6"
     }
 }

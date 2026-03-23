@@ -18,14 +18,15 @@ vi.mock("../src/install", () => ({
 }))
 
 import * as p from "@clack/prompts"
-import { installPackages } from "../src/install"
-import { ModuleRunner } from "../src/runner"
-import { vitePreset, nextjsPreset } from "../src/presets"
+import { installPackages } from "@/install"
+import { ModuleRunner } from "@/runner"
+import { vitePreset, nextjsPreset } from "@/presets"
 
 let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
+    vi.stubGlobal("__VERSION__", "2.1.0")
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-preset-"))
     origCwd = process.cwd()
     process.chdir(tmpDir)
@@ -39,7 +40,7 @@ afterEach(async () => {
 })
 
 describe("vite preset integration", () => {
-    it("sets up postcss with outDir and vite config", async () => {
+    it("sets up postcss with tmpDir and vite config", async () => {
         await fs.writeFile(path.join(tmpDir, "postcss.config.js"), `export default { plugins: {} }`)
         await fs.writeFile(path.join(tmpDir, "vite.config.ts"), `export default defineConfig({ plugins: [] })`)
 
@@ -51,8 +52,10 @@ describe("vite preset integration", () => {
 
         const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.js"), "utf-8")
         expect(postcssContent).toContain("@mochi-css/postcss")
-        expect(postcssContent).toContain("outDir")
-        expect(postcssContent).toContain(".mochi")
+
+        const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+        expect(mochiContent).toContain("tmpDir")
+        expect(mochiContent).toContain(".mochi")
 
         const viteContent = await fs.readFile(path.join(tmpDir, "vite.config.ts"), "utf-8")
         expect(viteContent).toContain("mochiCss()")
@@ -72,8 +75,10 @@ describe("nextjs preset integration", () => {
 
         const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.js"), "utf-8")
         expect(postcssContent).toContain("@mochi-css/postcss")
-        expect(postcssContent).toContain("outDir")
-        expect(postcssContent).toContain(".mochi")
+
+        const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+        expect(mochiContent).toContain("tmpDir")
+        expect(mochiContent).toContain(".mochi")
 
         const nextContent = await fs.readFile(path.join(tmpDir, "next.config.ts"), "utf-8")
         expect(nextContent).toContain("withMochi")
@@ -88,8 +93,10 @@ describe("nextjs preset integration", () => {
         nextjsPreset.setup(runner)
         await runner.run()
 
-        const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.mts"), "utf-8")
+        const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(postcssContent).toContain("@mochi-css/postcss")
-        expect(postcssContent).toContain("outDir")
+
+        const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+        expect(mochiContent).toContain("tmpDir")
     })
 })

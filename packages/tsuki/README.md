@@ -8,3 +8,22 @@ You can run it with:
 ```bash
 npx @mochi-css/tsuki
 ```
+
+`tsuki` handles installing integrations for next.js and vite frameworks.
+To get more info, run it with `-h` or `--help` option.
+
+## What `tsuki` sets up
+
+During initialization, `tsuki` installs the required packages and creates a `mochi.config.ts` file in your project root.
+This file is the single place to configure all Mochi-CSS options (`roots`, `extractors`, `plugins`, etc.) - all integrations load it automatically.
+
+## Presets
+
+Use the `--preset` / `-p` flag to choose a framework preset non-interactively:
+
+```bash
+npx @mochi-css/tsuki --preset vite
+npx @mochi-css/tsuki --preset nextjs
+```
+
+If `-p` is omitted, `tsuki` will prompt you to select a preset interactively.

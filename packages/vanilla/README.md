@@ -1,7 +1,8 @@
 # 🧁 Mochi-CSS/vanilla
 
 This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css).
-It provides type-safe CSS-in-JS styling functions with static extraction support, allowing you to write styles in TypeScript that get extracted to plain CSS at build time.
+It provides type-safe CSS-in-JS styling functions with static extraction support,
+allowing you to write styles in TypeScript that get extracted to plain CSS at build time.
 
 ## Installation
 
@@ -45,7 +46,8 @@ const buttonStyles = css(textStyles, {
 
 ### `globalCss(styles)`
 
-`globalCss` injects styles into the global scope — they are not scoped to any class and apply to all matching elements. Use it for resets, base typography, or any styles that must target plain HTML elements.
+`globalCss` injects styles into the global scope - they are not scoped to any class and apply to all matching elements.
+Use it for resets, base typography, or any styles that must target plain HTML elements.
 
 ```ts
 import { globalCss } from "@mochi-css/vanilla"
@@ -59,10 +61,11 @@ globalCss({
 
 ### `styled(component, ...styles)`
 
-`styled` creates a styled component by combining a base element or component with style definitions. It automatically applies the generated class names and forwards variant props.
+`styled` creates a styled component by combining a base element or component with style definitions.
+It automatically applies the generated class names and forwards variant props.
 
 ```tsx
-import {styled} from "@mochi-css/vanilla"
+import { styled } from "@mochi-css/react"
 
 const Button = styled("button", {
     borderRadius: 10,
@@ -127,7 +130,8 @@ A style definition is either a bundle of styles returned by `css`, or an object 
 
 ## Nested Selectors
 
-Mochi-CSS supports nested selectors, allowing you to define styles for child elements, pseudo-classes, and pseudo-elements directly within your style definitions.
+Mochi-CSS supports nested selectors, allowing you to define styles for child elements, pseudo-classes,
+and pseudo-elements directly within your style definitions.
 
 The `&` character represents the parent selector and must be included in every nested selector:
 
@@ -400,11 +404,14 @@ const redButtonStyle = css(baseButtonStyle, {
 })
 ```
 
-This works, but requires you to either manually select which style to apply in your component logic, or create separate components for each variant.
-Mochi-CSS allows you to define variants directly in your style definition and automatically generates the corresponding props for your component.
+This works, but requires you to either manually select which style to apply in your component logic,
+or create separate components for each variant.
+Mochi-CSS allows you to define variants directly in your style definition
+and automatically generates the corresponding props for your component.
 
 ```tsx
-import {styled, css} from "@mochi-css/vanilla"
+import { css } from "@mochi-css/vanilla"
+import { styled } from "@mochi-css/react"
 
 const buttonStyle = css({
     border: "2px solid black",
@@ -433,13 +440,16 @@ const SomeComponent = () => <div>
 </div>
 ```
 
-`defaultVariants` is optional, but specifying defaults for all variants ensures predictable styling when variant props are omitted.
+`defaultVariants` is optional,
+but specifying defaults for all variants ensures predictable styling when variant props are omitted.
 
 ## Tokens
 
-Mochi-CSS provides typed wrappers around CSS variables to help with type safety. Tokens ensure that only valid values are assigned to your CSS variables.
+Mochi-CSS provides typed wrappers around CSS variables to help with type safety.
+Tokens ensure that only valid values are assigned to your CSS variables.
 
-Create tokens using the `createToken<T>(name)` function, where `T` is a CSS value type like `CssColorLike`, `CssLengthLike`, or `string`:
+Create tokens using the `createToken<T>(name)` function,
+where `T` is a CSS value type like `CssColorLike`, `CssLengthLike`, or `string`:
 
 ```ts
 import {createToken, css, CssColorLike} from "@mochi-css/vanilla"

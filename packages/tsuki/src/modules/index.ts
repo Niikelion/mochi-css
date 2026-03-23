@@ -1,3 +1,5 @@
 export { postcssModule, createPostcssModule } from "./postcss"
 export { viteModule } from "./vite"
 export { nextModule } from "./next"
+export { createMochiConfigModule, findMochiConfig } from "./mochiConfig"
+export { createUiFrameworkModule } from "./uiFramework"

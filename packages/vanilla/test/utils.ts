@@ -1,28 +1,14 @@
 import { afterEach } from "vitest"
-import {
-    createElement,
-    type ReactElement,
-    type ComponentProps,
-    type FC,
-    type ComponentType,
-    type HTMLElementType,
-} from "react"
+import type { ReactElement } from "react"
 import { render as rtlRender, cleanup as rtlCleanup } from "@testing-library/react"
-import { CSSObject, AllVariants, MochiCSSProps, MergeCSSVariants, RefineVariants } from "@/cssObject"
+import { CSSObject, AllVariants, MochiCSSProps, MergeCSSVariants } from "@/cssObject"
 import { MochiCSS, mergeMochiCss } from "@/css"
 import { GlobalCssObject } from "@/globalCssObject"
 import type { GlobalCssStyles } from "@/globalCss"
 import { camelToKebab } from "@/props"
 import { CSSStyleDeclaration } from "happy-dom"
-import clsx from "clsx"
 
 const STYLE_ELEMENT_ID = "mochi-test-styles"
-
-type Cls = { className?: string }
-
-type MochiProps<V extends AllVariants[]> = {
-    className?: string
-} & Partial<RefineVariants<MergeCSSVariants<V>>>
 
 function normalizeValue(kebabProp: string, value: string): string {
     const el = document.createElement("div")
@@ -94,18 +80,6 @@ class TestRenderer {
     globalCss(styles: GlobalCssStyles): void {
         const obj = new GlobalCssObject(styles)
         this.capturedCss.push(obj.asCssString())
-    }
-
-    styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
-        target: T,
-        ...props: { [K in keyof V]: MochiCSSProps<V[K]> }
-    ): FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> {
-        const styles = this.css<V>(...props)
-        return ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
-            createElement(target, {
-                className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
-                ...p,
-            })
     }
 
     render(element: ReactElement) {

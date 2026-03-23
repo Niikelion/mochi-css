@@ -1,6 +1,8 @@
 import path from "path"
+import fs from "fs/promises"
+import { createPatch } from "diff"
 import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
-import { parseFile } from "@/parse"
+import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
 import { Runner, VmRunner } from "@/Runner"
 import dedent from "dedent"
@@ -9,6 +11,13 @@ import { StyleGenerator } from "@/generators/StyleGenerator"
 import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
 import { getExtractorId, extractRelevantSymbols } from "@/extractRelevantSymbols"
+import { wrapIndexWithProxies } from "@/AstProxy"
+
+export type AnalysisContext = {
+    onDiagnostic?: OnDiagnostic
+}
+
+export type AstPostProcessor = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
 
 const rootFileSuffix = dedent`
     declare global {
@@ -22,17 +31,53 @@ export type CollectCssOptions = {
 
 export type RootEntry = string | { path: string; package: string }
 
+/**
+ * Options for constructing a {@link Builder}.
+ *
+ * When used via an integration (Vite, PostCSS, Next.js), most of these fields are sourced
+ * from `mochi.config.ts` via `resolveConfig` — you typically only need to supply `bundler`
+ * and `runner` explicitly.
+ */
 export type BuilderOptions = {
+    /** Directories (or named root entries) scanned recursively for `.ts`/`.tsx` source files. */
     roots: RootEntry[]
+    /** Style extractors that identify and capture style function calls. Use `defaultExtractors` for vanilla Mochi CSS. */
     extractors: StyleExtractor[]
+    /**
+     * Bundler used to bundle the extracted minimal source code into a single executable module.
+     * Use `RolldownBundler` unless you need a custom bundler.
+     */
     bundler: Bundler
+    /**
+     * Runner used to execute the bundled code in an isolated context.
+     * Use `VmRunner` unless you need a custom runner.
+     */
     runner: Runner
-    splitBySource?: boolean
+    /** When `true`, CSS is split per source file instead of merged into one global output. Default: `false`. */
+    splitCss?: boolean
+    /** Callback invoked for warnings and non-fatal errors during extraction. */
     onDiagnostic?: OnDiagnostic
+    /** Preprocessing hook that runs on every loaded file before parsing. */
+    filePreProcess?(params: { content: string; filePath: string }): string | Promise<string>
+    /** Handlers that run after analysis, before CSS generation. Each handler may mutate AST nodes via a proxy layer. */
+    astPostProcessors?: AstPostProcessor[]
 }
 
+/**
+ * Orchestrates the full Mochi CSS extraction pipeline:
+ * scan source files → build dependency graph → extract style call arguments
+ * → bundle → execute → generate CSS.
+ *
+ * Use {@link Builder.collectMochiCss} for the common case of getting CSS strings directly.
+ * Use {@link Builder.collectMochiStyles} when you need the raw generators before CSS is produced.
+ * Use {@link Builder.collectStylesFromModules} to supply pre-parsed modules (useful in tests).
+ */
 export class Builder {
     constructor(private options: BuilderOptions) {}
+
+    private async preTransformFile(content: string, filePath: string): Promise<string> {
+        return this.options.filePreProcess ? await this.options.filePreProcess({ content, filePath }) : content
+    }
 
     private async bundleFiles(files: Record<string, string | null>) {
         // Prepare extracted project
@@ -156,6 +201,18 @@ export class Builder {
         const index = new ProjectIndex(modules, this.options.extractors, resolveImport, onDiagnostic)
         index.discoverCrossFileDerivedExtractors()
         index.propagateUsages()
+
+        for (const handler of this.options.astPostProcessors ?? []) {
+            const proxied = wrapIndexWithProxies(index)
+            await handler(index, { onDiagnostic })
+            const dirtyFiles = proxied.getDirtyFiles()
+            if (dirtyFiles.size === 0) continue
+            index.reanalyzeFiles(dirtyFiles)
+            index.resetCrossFileState()
+            index.discoverCrossFileDerivedExtractors()
+            index.propagateUsages()
+        }
+
         const resultingFiles = extractRelevantSymbols(index)
 
         // Create a generator for each extractor
@@ -182,15 +239,27 @@ export class Builder {
             }
         }
 
-        const modules = await Promise.all(files.map(parseFile))
+        const sourcemods: Record<string, string> = {}
 
-        return await this.collectStylesFromModules(modules)
+        const modules = await Promise.all(
+            files.map(async (filePath) => {
+                const source = await fs.readFile(filePath, "utf8")
+                const transformed = await this.preTransformFile(source, filePath)
+                if (transformed !== source) {
+                    sourcemods[filePath] = createPatch(filePath, source, transformed)
+                }
+                return transformed === source ? parseFile(filePath) : parseSource(transformed, filePath)
+            }),
+        )
+
+        const generators = await this.collectStylesFromModules(modules)
+        return { generators, sourcemods }
     }
 
     public async collectMochiCss(
         options?: CollectCssOptions,
-    ): Promise<{ global?: string; files?: Record<string, string> }> {
-        const generators = await this.collectMochiStyles(options?.onDep)
+    ): Promise<{ global?: string; files?: Record<string, string>; sourcemods?: Record<string, string> }> {
+        const { generators, sourcemods } = await this.collectMochiStyles(options?.onDep)
 
         // Collect and merge results from all generators
         const globalCss: string[] = []
@@ -208,7 +277,9 @@ export class Builder {
             }
         }
 
-        if (!this.options.splitBySource) {
+        const resultSourcemods = Object.keys(sourcemods).length > 0 ? sourcemods : undefined
+
+        if (!this.options.splitCss) {
             // Merge files into global CSS
             const allCss = [...globalCss]
             const sortedFiles = Object.keys(files).sort()
@@ -218,12 +289,14 @@ export class Builder {
             }
             return {
                 global: allCss.length > 0 ? allCss.join("\n\n") : undefined,
+                sourcemods: resultSourcemods,
             }
         }
 
         return {
             global: globalCss.length > 0 ? globalCss.join("\n\n") : undefined,
             files: Object.keys(files).length > 0 ? files : undefined,
+            sourcemods: resultSourcemods,
         }
     }
 }

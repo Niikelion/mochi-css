@@ -1,0 +1,28 @@
+{
+    "name": "mochi-next-smoke",
+    "private": true,
+    "scripts": {
+        "build": "next build",
+        "dev": "next dev --webpack"
+    },
+    "dependencies": {
+        "@mochi-css/next": "file:__MOCHI_ROOT__/packages/next",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla",
+        "@mochi-css/postcss": "file:__MOCHI_ROOT__/packages/postcss",
+        "next": "^16.1.6",
+        "react": "19.1.0",
+        "react-dom": "19.1.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "typescript": "^5"
+    },
+    "overrides": {
+        "@mochi-css/builder": "file:__MOCHI_ROOT__/packages/builder",
+        "@mochi-css/config": "file:__MOCHI_ROOT__/packages/config",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla",
+        "@mochi-css/postcss": "file:__MOCHI_ROOT__/packages/postcss"
+    }
+}
