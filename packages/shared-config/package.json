@@ -2,7 +2,7 @@
     "name": "@mochi-css/shared-config",
     "private": true,
     "type": "module",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "exports": {
         "./eslint": "./eslint.ts",
         "./prettier": "./prettier.ts"

@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vite",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -25,16 +25,16 @@
         "coverage": "vitest run --coverage"
     },
     "devDependencies": {
-        "@mochi-css/shared-config": "^1.0.0",
-        "@mochi-css/test": "^1.0.0",
+        "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
         "@types/diff": "^8.0.0",
         "@types/node": "^24.8.1",
         "typescript": "^5.9.3",
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/builder": "^2.1.0",
-        "@mochi-css/config": "^2.1.0",
+        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/config": "^3.0.0",
         "diff": "^8.0.3"
     },
     "peerDependencies": {

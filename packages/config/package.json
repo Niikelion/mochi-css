@@ -1,6 +1,6 @@
 {
     "name": "@mochi-css/config",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "license": "MIT",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "main": "dist/index.js",
@@ -28,18 +28,18 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/vanilla": "^2.1.0",
+        "@mochi-css/vanilla": "^3.0.0",
         "@swc/core": "^1.15.13",
         "jiti": "^2.6.1"
     },
     "peerDependencies": {
-        "@mochi-css/builder": "^2.1.0"
+        "@mochi-css/builder": "^3.0.0"
     },
     "devDependencies": {
         "@gamedev-sensei/tsdown-config": "^2.1.0",
-        "@mochi-css/builder": "^2.1.0",
-        "@mochi-css/shared-config": "^1.0.0",
-        "@mochi-css/test": "^1.0.0",
+        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
         "@swc/types": "^0.1.25",
         "@types/node": "^24.8.1",
         "dedent": "^1.7.2",

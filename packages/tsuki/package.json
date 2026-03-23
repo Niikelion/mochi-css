@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/tsuki",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "license": "MIT",
     "type": "module",
     "bin": "./dist/index.js",
@@ -18,8 +18,8 @@
         "format": "prettier --write"
     },
     "devDependencies": {
-        "@mochi-css/shared-config": "^1.0.0",
-        "@mochi-css/test": "^1.0.0",
+        "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
         "@types/cross-spawn": "^6.0.6",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "^24.8.1",
