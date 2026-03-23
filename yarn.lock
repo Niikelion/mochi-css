@@ -1357,8 +1357,8 @@ __metadata:
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^2.1.0"
-    "@mochi-css/config": "npm:^1.0.0"
+    "@mochi-css/builder": "npm:^3.0.0"
+    "@mochi-css/config": "npm:^3.0.0"
     "@mochi-css/stitches": "npm:^0.0.0"
     "@swc/types": "npm:^0.1.25"
     "@types/node": "npm:^24.8.1"
