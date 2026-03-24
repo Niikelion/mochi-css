@@ -4,7 +4,7 @@ import { createPatch } from "diff"
 import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
 import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
-import { Runner, VmRunner } from "@/Runner"
+import { Runner } from "@/Runner"
 import dedent from "dedent"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
@@ -12,9 +12,11 @@ import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
 import { getExtractorId, extractRelevantSymbols } from "@/extractRelevantSymbols"
 import { wrapIndexWithProxies } from "@/AstProxy"
+import { Evaluator } from "@/Evaluator"
 
 export type AnalysisContext = {
     onDiagnostic?: OnDiagnostic
+    evaluator: Evaluator
 }
 
 export type AstPostProcessor = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
@@ -59,8 +61,12 @@ export type BuilderOptions = {
     onDiagnostic?: OnDiagnostic
     /** Preprocessing hook that runs on every loaded file before parsing. */
     filePreProcess?(params: { content: string; filePath: string }): string | Promise<string>
-    /** Handlers that run after analysis, before CSS generation. Each handler may mutate AST nodes via a proxy layer. */
-    astPostProcessors?: AstPostProcessor[]
+    /** Handlers that run after analysis, before CSS generation. Each handler may mutate AST nodes via a proxy layer. Can call evaluator.valueWithTracking() to mark expressions for capture. */
+    preEvalTransforms?: AstPostProcessor[]
+    /** Handlers that run after code execution. The evaluator is populated — use evaluator.getTrackedValue() to read back runtime values. */
+    postEvalTransforms?: AstPostProcessor[]
+    /** Called once at the end of the pipeline. Use to release any caches built between preEvalTransforms and postEvalTransforms. */
+    cleanup?: () => void | Promise<void>
 }
 
 /**
@@ -108,9 +114,8 @@ export class Builder {
         }
     }
 
-    private async executeCode(code: string, generators: Map<string, StyleGenerator>) {
+    private async executeCode(code: string, generators: Map<string, StyleGenerator>, evaluator: Evaluator) {
         const onDiagnostic = this.options.onDiagnostic
-        const runner = new VmRunner()
 
         const wrapGenerator = (
             generator: StyleGenerator,
@@ -143,7 +148,7 @@ export class Builder {
         }
 
         try {
-            await runner.execute(code, { extractors: extractorsObj })
+            await evaluator.evaluate(code, { extractors: extractorsObj })
         } catch (err) {
             const message = getErrorMessage(err)
             throw new MochiError("MOCHI_EXEC", message, undefined, err)
@@ -202,9 +207,11 @@ export class Builder {
         index.discoverCrossFileDerivedExtractors()
         index.propagateUsages()
 
-        for (const handler of this.options.astPostProcessors ?? []) {
+        const evaluator = new Evaluator(this.options.runner)
+
+        for (const handler of this.options.preEvalTransforms ?? []) {
             const proxied = wrapIndexWithProxies(index)
-            await handler(index, { onDiagnostic })
+            await handler(index, { onDiagnostic, evaluator })
             const dirtyFiles = proxied.getDirtyFiles()
             if (dirtyFiles.size === 0) continue
             index.reanalyzeFiles(dirtyFiles)
@@ -223,7 +230,13 @@ export class Builder {
         }
 
         const code = await this.bundleFiles(resultingFiles)
-        await this.executeCode(code, generators)
+        await this.executeCode(code, generators, evaluator)
+
+        for (const handler of this.options.postEvalTransforms ?? []) {
+            await handler(index, { onDiagnostic, evaluator })
+        }
+
+        await this.options.cleanup?.()
 
         return generators
     }

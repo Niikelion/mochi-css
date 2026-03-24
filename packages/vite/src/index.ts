@@ -83,7 +83,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 runner: opts?.runner ?? new VmRunner(),
                 splitCss: resolved.splitCss,
                 onDiagnostic: resolved.onDiagnostic,
-                astPostProcessors: buildContext.getAnalysisHooks(),
+                preEvalTransforms: buildContext.getAnalysisHooks(),
             }
 
             builder = new Builder(options)

@@ -14,8 +14,9 @@ import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
 import { CallExpression, Expression } from "@swc/core"
-import { AstPostProcessor } from "@/Builder"
+import { AstPostProcessor, AnalysisContext } from "@/Builder"
 import { ProjectIndex } from "@/ProjectIndex"
+import { Evaluator } from "@/Evaluator"
 
 function createMockParentExtractor(importPath: string, symbolName: string, derivedNames: string[]): StyleExtractor {
     const derivedExtractors = new Map<string, StyleExtractor>()
@@ -666,14 +667,14 @@ describe("Builder", () => {
         })
     })
 
-    describe("astPostProcessors", () => {
-        function makeBuilder(astPostProcessors: AstPostProcessor[]) {
+    describe("preEvalTransforms", () => {
+        function makeBuilder(preEvalTransforms: AstPostProcessor[]) {
             return new Builder({
                 roots: ["./"],
                 extractors: [mochiCssFunctionExtractor],
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
-                astPostProcessors,
+                preEvalTransforms,
             })
         }
 
@@ -697,7 +698,7 @@ describe("Builder", () => {
             expect(receivedIndex?.files.length).toBe(1)
         })
 
-        it("pipeline is unaffected when astPostProcessors array is empty", async () => {
+        it("pipeline is unaffected when preEvalTransforms array is empty", async () => {
             const module = await parseSource(
                 dedent`
                 import { css } from "@mochi-css/vanilla"
@@ -746,6 +747,140 @@ describe("Builder", () => {
             const css = Object.values(result?.files ?? {}).join("")
             expect(css).toContain("color: blue")
             expect(css).not.toContain("color: red")
+        })
+    })
+
+    describe("postEvalTransforms", () => {
+        it("is called after execution with evaluator populated", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            let capturedContext: AnalysisContext | undefined
+            const postHandler: AstPostProcessor = (_index, context) => {
+                capturedContext = context
+            }
+
+            await new Builder({
+                roots: ["./"],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                postEvalTransforms: [postHandler],
+            }).collectStylesFromModules([module])
+
+            expect(capturedContext).toBeDefined()
+            expect(capturedContext?.evaluator).toBeInstanceOf(Evaluator)
+        })
+    })
+
+    describe("cleanup", () => {
+        it("is called once at the end of the pipeline", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            let cleanupCallCount = 0
+
+            await new Builder({
+                roots: ["./"],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                cleanup: () => {
+                    cleanupCallCount++
+                },
+            }).collectStylesFromModules([module])
+
+            expect(cleanupCallCount).toBe(1)
+        })
+
+        it("cleanup is called after postEvalTransforms", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            const order: string[] = []
+
+            await new Builder({
+                roots: ["./"],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                postEvalTransforms: [
+                    () => {
+                        order.push("post")
+                    },
+                ],
+                cleanup: () => {
+                    order.push("cleanup")
+                },
+            }).collectStylesFromModules([module])
+
+            expect(order).toEqual(["post", "cleanup"])
+        })
+    })
+
+    describe("evaluator lifecycle", () => {
+        it("valueWithTracking in preEval, getTrackedValue in postEval returns runtime value", async () => {
+            // config is referenced by css(config), so it appears in usedBindings and the bundled code
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                const config = { color: "red" }
+                export const s = css(config)
+            `,
+                "test.ts",
+            )
+
+            let trackedNode: Expression | undefined
+            let trackedValue: unknown
+
+            const preHandler: AstPostProcessor = (index, { evaluator }) => {
+                for (const [, fileInfo] of index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "VariableDeclaration") continue
+                        const decl = item.declarations[0]
+                        if (decl?.id.type !== "Identifier" || decl.id.value !== "config") continue
+                        const init = decl.init
+                        if (!init) continue
+                        // Wrap the config initializer so we can read its runtime value
+                        const wrapper = evaluator.valueWithTracking(init)
+                        trackedNode = wrapper
+                        decl.init = wrapper
+                    }
+                }
+            }
+
+            const postHandler: AstPostProcessor = (_index, { evaluator }) => {
+                if (trackedNode) {
+                    trackedValue = evaluator.getTrackedValue(trackedNode)
+                }
+            }
+
+            await new Builder({
+                roots: ["./"],
+                extractors: [mochiCssFunctionExtractor],
+                bundler: new RolldownBundler(),
+                runner: new VmRunner(),
+                preEvalTransforms: [preHandler],
+                postEvalTransforms: [postHandler],
+            }).collectStylesFromModules([module])
+
+            // The tracked value should be the runtime value of the config object
+            expect(trackedValue).toEqual({ color: "red" })
         })
     })
 })
