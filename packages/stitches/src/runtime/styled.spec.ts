@@ -37,11 +37,7 @@ describe("polymorphic as prop", () => {
     it("renders as default element when no as prop provided", () => {
         const Button = runtimeStyled("button", [{}], config);
         const html = renderHtml(
-            createElement(
-                Button as MochiStyledComponent<{ children?: unknown }>,
-                {},
-                "Click",
-            ),
+            createElement(Button as MochiStyledComponent, {}, "Click"),
         );
         expect(html).toContain("<button");
     });
@@ -50,11 +46,7 @@ describe("polymorphic as prop", () => {
         const Button = runtimeStyled("button", [{}], config);
         const html = renderHtml(
             createElement(
-                Button as MochiStyledComponent<{
-                    as?: string;
-                    href?: string;
-                    children?: unknown;
-                }>,
+                Button as MochiStyledComponent<Record<string, unknown>>,
                 { as: "a", href: "/test" },
                 "Link",
             ),
@@ -67,8 +59,11 @@ describe("polymorphic as prop", () => {
         const Button = runtimeStyled("button", [{}], config);
         const html = renderHtml(
             createElement(
-                Button as MochiStyledComponent<{ as?: string; href?: string }>,
-                { as: "a", href: "/about" },
+                Button as MochiStyledComponent<Record<string, unknown>>,
+                {
+                    as: "a",
+                    href: "/about",
+                },
             ),
         );
         expect(html).toContain('href="/about"');
@@ -108,11 +103,7 @@ describe("variant inheritance", () => {
         );
 
         const html = renderHtml(
-            createElement(
-                PrimaryButton as MochiStyledComponent<{ children?: unknown }>,
-                {},
-                "Test",
-            ),
+            createElement(PrimaryButton as MochiStyledComponent, {}, "Test"),
         );
         expect(html).toContain("<button");
     });
@@ -142,10 +133,9 @@ describe("variant inheritance", () => {
         expect(() =>
             renderHtml(
                 createElement(
-                    PrimaryButton as MochiStyledComponent<{
-                        size?: string;
-                        intent?: string;
-                    }>,
+                    PrimaryButton as MochiStyledComponent<
+                        Record<string, unknown>
+                    >,
                     { size: "large", intent: "primary" },
                 ),
             ),

@@ -1,2 +1,2 @@
-const config = { plugins: { tailwindcss: {} } };
+const config = { plugins: { tailwindcss: {} } }
 export default config

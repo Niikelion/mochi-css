@@ -1,8 +1,8 @@
-import {defineConfig} from "tsdown";
+import { defineConfig } from "tsdown"
 // @ts-expect-error - fs-extra CJS/ESM interop
-import fsExtra from "fs-extra";
+import fsExtra from "fs-extra"
 
-const pkg = fsExtra.readJsonSync("./package.json");
+const pkg = fsExtra.readJsonSync("./package.json")
 
 export default defineConfig({
     entry: "src/index.ts",
@@ -11,9 +11,9 @@ export default defineConfig({
     clean: true,
     skipNodeModulesBundle: true,
     banner: {
-        js: "#!/usr/bin/env node"
+        js: "#!/usr/bin/env node",
     },
     define: {
-        __VERSION__: JSON.stringify(pkg.version)
-    }
+        __VERSION__: JSON.stringify(pkg.version),
+    },
 })

@@ -44,9 +44,11 @@ type StyledVariantProp<V extends AllVariants> =
 
 /** Extract the AllVariants shape from a single CSS arg */
 type ExtractVariants<T> =
-    T extends MochiCSS<infer V> ? V :
-    T extends { variants: infer V extends AllVariants } ? V :
-    DefaultVariants;
+    T extends MochiCSS<infer V>
+        ? V
+        : T extends { variants: infer V extends AllVariants }
+          ? V
+          : DefaultVariants;
 
 /** Merge variant shapes from all args, mirroring MergeCSSVariants over a mapped tuple */
 type ArgsVariants<Args extends (MochiCSSProps<AllVariants> | MochiCSS)[]> =
@@ -94,7 +96,8 @@ export function runtimeStyled<
     args: Args,
     config: StitchesConfig,
 ): MochiStyledComponent<
-    Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> & StyledProps<ArgsVariants<Args>>
+    Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
+        StyledProps<ArgsVariants<Args>>
 > {
     // Variant inheritance: unwrap parent styled component
     const renderTarget: HTMLElementType | ComponentType<Cls> = isMochiStyled(
@@ -109,13 +112,10 @@ export function runtimeStyled<
             arg as Record<string, unknown>,
             config,
         ) as MochiCSSProps<AllVariants>;
-    }) as (MochiCSSProps<AllVariants> | MochiCSS)[];
+    });
 
     // If target is a styled component, prepend its MochiCSS so styles are inherited
-    const flatArgs = preprocessedArgs as (
-        | MochiCSSProps<AllVariants>
-        | MochiCSS
-    )[];
+    const flatArgs = preprocessedArgs;
     const cssArgs: (MochiCSSProps<AllVariants> | MochiCSS)[] = isMochiStyled(
         target,
     )
@@ -131,7 +131,8 @@ export function runtimeStyled<
     const variantKeys = new Set(Object.keys(mochiInstance.variantClassNames));
 
     function StitchesComponent(
-        props: Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> & StyledProps<ArgsVariants<Args>>,
+        props: Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
+            StyledProps<ArgsVariants<Args>>,
     ) {
         const {
             as: asProp,
@@ -242,7 +243,8 @@ export function runtimeStyled<
 
     // Attach metadata for variant inheritance and component-targeting selectors
     const component = StitchesComponent as MochiStyledComponent<
-        Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> & StyledProps<ArgsVariants<Args>>
+        Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
+            StyledProps<ArgsVariants<Args>>
     >;
     component[MOCHI_CSS] = mochiInstance;
     component[MOCHI_TARGET] = renderTarget;
