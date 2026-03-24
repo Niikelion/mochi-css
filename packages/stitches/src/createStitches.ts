@@ -40,12 +40,12 @@ export function createStitches(config: StitchesConfig) {
                 | HTMLElementType
                 | ComponentType<Cls>
                 | MochiStyledComponent,
-            V extends AllVariants[],
+            Args extends (MochiCSSProps<AllVariants> | MochiCSS)[],
         >(
             target: T,
-            ...args: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+            ...args: Args
         ) {
-            return runtimeStyled<T, V>(target, args, resolvedConfig);
+            return runtimeStyled<T, Args>(target, args, resolvedConfig);
         },
         keyframes(stops: KeyframeStops): MochiKeyframes {
             return runtimeKeyframes(stops);

@@ -15,7 +15,7 @@
         "manual": "jiti scripts/manual.ts",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
-        "format": "prettier --write"
+        "format": "prettier --write ."
     },
     "devDependencies": {
         "@mochi-css/shared-config": "^2.0.0",

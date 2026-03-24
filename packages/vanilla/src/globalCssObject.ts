@@ -1,8 +1,16 @@
+import type { Properties, PropertiesHyphen } from "csstype"
 import { CssObjectSubBlock } from "@/cssObject"
 import { compareStringKey } from "@/compare"
 import { StyleProps } from "@/props"
 
-export type GlobalCssStyles = Record<string, StyleProps>
+/** CSS properties accepting both camelCase and kebab-case names with permissive string values */
+export type GlobalCssProperties = {
+    [K in keyof (Properties & PropertiesHyphen)]?: string | number
+} & Record<string, unknown>
+
+export type GlobalCssStyles = {
+    [selector: string]: GlobalCssProperties | GlobalCssStyles
+}
 
 /**
  * CSS object model for global (non-scoped) styles.
@@ -24,7 +32,7 @@ export class GlobalCssObject {
             .toSorted(compareStringKey)
             .map(([selector, props]) => ({
                 selector,
-                subBlocks: [...CssObjectSubBlock.fromProps(props)],
+                subBlocks: [...CssObjectSubBlock.fromProps(props as StyleProps)],
             }))
     }
 

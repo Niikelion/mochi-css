@@ -1,6 +1,7 @@
 export type StitchesMedia = Record<string, string>;
 
-export type StitchesTheme = Record<string, Record<string, string>>;
+export type StitchesThemeValue = string | Record<string, string>;
+export type StitchesTheme = Record<string, Record<string, StitchesThemeValue>>;
 
 export type StitchesUtils = Record<
     string,
