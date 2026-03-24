@@ -1,5 +1,11 @@
 # @mochi-css/vanilla
 
+## 3.0.1
+
+### Patch Changes
+
+- c7c2adb: Bigfixes
+
 ## 3.0.0
 
 ### Major Changes

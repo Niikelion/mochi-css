@@ -1074,7 +1074,7 @@ __metadata:
     "@mochi-css/next": "npm:^3.0.0"
     "@mochi-css/postcss": "npm:^3.0.0"
     "@mochi-css/react": "npm:^3.0.0"
-    "@mochi-css/vanilla": "npm:^3.0.0"
+    "@mochi-css/vanilla": "npm:^3.0.1"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -1178,7 +1178,7 @@ __metadata:
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
     "@mochi-css/config": "npm:*"
     "@mochi-css/shared-config": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^3.0.0"
+    "@mochi-css/vanilla": "npm:^3.0.1"
     "@types/react": "npm:^19.2.2"
     "@types/react-dom": "npm:^19.2.3"
     "@vitest/coverage-v8": "npm:^4.0.15"
@@ -1234,7 +1234,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:^3.0.0, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:^3.0.0, @mochi-css/vanilla@npm:^3.0.1, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
