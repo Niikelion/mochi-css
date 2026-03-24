@@ -8,6 +8,7 @@ export type {
     StitchesConfig,
     StitchesMedia,
     StitchesTheme,
+    StitchesThemeValue,
     StitchesUtils,
 } from "./types";
 export { defaultThemeMap } from "./types";

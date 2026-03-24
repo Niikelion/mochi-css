@@ -18,12 +18,7 @@ npm i @mochi-css/builder --save-dev
 ## Quick Start
 
 ```typescript
-import {
-    Builder,
-    RolldownBundler,
-    VmRunner,
-    defaultExtractors,
-} from "@mochi-css/builder"
+import { Builder, RolldownBundler, VmRunner, defaultExtractors } from "@mochi-css/builder"
 import { writeFile } from "fs/promises"
 
 const builder = new Builder({
@@ -86,7 +81,7 @@ class Builder {
 #### `BuilderOptions`
 
 | Option           | Type       | Description                                                                                                                                           |
-|------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bundler`        | `Bundler`  | Bundler implementation - defaults to `RolldownBundler`                                                                                                |
 | `runner`         | `Runner`   | Code runner implementation - defaults to `VmRunner`                                                                                                   |
 | `filePreProcess` | `function` | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string. |
@@ -120,8 +115,8 @@ Implement this to support a new style function.
 
 ```typescript
 interface StyleExtractor {
-    readonly importPath: string       // e.g. "@mochi-css/vanilla"
-    readonly symbolName: string       // e.g. "css"
+    readonly importPath: string // e.g. "@mochi-css/vanilla"
+    readonly symbolName: string // e.g. "css"
     readonly derivedExtractors?: ReadonlyMap<string, StyleExtractor>
 
     // Extract static arguments from a call expression AST node
@@ -241,7 +236,7 @@ const builder = new Builder({
     onDiagnostic: (diagnostic) => {
         console.warn(`[${diagnostic.code}] ${diagnostic.message}`)
         if (diagnostic.file) console.warn(`  at ${diagnostic.file}:${diagnostic.line}`)
-    }
+    },
 })
 ```
 
@@ -249,13 +244,13 @@ Fatal errors are thrown as `MochiError` instances:
 
 ```typescript
 class MochiError extends Error {
-    readonly code: string    // e.g. "MOCHI_BUNDLE"
+    readonly code: string // e.g. "MOCHI_BUNDLE"
     readonly file?: string
 }
 ```
 
 | Error Code                      | Cause                                           |
-|---------------------------------|-------------------------------------------------|
+| ------------------------------- | ----------------------------------------------- |
 | `MOCHI_FILE_READ`               | Cannot read a source file                       |
 | `MOCHI_PARSE`                   | TypeScript parsing failed                       |
 | `MOCHI_BUNDLE`                  | Bundling the extracted code failed              |
@@ -283,7 +278,7 @@ class MyGenerator implements StyleGenerator {
     }
 
     async generateStyles() {
-        const css = this.collected.map(arg => `/* ${JSON.stringify(arg)} */`).join("\n")
+        const css = this.collected.map((arg) => `/* ${JSON.stringify(arg)} */`).join("\n")
         return { global: css }
     }
 }
@@ -293,7 +288,7 @@ const myExtractor: StyleExtractor = {
     symbolName: "myStyle",
 
     extractStaticArgs(call: CallExpression): Expression[] {
-        return call.arguments.map(a => a.expression)
+        return call.arguments.map((a) => a.expression)
     },
 
     startGeneration(_onDiagnostic?: OnDiagnostic): StyleGenerator {

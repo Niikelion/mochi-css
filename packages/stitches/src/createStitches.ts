@@ -35,17 +35,16 @@ export function createStitches(config: StitchesConfig) {
         ): MochiCSS<MergeCSSVariants<V>> {
             return runtimeCss<V>(args, resolvedConfig);
         },
+        /* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
         styled<
             T extends
                 | HTMLElementType
                 | ComponentType<Cls>
                 | MochiStyledComponent,
-            V extends AllVariants[],
-        >(
-            target: T,
-            ...args: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
-        ) {
-            return runtimeStyled<T, V>(target, args, resolvedConfig);
+            Args extends (MochiCSSProps<AllVariants> | MochiCSS)[],
+        >(target: T, ...args: Args) {
+            /* eslint-enable @typescript-eslint/no-unnecessary-type-parameters */
+            return runtimeStyled(target, args, resolvedConfig);
         },
         keyframes(stops: KeyframeStops): MochiKeyframes {
             return runtimeKeyframes(stops);

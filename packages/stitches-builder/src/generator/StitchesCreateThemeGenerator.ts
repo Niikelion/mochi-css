@@ -46,9 +46,19 @@ export class StitchesCreateThemeGenerator implements StyleGenerator {
                 for (const [token, value] of Object.entries(vals).sort(
                     ([a], [b]) => a.localeCompare(b),
                 )) {
-                    declarations.push(
-                        `    --${prefix}${scale}-${token}: ${value};`,
-                    );
+                    if (typeof value === "string") {
+                        declarations.push(
+                            `    --${prefix}${scale}-${token}: ${value};`,
+                        );
+                    } else {
+                        for (const [subKey, subVal] of Object.entries(
+                            value,
+                        ).sort(([a], [b]) => a.localeCompare(b))) {
+                            declarations.push(
+                                `    --${prefix}${scale}-${token}-${subKey}: ${subVal};`,
+                            );
+                        }
+                    }
                 }
             }
 

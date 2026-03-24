@@ -69,6 +69,7 @@ async function resolveConfig(
 ```
 
 **Merge behaviour:**
+
 - Arrays (`roots`, `extractors`, `esbuildPlugins`): file config + inline options concatenated, falling back to defaults
 - Scalar values (`splitCss`, `tmpDir`): inline options take precedence over file config, then defaults
 - Callbacks (`onDiagnostic`): both callbacks are called when both are provided
@@ -82,10 +83,10 @@ async function resolveConfig(
 The user-facing config. All fields are optional.
 
 | Field            | Type               | Description                                               |
-|------------------|--------------------|-----------------------------------------------------------|
+| ---------------- | ------------------ | --------------------------------------------------------- |
 | `roots`          | `RootEntry[]`      | Directories scanned for source files (default: `["src"]`) |
 | `extractors`     | `StyleExtractor[]` | Style extractors - merged with defaults from integrations |
-| `splitCss`  | `boolean`          | Emit per-source-file CSS instead of one global file       |
+| `splitCss`       | `boolean`          | Emit per-source-file CSS instead of one global file       |
 | `onDiagnostic`   | `OnDiagnostic`     | Callback for warnings and non-fatal errors                |
 | `esbuildPlugins` | `EsbuildPlugin[]`  | esbuild plugins forwarded to the bundler                  |
 | `plugins`        | `MochiPlugin[]`    | Mochi plugins - run after config is resolved              |

@@ -5,15 +5,18 @@ import {
     FC,
     Fragment,
     HTMLElementType,
+    ReactNode,
 } from "react";
 import clsx from "clsx";
 import {
     AllVariants,
     CssObjectBlock,
+    DefaultVariants,
     isMochiCSS,
     MergeCSSVariants,
     MochiCSSProps,
     MochiCSS,
+    RefineVariantType,
     StyleProps,
     css as vanillaCss,
 } from "@mochi-css/vanilla";
@@ -39,14 +42,31 @@ type StyledVariantProp<V extends AllVariants> =
     | (keyof V[keyof V] & string)
     | Partial<Record<string, keyof V[keyof V] & string>>;
 
-type StyledProps<V extends AllVariants[]> = {
+/** Extract the AllVariants shape from a single CSS arg */
+type ExtractVariants<T> =
+    T extends MochiCSS<infer V>
+        ? V
+        : T extends { variants: infer V extends AllVariants }
+          ? V
+          : DefaultVariants;
+
+/** Merge variant shapes from all args, mirroring MergeCSSVariants over a mapped tuple */
+type ArgsVariants<Args extends (MochiCSSProps<AllVariants> | MochiCSS)[]> =
+    MergeCSSVariants<
+        { [K in keyof Args]: ExtractVariants<Args[K]> } extends AllVariants[]
+            ? { [K in keyof Args]: ExtractVariants<Args[K]> }
+            : AllVariants[]
+    >;
+
+type StyledProps<AV extends AllVariants> = {
     as?: HTMLElementType | ComponentType;
     className?: string;
     css?: Record<string, unknown>;
+    children?: ReactNode;
 } & Partial<{
-    [K in keyof MergeCSSVariants<V>]:
-        | (keyof MergeCSSVariants<V>[K] & string)
-        | Partial<Record<string, keyof MergeCSSVariants<V>[K] & string>>;
+    [K in keyof AV]:
+        | RefineVariantType<keyof AV[K] & string>
+        | Partial<Record<string, RefineVariantType<keyof AV[K] & string>>>;
 }>;
 
 function extractVariantStyles(
@@ -70,13 +90,14 @@ function extractVariantStyles(
 
 export function runtimeStyled<
     T extends HTMLElementType | ComponentType<Cls> | MochiStyledComponent,
-    V extends AllVariants[],
+    Args extends (MochiCSSProps<AllVariants> | MochiCSS)[],
 >(
     target: T,
-    args: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS },
+    args: Args,
     config: StitchesConfig,
 ): MochiStyledComponent<
-    Omit<ComponentProps<T>, keyof StyledProps<V>> & StyledProps<V>
+    Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
+        StyledProps<ArgsVariants<Args>>
 > {
     // Variant inheritance: unwrap parent styled component
     const renderTarget: HTMLElementType | ComponentType<Cls> = isMochiStyled(
@@ -91,13 +112,10 @@ export function runtimeStyled<
             arg as Record<string, unknown>,
             config,
         ) as MochiCSSProps<AllVariants>;
-    }) as { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS };
+    });
 
     // If target is a styled component, prepend its MochiCSS so styles are inherited
-    const flatArgs = preprocessedArgs as (
-        | MochiCSSProps<AllVariants>
-        | MochiCSS
-    )[];
+    const flatArgs = preprocessedArgs;
     const cssArgs: (MochiCSSProps<AllVariants> | MochiCSS)[] = isMochiStyled(
         target,
     )
@@ -113,7 +131,8 @@ export function runtimeStyled<
     const variantKeys = new Set(Object.keys(mochiInstance.variantClassNames));
 
     function StitchesComponent(
-        props: Omit<ComponentProps<T>, keyof StyledProps<V>> & StyledProps<V>,
+        props: Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
+            StyledProps<ArgsVariants<Args>>,
     ) {
         const {
             as: asProp,
@@ -224,7 +243,8 @@ export function runtimeStyled<
 
     // Attach metadata for variant inheritance and component-targeting selectors
     const component = StitchesComponent as MochiStyledComponent<
-        Omit<ComponentProps<T>, keyof StyledProps<V>> & StyledProps<V>
+        Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
+            StyledProps<ArgsVariants<Args>>
     >;
     component[MOCHI_CSS] = mochiInstance;
     component[MOCHI_TARGET] = renderTarget;

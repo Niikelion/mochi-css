@@ -1,3 +1,3 @@
-import { eslintConfig } from "@mochi-css/shared-config/eslint"
+import { eslintConfig } from "@mochi-css/shared-config/eslint";
 
-export default eslintConfig
+export default eslintConfig;
