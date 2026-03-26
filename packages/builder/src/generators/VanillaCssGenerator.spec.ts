@@ -75,6 +75,36 @@ describe("VanillaCssGenerator", () => {
         })
     })
 
+    describe("getArgReplacements", () => {
+        it("returns a NewExpression for MochiCSS after generateStyles", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }, "s-abc"])
+            await gen.generateStyles()
+            const replacements = gen.getArgReplacements()
+            expect(replacements).toHaveLength(1)
+            const expr = replacements[0]?.expression
+            expect(expr?.type).toBe("NewExpression")
+        })
+
+        it("returns one replacement per collectArgs call", async () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }])
+            gen.collectArgs("b.ts", [{ color: "blue" }])
+            await gen.generateStyles()
+            const replacements = gen.getArgReplacements()
+            expect(replacements).toHaveLength(2)
+            expect(replacements[0]?.source).toBe("a.ts")
+            expect(replacements[1]?.source).toBe("b.ts")
+        })
+
+        it("returns empty array before generateStyles is called", () => {
+            const gen = new VanillaCssGenerator()
+            gen.collectArgs("a.ts", [{ color: "red" }])
+            const replacements = gen.getArgReplacements()
+            expect(replacements).toHaveLength(0)
+        })
+    })
+
     describe("generateStyles", () => {
         it("accumulates styles from same source across multiple collectArgs calls", async () => {
             const gen = new VanillaCssGenerator()

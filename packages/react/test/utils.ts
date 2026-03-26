@@ -105,16 +105,24 @@ class TestRenderer {
 
     styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
         target: T,
-        ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+        ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS<V[K]> }
     ): FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> & { toString(): string; selector: string } {
         const styles = this.css<V>(...(props as Parameters<typeof this.css<V>>))
         const selector = styles.selector
+        const variantKeys = new Set(Object.keys(styles.variantClassNames))
         return Object.assign(
-            ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) =>
-                createElement(target, {
-                    className: clsx(styles.variant(p as unknown as Parameters<typeof styles.variant>[0]), className),
-                    ...p,
-                }),
+            ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) => {
+                const variantProps: Record<string, unknown> = {}
+                const restProps: Record<string, unknown> = {}
+                for (const [k, v] of Object.entries(p)) {
+                    if (variantKeys.has(k)) variantProps[k] = v
+                    else restProps[k] = v
+                }
+                return createElement(target, {
+                    className: clsx(styles.variant(variantProps as Parameters<typeof styles.variant>[0]), className),
+                    ...restProps,
+                })
+            },
             { toString: () => selector, selector },
         )
     }

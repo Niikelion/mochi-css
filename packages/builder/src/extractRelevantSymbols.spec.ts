@@ -4,6 +4,7 @@ import dedent from "dedent"
 import * as SWC from "@swc/core"
 import { parseSource } from "@/parse"
 import { ProjectIndex, ResolveImport, RefMap, FileInfo, DerivedExtractorBinding, BindingInfo } from "@/ProjectIndex"
+import { defaultStages } from "@/analysis/stages"
 import { extractRelevantSymbols } from "@/extractRelevantSymbols"
 import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
 import { mochiStyledFunctionExtractor } from "@/extractors/ReactStyledExtractor"
@@ -25,7 +26,7 @@ function buildIndex(modules: { ast: SWC.Module; filePath: string }[], extractors
         return null
     }
 
-    const index = new ProjectIndex(modules, extractors, resolveImport)
+    const index = new ProjectIndex(modules, defaultStages, extractors, resolveImport)
     index.discoverCrossFileDerivedExtractors()
     index.propagateUsages()
     return index
@@ -293,7 +294,7 @@ describe("extractRelevantSymbols", () => {
         // mochiStyledFunctionExtractor skips the first arg; styled(Tag) with no style arg returns []
         // This puts an empty array entry in extractedExpressions and triggers expressions.length === 0
         // css({ color }) is also present so hasExpressions=true and generateCallStatements is reached
-        // noinspection JSUnusedLocalSymbols
+        // noinspection JSUnusedLocalSymbols,TypeScriptCheckImport
         const module = await parseSource(
             /* language=typescript */ dedent`
                 import { css } from "@mochi-css/vanilla"
@@ -401,12 +402,23 @@ describe("extractRelevantSymbols", () => {
             }
         }
 
+        function mockCallExprWithArg(arg: SWC.Expression): SWC.CallExpression & { ctxt: number } {
+            return {
+                type: "CallExpression",
+                span: emptySpan,
+                ctxt: 0,
+                callee: mockId("css", 0),
+                arguments: [{ expression: arg }],
+            }
+        }
+
         function makeFileInfo(extras: Partial<FileInfo>): FileInfo {
             return {
                 filePath: "mock.ts",
                 ast: { type: "Module", span: emptySpan, body: [], interpreter: "" },
                 styleExpressions: new Set(),
                 extractedExpressions: new Map(),
+                extractedCallExpressions: new Map(),
                 references: new Set(),
                 moduleBindings: new RefMap(),
                 localImports: new RefMap(),
@@ -444,6 +456,7 @@ describe("extractRelevantSymbols", () => {
             const fileInfo = makeFileInfo({
                 derivedExtractorBindings,
                 extractedExpressions: new Map([[mochiCssFunctionExtractor, [redExpr]]]),
+                extractedCallExpressions: new Map([[mochiCssFunctionExtractor, [mockCallExprWithArg(redExpr)]]]),
             })
 
             const result = extractRelevantSymbols(mockIndex(fileInfo))
@@ -497,6 +510,7 @@ describe("extractRelevantSymbols", () => {
             const fileInfo = makeFileInfo({
                 usedBindings,
                 extractedExpressions: new Map([[mochiCssFunctionExtractor, [redExpr]]]),
+                extractedCallExpressions: new Map([[mochiCssFunctionExtractor, [mockCallExprWithArg(redExpr)]]]),
             })
 
             const result = extractRelevantSymbols(mockIndex(fileInfo))

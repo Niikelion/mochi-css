@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { ProjectIndex, RefMap } from "@/ProjectIndex"
 import { parseSource } from "@/parse"
 import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
+import { defaultStages } from "@/analysis/stages"
 
 describe("RefMap", () => {
     it("stores and retrieves by ref", () => {
@@ -80,6 +81,40 @@ describe("RefMap", () => {
     })
 })
 
+describe("ProjectIndex FileInfo.extractedCallExpressions", () => {
+    it("is populated with the call expression node for each css call", async () => {
+        const module = await parseSource(
+            `import { css } from "@mochi-css/vanilla"
+export const s = css({ color: "red" })`,
+            "test.ts",
+        )
+        const index = new ProjectIndex([module], defaultStages, [mochiCssFunctionExtractor], () => null)
+        index.propagateUsages()
+
+        const fileInfo = index.files.find(([p]) => p === "test.ts")?.[1]
+        expect.assert(fileInfo !== undefined)
+        const callExprs = fileInfo.extractedCallExpressions.get(mochiCssFunctionExtractor)
+        expect(callExprs).toHaveLength(1)
+        expect(callExprs?.[0]?.type).toBe("CallExpression")
+    })
+
+    it("tracks each call separately for multiple css calls", async () => {
+        const module = await parseSource(
+            `import { css } from "@mochi-css/vanilla"
+export const a = css({ color: "red" })
+export const b = css({ color: "blue" })`,
+            "multi.ts",
+        )
+        const index = new ProjectIndex([module], defaultStages, [mochiCssFunctionExtractor], () => null)
+        index.propagateUsages()
+
+        const fileInfo = index.files.find(([p]) => p === "multi.ts")?.[1]
+        expect.assert(fileInfo !== undefined)
+        const callExprs = fileInfo.extractedCallExpressions.get(mochiCssFunctionExtractor)
+        expect(callExprs).toHaveLength(2)
+    })
+})
+
 describe("ProjectIndex.reanalyzeFiles", () => {
     it("replaces FileInfo analysis after AST mutation", async () => {
         const module = await parseSource(
@@ -87,7 +122,7 @@ describe("ProjectIndex.reanalyzeFiles", () => {
 export const s = css({ color: "red" })`,
             "test.ts",
         )
-        const index = new ProjectIndex([module], [mochiCssFunctionExtractor], () => null)
+        const index = new ProjectIndex([module], defaultStages, [mochiCssFunctionExtractor], () => null)
 
         // Verify initial extraction found the style expression
         const before = index.files.find(([p]) => p === "test.ts")?.[1]
@@ -105,7 +140,7 @@ export const s = css({ color: "red" })`,
 
     it("skips file paths not in the index", async () => {
         const module = await parseSource(`export const x = 1`, "a.ts")
-        const index = new ProjectIndex([module], [], () => null)
+        const index = new ProjectIndex([module], defaultStages, [], () => null)
 
         // Should not throw for unknown paths
         expect(() => {
@@ -123,7 +158,7 @@ const primary = "red"
 export const s = css({ color: primary })`,
             "test.ts",
         )
-        const index = new ProjectIndex([module], [mochiCssFunctionExtractor], () => null)
+        const index = new ProjectIndex([module], defaultStages, [mochiCssFunctionExtractor], () => null)
         index.propagateUsages()
 
         const fileInfo = index.files.find(([p]) => p === "test.ts")?.[1]

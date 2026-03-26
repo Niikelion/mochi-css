@@ -111,7 +111,7 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
         splitCss: resolved.splitCss,
         filePreProcess: ({ content, filePath }) =>
             context.sourceTransform.transform(content, { filePath }),
-        preEvalTransforms: context.getAnalysisHooks(),
+        sourceTransforms: context.getAnalysisHooks(),
     })
 
     let rebuildTimer: ReturnType<typeof setTimeout> | undefined

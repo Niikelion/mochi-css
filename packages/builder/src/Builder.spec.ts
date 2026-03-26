@@ -14,9 +14,36 @@ import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
 import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
 import { CallExpression, Expression } from "@swc/core"
-import { AstPostProcessor, AnalysisContext } from "@/Builder"
-import { ProjectIndex } from "@/ProjectIndex"
+import { AstPostProcessor, AnalysisContext, BuilderOptions, EmitHook } from "@/Builder"
+import { Module, ProjectIndex } from "@/ProjectIndex"
+import { defineStage } from "@/analysis/Stage"
+import type { CacheRegistry } from "@/analysis/CacheEngine"
 import { Evaluator } from "@/Evaluator"
+import { createExtractorsPlugin } from "@/ExtractorsPlugin"
+
+async function runWithPlugin(
+    extractors: StyleExtractor[],
+    modules: Module[],
+    extraOptions: Partial<BuilderOptions> = {},
+): Promise<Map<string, StyleGenerator>> {
+    const plugin = createExtractorsPlugin(extractors, { onDiagnostic: extraOptions.onDiagnostic })
+    let capturedBeforeCleanup = new Map<string, StyleGenerator>()
+    await new Builder({
+        roots: ["./"],
+        bundler: new RolldownBundler(),
+        runner: new VmRunner(),
+        ...extraOptions,
+        extractors: plugin.extractors,
+        sourceTransforms: [...plugin.sourceTransforms, ...(extraOptions.sourceTransforms ?? [])],
+        emitHooks: [...(extraOptions.emitHooks ?? []), ...plugin.emitHooks],
+        cleanup: async () => {
+            capturedBeforeCleanup = plugin.getGenerators()
+            plugin.cleanup()
+            await extraOptions.cleanup?.()
+        },
+    }).collectStylesFromModules(modules)
+    return capturedBeforeCleanup
+}
 
 function createMockParentExtractor(importPath: string, symbolName: string, derivedNames: string[]): StyleExtractor {
     const derivedExtractors = new Map<string, StyleExtractor>()
@@ -84,14 +111,7 @@ describe("Builder", () => {
             "buttonStyles.ts",
         )
 
-        const builder = new Builder({
-            roots: ["./"],
-            extractors: [mochiCssFunctionExtractor],
-            bundler: new RolldownBundler(),
-            runner: new VmRunner(),
-        })
-
-        const generators = await builder.collectStylesFromModules([module])
+        const generators = await runWithPlugin([mochiCssFunctionExtractor], [module])
         const generator = generators.get("@mochi-css/vanilla:css")
         const result = await generator?.generateStyles()
         expect.assert(result !== undefined)
@@ -121,9 +141,7 @@ describe("Builder", () => {
 
         let generatedCode = ""
 
-        const builder = new Builder({
-            roots: ["./"],
-            extractors: [mochiCssFunctionExtractor],
+        await runWithPlugin([mochiCssFunctionExtractor], [module], {
             bundler: {
                 async bundle(rootFilePath, files) {
                     const bundler = new RolldownBundler()
@@ -139,10 +157,7 @@ describe("Builder", () => {
                     return bundler.bundle(rootFilePath, files)
                 },
             },
-            runner: new VmRunner(),
         })
-
-        await builder.collectStylesFromModules([module])
 
         // noinspection TypeScriptUnresolvedReference
         expect(generatedCode).toEqual(/* language=typescript */ dedent`
@@ -174,14 +189,7 @@ describe("Builder", () => {
             "b.ts",
         )
 
-        const builder = new Builder({
-            roots: ["./"],
-            extractors: [mochiCssFunctionExtractor],
-            bundler: new RolldownBundler(),
-            runner: new VmRunner(),
-        })
-
-        const generators = await builder.collectStylesFromModules([moduleA, moduleB])
+        const generators = await runWithPlugin([mochiCssFunctionExtractor], [moduleA, moduleB])
         const generator = generators.get("@mochi-css/vanilla:css")
         const result = await generator?.generateStyles()
         expect.assert(result !== undefined)
@@ -201,14 +209,7 @@ describe("Builder", () => {
             "globals.ts",
         )
 
-        const builder = new Builder({
-            roots: ["./"],
-            extractors: [mochiGlobalCssFunctionExtractor],
-            bundler: new RolldownBundler(),
-            runner: new VmRunner(),
-        })
-
-        const generators = await builder.collectStylesFromModules([module])
+        const generators = await runWithPlugin([mochiGlobalCssFunctionExtractor], [module])
         const generator = generators.get("@mochi-css/vanilla:globalCss")
         const result = await generator?.generateStyles()
         expect.assert(result !== undefined)
@@ -229,14 +230,7 @@ describe("Builder", () => {
             "anim.ts",
         )
 
-        const builder = new Builder({
-            roots: ["./"],
-            extractors: [mochiKeyframesFunctionExtractor],
-            bundler: new RolldownBundler(),
-            runner: new VmRunner(),
-        })
-
-        const generators = await builder.collectStylesFromModules([module])
+        const generators = await runWithPlugin([mochiKeyframesFunctionExtractor], [module])
         const generator = generators.get("@mochi-css/vanilla:keyframes")
         const result = await generator?.generateStyles()
         expect.assert(result !== undefined)
@@ -260,9 +254,7 @@ describe("Builder", () => {
         )
 
         let generatedCode = ""
-        const builder = new Builder({
-            roots: ["./"],
-            extractors: [mochiCssFunctionExtractor],
+        const generators = await runWithPlugin([mochiCssFunctionExtractor], [module], {
             bundler: {
                 async bundle(rootFilePath, files) {
                     const bundler = new RolldownBundler()
@@ -274,10 +266,7 @@ describe("Builder", () => {
                     return bundler.bundle(rootFilePath, files)
                 },
             },
-            runner: new VmRunner(),
         })
-
-        const generators = await builder.collectStylesFromModules([module])
         const generator = generators.get("@mochi-css/vanilla:css")
         const result = await generator?.generateStyles()
         expect.assert(result !== undefined)
@@ -319,11 +308,7 @@ describe("Builder", () => {
                 splitCss: true,
             })
 
-            const { generators } = await builder.collectMochiStyles()
-            const generator = generators.get("@mochi-css/vanilla:css")
-            const result = await generator?.generateStyles()
-            expect.assert(result !== undefined)
-
+            const result = await builder.collectMochiCss()
             const allCss = Object.values(result.files ?? {}).join("\n")
             expect(allCss).toContain("color: red")
             expect(allCss).toContain("color: blue")
@@ -352,11 +337,7 @@ describe("Builder", () => {
                 splitCss: true,
             })
 
-            const { generators } = await builder.collectMochiStyles()
-            const generator = generators.get("@mochi-css/vanilla:css")
-            const result = await generator?.generateStyles()
-            expect.assert(result !== undefined)
-
+            const result = await builder.collectMochiCss()
             const allCss = Object.values(result.files ?? {}).join("\n")
             expect(allCss).toContain("color: green")
         } finally {
@@ -385,11 +366,7 @@ describe("Builder", () => {
                     content.replace("// REPLACE_ME", `export const x = css({ color: "purple" })`),
             })
 
-            const { generators } = await builder.collectMochiStyles()
-            const generator = generators.get("@mochi-css/vanilla:css")
-            const result = await generator?.generateStyles()
-            expect.assert(result !== undefined)
-
+            const result = await builder.collectMochiCss()
             const allCss = Object.values(result.files ?? {}).join("\n")
             expect(allCss).toContain("color: purple")
         } finally {
@@ -411,14 +388,7 @@ describe("Builder", () => {
                 "single.ts",
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
-            })
-
-            const generators = await builder.collectStylesFromModules([module])
+            const generators = await runWithPlugin([mockParent], [module])
             const generator = generators.get("@mock/lib:createMock")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
@@ -450,14 +420,7 @@ describe("Builder", () => {
                 buttonPath,
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
-            })
-
-            const generators = await builder.collectStylesFromModules([configModule, buttonModule])
+            const generators = await runWithPlugin([mockParent], [configModule, buttonModule])
             const generator = generators.get("@mock/lib:createMock")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
@@ -491,14 +454,10 @@ describe("Builder", () => {
                 styledPath,
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mochiCssFunctionExtractor, mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
-            })
-
-            const generators = await builder.collectStylesFromModules([configModule, styledModule])
+            const generators = await runWithPlugin(
+                [mochiCssFunctionExtractor, mockParent],
+                [configModule, styledModule],
+            )
 
             const regularGen = generators.get("@mochi-css/vanilla:css")
             const regularResult = await regularGen?.generateStyles()
@@ -522,14 +481,7 @@ describe("Builder", () => {
                 "renamed.ts",
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
-            })
-
-            const generators = await builder.collectStylesFromModules([module])
+            const generators = await runWithPlugin([mockParent], [module])
             const generator = generators.get("@mock/lib:createMock")
             const result = await generator?.generateStyles()
             expect.assert(result !== undefined)
@@ -552,9 +504,7 @@ describe("Builder", () => {
             )
 
             let generatedCode = ""
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [multiDerived],
+            await runWithPlugin([multiDerived], [module], {
                 bundler: {
                     async bundle(rootFilePath, files) {
                         const bundler = new RolldownBundler()
@@ -567,10 +517,7 @@ describe("Builder", () => {
                         return bundler.bundle(rootFilePath, files)
                     },
                 },
-                runner: new VmRunner(),
             })
-
-            await builder.collectStylesFromModules([module])
 
             expect(generatedCode).toContain("css")
             expect(generatedCode).not.toContain("styled")
@@ -588,15 +535,9 @@ describe("Builder", () => {
                 "assign.ts",
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
+            await runWithPlugin([mockParent], [module], {
                 onDiagnostic: (d) => diagnostics.push(d),
             })
-
-            await builder.collectStylesFromModules([module])
 
             expect(diagnostics).toContainEqual(
                 expect.objectContaining({
@@ -618,15 +559,9 @@ describe("Builder", () => {
                 "ignored.ts",
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
+            await runWithPlugin([mockParent], [module], {
                 onDiagnostic: (d) => diagnostics.push(d),
             })
-
-            await builder.collectStylesFromModules([module])
 
             expect(diagnostics).toContainEqual(
                 expect.objectContaining({
@@ -648,15 +583,9 @@ describe("Builder", () => {
                 "rest.ts",
             )
 
-            const builder = new Builder({
-                roots: ["./"],
-                extractors: [mockParent],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
+            await runWithPlugin([mockParent], [module], {
                 onDiagnostic: (d) => diagnostics.push(d),
             })
-
-            await builder.collectStylesFromModules([module])
 
             expect(diagnostics).toContainEqual(
                 expect.objectContaining({
@@ -667,17 +596,7 @@ describe("Builder", () => {
         })
     })
 
-    describe("preEvalTransforms", () => {
-        function makeBuilder(preEvalTransforms: AstPostProcessor[]) {
-            return new Builder({
-                roots: ["./"],
-                extractors: [mochiCssFunctionExtractor],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
-                preEvalTransforms,
-            })
-        }
-
+    describe("sourceTransforms", () => {
         it("calls the handler with the ProjectIndex", async () => {
             const module = await parseSource(
                 dedent`
@@ -692,13 +611,13 @@ describe("Builder", () => {
                 receivedIndex = index
             }
 
-            await makeBuilder([handler]).collectStylesFromModules([module])
+            await runWithPlugin([mochiCssFunctionExtractor], [module], { sourceTransforms: [handler] })
 
             expect(receivedIndex).toBeDefined()
             expect(receivedIndex?.files.length).toBe(1)
         })
 
-        it("pipeline is unaffected when preEvalTransforms array is empty", async () => {
+        it("pipeline is unaffected when sourceTransforms array is empty", async () => {
             const module = await parseSource(
                 dedent`
                 import { css } from "@mochi-css/vanilla"
@@ -707,7 +626,7 @@ describe("Builder", () => {
                 "test.ts",
             )
 
-            const generators = await makeBuilder([]).collectStylesFromModules([module])
+            const generators = await runWithPlugin([mochiCssFunctionExtractor], [module])
             const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
             const css = Object.values(result?.files ?? {}).join("")
             expect(css).toContain("color: red")
@@ -742,11 +661,130 @@ describe("Builder", () => {
                 }
             }
 
-            const generators = await makeBuilder([handler]).collectStylesFromModules([module])
+            const generators = await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                sourceTransforms: [handler],
+            })
             const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
             const css = Object.values(result?.files ?? {}).join("")
             expect(css).toContain("color: blue")
             expect(css).not.toContain("color: red")
+        })
+    })
+
+    describe("preEvalTransforms", () => {
+        it("mutations to eval copy do not affect the canonical index seen by postEvalTransforms", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            let canonicalColorValue: string | undefined
+
+            const preEvalHandler: AstPostProcessor = (index) => {
+                for (const [, fileInfo] of index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "ExportDeclaration") continue
+                        if (item.declaration.type !== "VariableDeclaration") continue
+                        const init = item.declaration.declarations[0]?.init
+                        if (init?.type !== "CallExpression") continue
+                        const arg = init.arguments[0]?.expression
+                        if (arg?.type !== "ObjectExpression") continue
+                        const prop = arg.properties[0]
+                        if (prop?.type !== "KeyValueProperty") continue
+                        const val = prop.value
+                        if (val.type === "StringLiteral") {
+                            val.value = "blue"
+                            val.raw = '"blue"'
+                        }
+                    }
+                }
+            }
+
+            const postHandler: AstPostProcessor = (index) => {
+                for (const [, fileInfo] of index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "ExportDeclaration") continue
+                        if (item.declaration.type !== "VariableDeclaration") continue
+                        const init = item.declaration.declarations[0]?.init
+                        if (init?.type !== "CallExpression") continue
+                        const arg = init.arguments[0]?.expression
+                        if (arg?.type !== "ObjectExpression") continue
+                        const prop = arg.properties[0]
+                        if (prop?.type !== "KeyValueProperty") continue
+                        const val = prop.value
+                        if (val.type === "StringLiteral") {
+                            canonicalColorValue = val.value
+                        }
+                    }
+                }
+            }
+
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                preEvalTransforms: [preEvalHandler],
+                postEvalTransforms: [postHandler],
+            })
+
+            expect(canonicalColorValue).toBe("red")
+        })
+
+        it("mutations in preEvalTransforms affect CSS output via the eval copy", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            const preEvalHandler: AstPostProcessor = (index) => {
+                for (const [, fileInfo] of index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "ExportDeclaration") continue
+                        if (item.declaration.type !== "VariableDeclaration") continue
+                        const init = item.declaration.declarations[0]?.init
+                        if (init?.type !== "CallExpression") continue
+                        const arg = init.arguments[0]?.expression
+                        if (arg?.type !== "ObjectExpression") continue
+                        const prop = arg.properties[0]
+                        if (prop?.type !== "KeyValueProperty") continue
+                        const val = prop.value
+                        if (val.type === "StringLiteral") {
+                            val.value = "blue"
+                            val.raw = '"blue"'
+                        }
+                    }
+                }
+            }
+
+            const generators = await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                preEvalTransforms: [preEvalHandler],
+            })
+
+            const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
+            const css = Object.values(result?.files ?? {}).join("")
+            expect(css).toContain("color: blue")
+            expect(css).not.toContain("color: red")
+        })
+
+        it("pipeline is unaffected when preEvalTransforms array is empty", async () => {
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            const generators = await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                preEvalTransforms: [],
+            })
+
+            const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
+            const css = Object.values(result?.files ?? {}).join("")
+            expect(css).toContain("color: red")
         })
     })
 
@@ -765,13 +803,9 @@ describe("Builder", () => {
                 capturedContext = context
             }
 
-            await new Builder({
-                roots: ["./"],
-                extractors: [mochiCssFunctionExtractor],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
                 postEvalTransforms: [postHandler],
-            }).collectStylesFromModules([module])
+            })
 
             expect(capturedContext).toBeDefined()
             expect(capturedContext?.evaluator).toBeInstanceOf(Evaluator)
@@ -790,15 +824,11 @@ describe("Builder", () => {
 
             let cleanupCallCount = 0
 
-            await new Builder({
-                roots: ["./"],
-                extractors: [mochiCssFunctionExtractor],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
                 cleanup: () => {
                     cleanupCallCount++
                 },
-            }).collectStylesFromModules([module])
+            })
 
             expect(cleanupCallCount).toBe(1)
         })
@@ -814,11 +844,7 @@ describe("Builder", () => {
 
             const order: string[] = []
 
-            await new Builder({
-                roots: ["./"],
-                extractors: [mochiCssFunctionExtractor],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
                 postEvalTransforms: [
                     () => {
                         order.push("post")
@@ -827,9 +853,297 @@ describe("Builder", () => {
                 cleanup: () => {
                     order.push("cleanup")
                 },
-            }).collectStylesFromModules([module])
+            })
 
             expect(order).toEqual(["post", "cleanup"])
+        })
+    })
+
+    describe("emitHooks", () => {
+        it("writes files to emitDir and cleans up removed files on second run", async () => {
+            const emitDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-emit-"))
+            try {
+                const module = await parseSource(
+                    dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    export const s = css({ color: "red" })
+                `,
+                    "test.ts",
+                )
+
+                const emitHook: EmitHook = (_index, context) => {
+                    context.emitChunk("output.css", ".foo { color: red }")
+                }
+
+                await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                    emitHooks: [emitHook],
+                    emitDir,
+                })
+                const written = await fs.readFile(path.join(emitDir, "output.css"), "utf8")
+                expect(written).toBe(".foo { color: red }")
+
+                // Second run without that file → should be deleted
+                const module2 = await parseSource(
+                    dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    export const s = css({ color: "red" })
+                `,
+                    "test.ts",
+                )
+                const emitHook2: EmitHook = () => undefined
+                await runWithPlugin([mochiCssFunctionExtractor], [module2], {
+                    emitHooks: [emitHook2],
+                    emitDir,
+                })
+                await expect(fs.readFile(path.join(emitDir, "output.css"), "utf8")).rejects.toThrow()
+            } finally {
+                await fs.rm(emitDir, { recursive: true, force: true })
+            }
+        })
+    })
+
+    describe("markForEval", () => {
+        it("expression marked for eval appears as statement in bundle and its runtime value is capturable", async () => {
+            // config is NOT referenced by any css() call — it would normally be stripped
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                const config = { color: "red" }
+                export const s = css({ color: "blue" })
+            `,
+                "test.ts",
+            )
+
+            let trackedValue: unknown
+            let bundledConfigCode = ""
+
+            const sourceTransform: AstPostProcessor = (index, context) => {
+                for (const [, fileInfo] of index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "VariableDeclaration") continue
+                        const decl = item.declarations[0]
+                        if (decl?.id.type !== "Identifier" || decl.id.value !== "config") continue
+                        const init = decl.init
+                        if (!init) continue
+                        const wrapper = context.evaluator.valueWithTracking(init)
+                        decl.init = wrapper
+                        context.markForEval(fileInfo.filePath, wrapper)
+                    }
+                }
+            }
+
+            const postHandler: AstPostProcessor = (_index, { evaluator }) => {
+                // evaluator.valueWithTracking node is the tracked node
+                // We need to find it via the module AST — just scan for any tracked value
+                for (const [, fileInfo] of _index.files) {
+                    for (const item of fileInfo.ast.body) {
+                        if (item.type !== "VariableDeclaration") continue
+                        const decl = item.declarations[0]
+                        if (decl?.id.type !== "Identifier" || decl.id.value !== "config") continue
+                        const init = decl.init
+                        if (!init) continue
+                        trackedValue = evaluator.getTrackedValue(init)
+                    }
+                }
+            }
+
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                bundler: {
+                    async bundle(rootFilePath, files) {
+                        for (const [p, src] of Object.entries(files)) {
+                            if (p.endsWith("test.ts") && src) bundledConfigCode = src
+                        }
+                        return new RolldownBundler().bundle(rootFilePath, files)
+                    },
+                },
+                sourceTransforms: [sourceTransform],
+                postEvalTransforms: [postHandler],
+            })
+
+            // The wrapped expression should appear as a statement in the bundle even though css() doesn't use it
+            expect(bundledConfigCode).toContain("color")
+            expect(bundledConfigCode).toContain("red")
+            // The runtime value should be captured via getTrackedValue
+            expect(trackedValue).toEqual({ color: "red" })
+        })
+    })
+
+    describe("createExtractorsPlugin", () => {
+        it("produces CSS via emitChunk", async () => {
+            const emitDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-extplugin-"))
+            try {
+                const module = await parseSource(
+                    dedent`
+                    import { css } from "@mochi-css/vanilla"
+                    export const s = css({ color: "green" })
+                `,
+                    "test.ts",
+                )
+
+                const plugin = createExtractorsPlugin([mochiCssFunctionExtractor])
+
+                const builder = new Builder({
+                    roots: ["./"],
+                    extractors: plugin.extractors,
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    sourceTransforms: plugin.sourceTransforms,
+                    emitHooks: plugin.emitHooks,
+                    emitDir,
+                    cleanup: plugin.cleanup,
+                })
+
+                await builder.collectStylesFromModules([module])
+
+                const manifestContent = await fs.readFile(path.join(emitDir, ".mochi-emit.json"), "utf8")
+                const emittedPaths = JSON.parse(manifestContent) as string[]
+                expect(emittedPaths.length).toBeGreaterThan(0)
+
+                // At least one file should contain green CSS
+                let foundGreen = false
+                for (const relPath of emittedPaths) {
+                    const content = await fs.readFile(path.join(emitDir, relPath), "utf8")
+                    if (content.includes("green")) foundGreen = true
+                }
+                expect(foundGreen).toBe(true)
+            } finally {
+                await fs.rm(emitDir, { recursive: true, force: true })
+            }
+        })
+    })
+
+    describe("emitChunk", () => {
+        async function withEmitDir(fn: (emitDir: string) => Promise<void>) {
+            const emitDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-chunk-"))
+            try {
+                await fn(emitDir)
+            } finally {
+                await fs.rm(emitDir, { recursive: true, force: true })
+            }
+        }
+
+        it("chunk emitted from sourceTransform is written to emitDir", async () => {
+            await withEmitDir(async (emitDir) => {
+                const sourceTransform: AstPostProcessor = (_index, context) => {
+                    context.emitChunk("out.css", "body {}")
+                }
+
+                await new Builder({
+                    roots: ["./"],
+                    extractors: [],
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    sourceTransforms: [sourceTransform],
+                    emitDir,
+                }).collectStylesFromModules([])
+
+                const content = await fs.readFile(path.join(emitDir, "out.css"), "utf8")
+                expect(content).toBe("body {}")
+            })
+        })
+
+        it("chunk emitted from postEvalTransform is written to emitDir", async () => {
+            await withEmitDir(async (emitDir) => {
+                const postEvalTransform: AstPostProcessor = (_index, context) => {
+                    context.emitChunk("post.css", "h1 {}")
+                }
+
+                await new Builder({
+                    roots: ["./"],
+                    extractors: [],
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    postEvalTransforms: [postEvalTransform],
+                    emitDir,
+                }).collectStylesFromModules([])
+
+                const content = await fs.readFile(path.join(emitDir, "post.css"), "utf8")
+                expect(content).toBe("h1 {}")
+            })
+        })
+
+        it("chunk emitted from emitHook is written to emitDir", async () => {
+            await withEmitDir(async (emitDir) => {
+                const emitHook: EmitHook = (_index, context) => {
+                    context.emitChunk("hook.css", "a {}")
+                }
+
+                await new Builder({
+                    roots: ["./"],
+                    extractors: [],
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    emitHooks: [emitHook],
+                    emitDir,
+                }).collectStylesFromModules([])
+
+                const content = await fs.readFile(path.join(emitDir, "hook.css"), "utf8")
+                expect(content).toBe("a {}")
+            })
+        })
+
+        it("duplicate chunk content for same path is deduplicated", async () => {
+            await withEmitDir(async (emitDir) => {
+                const sourceTransform: AstPostProcessor = (_index, context) => {
+                    context.emitChunk("out.css", "body {}")
+                    context.emitChunk("out.css", "body {}")
+                }
+
+                await new Builder({
+                    roots: ["./"],
+                    extractors: [],
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    sourceTransforms: [sourceTransform],
+                    emitDir,
+                }).collectStylesFromModules([])
+
+                const content = await fs.readFile(path.join(emitDir, "out.css"), "utf8")
+                expect(content).toBe("body {}")
+            })
+        })
+
+        it("multiple distinct chunks for same path are joined with newlines", async () => {
+            await withEmitDir(async (emitDir) => {
+                const sourceTransform: AstPostProcessor = (_index, context) => {
+                    context.emitChunk("out.css", "body {}")
+                    context.emitChunk("out.css", "h1 {}")
+                }
+
+                await new Builder({
+                    roots: ["./"],
+                    extractors: [],
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    sourceTransforms: [sourceTransform],
+                    emitDir,
+                }).collectStylesFromModules([])
+
+                const content = await fs.readFile(path.join(emitDir, "out.css"), "utf8")
+                expect(content).toBe("body {}\n\nh1 {}")
+            })
+        })
+
+        it("chunk path is registered in manifest", async () => {
+            await withEmitDir(async (emitDir) => {
+                const sourceTransform: AstPostProcessor = (_index, context) => {
+                    context.emitChunk("styles.css", "p {}")
+                }
+
+                await new Builder({
+                    roots: ["./"],
+                    extractors: [],
+                    bundler: new RolldownBundler(),
+                    runner: new VmRunner(),
+                    sourceTransforms: [sourceTransform],
+                    emitDir,
+                }).collectStylesFromModules([])
+
+                const manifest = JSON.parse(
+                    await fs.readFile(path.join(emitDir, ".mochi-emit.json"), "utf8"),
+                ) as string[]
+                expect(manifest).toContain("styles.css")
+            })
         })
     })
 
@@ -870,17 +1184,76 @@ describe("Builder", () => {
                 }
             }
 
-            await new Builder({
-                roots: ["./"],
-                extractors: [mochiCssFunctionExtractor],
-                bundler: new RolldownBundler(),
-                runner: new VmRunner(),
-                preEvalTransforms: [preHandler],
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                sourceTransforms: [preHandler],
                 postEvalTransforms: [postHandler],
-            }).collectStylesFromModules([module])
+            })
 
             // The tracked value should be the runtime value of the config object
             expect(trackedValue).toEqual({ color: "red" })
+        })
+
+        it("setGlobal makes a value available in the execution context", async () => {
+            // The module references `__myGlobal`, which is only defined via setGlobal
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                const config = __myGlobal
+                export const s = css(config)
+            `,
+                "test.ts",
+            )
+
+            const sourceTransform: AstPostProcessor = (_index, { evaluator }) => {
+                evaluator.setGlobal("__myGlobal", { color: "blue" })
+            }
+
+            const generators = await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                sourceTransforms: [sourceTransform],
+            })
+
+            const result = await generators.get("@mochi-css/vanilla:css")?.generateStyles()
+            const css = Object.values(result?.files ?? {}).join("")
+            expect(css).toContain("color: blue")
+        })
+    })
+
+    describe("stages", () => {
+        it("custom stage output is accessible via index.getInstance in a hook", async () => {
+            const collectedPaths: string[] = []
+
+            const FilePathStage = defineStage({
+                dependsOn: [],
+                init(registry: CacheRegistry) {
+                    const paths = registry.fileCache(
+                        () => [],
+                        (file) => file,
+                    )
+                    return { paths }
+                },
+            })
+
+            const module = await parseSource(
+                dedent`
+                import { css } from "@mochi-css/vanilla"
+                export const s = css({ color: "red" })
+            `,
+                "test.ts",
+            )
+
+            const handler: AstPostProcessor = (index) => {
+                const { paths } = index.getInstance(FilePathStage)
+                for (const [filePath] of index.files) {
+                    collectedPaths.push(paths.for(filePath).get())
+                }
+            }
+
+            await runWithPlugin([mochiCssFunctionExtractor], [module], {
+                stages: [FilePathStage],
+                sourceTransforms: [handler],
+            })
+
+            expect(collectedPaths).toEqual(["test.ts"])
         })
     })
 })

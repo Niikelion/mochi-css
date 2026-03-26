@@ -243,45 +243,51 @@ function generateCallStatements(
 ): SWC.ExpressionStatement[] {
     const statements: SWC.ExpressionStatement[] = []
 
-    for (const [extractor, expressions] of info.extractedExpressions) {
-        if (expressions.length === 0) continue
+    for (const [extractor, callNodes] of info.extractedCallExpressions) {
+        if (callNodes.length === 0) continue
 
         const derivedBinding = derivedLookup.get(extractor)
+        const extractorId = getExtractorId(extractor)
 
-        // Build args, replacing grouped expressions with a single spread element
-        const processedGroups = new Set<DependencyCssCallGroup>()
-        const args: SWC.Argument[] = []
-        for (const expression of expressions) {
-            const group = expressionToGroup.get(expression)
-            if (group) {
-                if (!processedGroups.has(group)) {
-                    processedGroups.add(group)
-                    args.push({ spread: emptySpan, expression: makeIdentifier(group.varName, 0) })
+        for (const callNode of callNodes) {
+            const staticArgs = extractor.extractStaticArgs(callNode)
+            if (staticArgs.length === 0) continue
+
+            // Build args, replacing grouped expressions with a single spread element
+            const processedGroups = new Set<DependencyCssCallGroup>()
+            const args: SWC.Argument[] = []
+            for (const expression of staticArgs) {
+                const group = expressionToGroup.get(expression)
+                if (group) {
+                    if (!processedGroups.has(group)) {
+                        processedGroups.add(group)
+                        args.push({ spread: emptySpan, expression: makeIdentifier(group.varName, 0) })
+                    }
+                    // Skip: already covered by the spread above
+                } else {
+                    args.push({ expression })
                 }
-                // Skip: already covered by the spread above
-            } else {
-                args.push({ expression })
             }
-        }
+            if (args.length === 0) continue
 
-        if (derivedBinding) {
-            // Derived call: localRef("file.ts", ...args)
-            const callExpr: SWC.CallExpression & { ctxt: number } = {
-                type: "CallExpression",
-                span: emptySpan,
-                ctxt: 0,
-                arguments: [{ expression: { type: "StringLiteral", span: emptySpan, value: filePath } }, ...args],
-                callee: makeIdentifier(derivedBinding.localIdentifier.value, 0),
+            if (derivedBinding) {
+                // Derived call: localRef("file.ts", ...args)
+                const callExpr: SWC.CallExpression & { ctxt: number } = {
+                    type: "CallExpression",
+                    span: emptySpan,
+                    ctxt: 0,
+                    arguments: [{ expression: { type: "StringLiteral", span: emptySpan, value: filePath } }, ...args],
+                    callee: makeIdentifier(derivedBinding.localIdentifier.value, 0),
+                }
+                statements.push({ type: "ExpressionStatement", span: emptySpan, expression: callExpr })
+            } else {
+                // Regular call: extractors["id"]("file.ts", ...args)
+                statements.push({
+                    type: "ExpressionStatement",
+                    span: emptySpan,
+                    expression: makeExtractorCall(extractorId, filePath, args),
+                })
             }
-            statements.push({ type: "ExpressionStatement", span: emptySpan, expression: callExpr })
-        } else {
-            // Regular call: extractors["id"]("file.ts", ...args)
-            const extractorId = getExtractorId(extractor)
-            statements.push({
-                type: "ExpressionStatement",
-                span: emptySpan,
-                expression: makeExtractorCall(extractorId, filePath, args),
-            })
         }
     }
 
@@ -291,13 +297,18 @@ function generateCallStatements(
 /**
  * Extracts relevant symbols from a project index, generating minimal code for each file.
  */
-export function extractRelevantSymbols(index: ProjectIndex): Record<string, string | null> {
+export function extractRelevantSymbols(
+    index: ProjectIndex,
+    extraExpressions?: Map<string, Set<SWC.Expression>>,
+): Record<string, string | null> {
     return Object.fromEntries(
         index.files.map(([filePath, info]) => {
             const styles = info.styleExpressions
             const hasDerived = info.derivedExtractorBindings.size > 0
+            const extra = [...(extraExpressions?.get(filePath) ?? [])]
 
-            if (styles.size === 0 && info.usedBindings.size === 0 && !hasDerived) return [filePath, null]
+            if (styles.size === 0 && info.usedBindings.size === 0 && !hasDerived && extra.length === 0)
+                return [filePath, null]
 
             // Build derived extractor lookup
             const derivedLookup = new Map<StyleExtractor, DerivedExtractorBinding>()
@@ -361,7 +372,13 @@ export function extractRelevantSymbols(index: ProjectIndex): Record<string, stri
                 }
             }
 
-            const hasExpressions = styles.size > 0 || info.extractedExpressions.size > 0
+            const extraStatements: SWC.ExpressionStatement[] = extra.map((expression) => ({
+                type: "ExpressionStatement",
+                span: emptySpan,
+                expression,
+            }))
+
+            const hasExpressions = styles.size > 0 || info.extractedExpressions.size > 0 || extra.length > 0
             if (!hasExpressions && derivedStatements.length === 0) {
                 if (moduleBody.length === 0) return [filePath, null]
 
@@ -380,7 +397,7 @@ export function extractRelevantSymbols(index: ProjectIndex): Record<string, stri
             const code = SWC.printSync({
                 type: "Module",
                 span: emptySpan,
-                body: [...moduleBody, ...derivedStatements, ...callStatements],
+                body: [...moduleBody, ...derivedStatements, ...callStatements, ...extraStatements],
                 interpreter: "",
             }).code
 

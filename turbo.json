@@ -5,10 +5,6 @@
             "dependsOn": [ "^build" ],
             "outputs": [ "dist/**" ]
         },
-        "build-example": {
-            "dependsOn": [ "^build-example" ],
-            "outputs": [ "dist/**" ]
-        },
         "test": {},
         "coverage": {},
         "dev": {

@@ -49,8 +49,11 @@ The builder performs multiphase processing:
 
 1. **Preprocessing** - Runs the optional `filePreProcess` callback on every source file before parsing.
 2. **Analysis** - Scans the source files, builds a dependency graph, and identifies all style function calls and the variables they depend on.
-3. **Extraction** - Generates minimal executable code containing only the relevant style expressions, bundles it, executes it in an isolated VM context, and captures the style arguments passed to each extractor.
-4. **Generation** - Generates CSS code using extracted arguments and registered generators.
+3. **preEvalTransforms** - Optional hooks that run after analysis but before execution. Receive the full `ProjectIndex` and `AnalysisContext`. Can mutate AST nodes.
+4. **Extraction** - Generates minimal executable code containing only the relevant style expressions, bundles it, executes it in an isolated VM context, and captures the style arguments passed to each extractor.
+5. **postEvalTransforms** - Optional hooks that run after execution, with access to runtime-resolved values via `context.evaluator`.
+6. **emitHooks** - Optional hooks that run after execution and produce output files. Return a `Record<path, content | null>` — files are written to `emitDir` and cleaned up automatically.
+7. **Generation** - Generates CSS code using extracted arguments and registered generators.
 
 ---
 
@@ -80,13 +83,20 @@ class Builder {
 
 #### `BuilderOptions`
 
-| Option           | Type       | Description                                                                                                                                           |
-| ---------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bundler`        | `Bundler`  | Bundler implementation - defaults to `RolldownBundler`                                                                                                |
-| `runner`         | `Runner`   | Code runner implementation - defaults to `VmRunner`                                                                                                   |
-| `filePreProcess` | `function` | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string. |
-
-For all other options, see [`MochiConfig`](../config/README.md) - they can be set in `mochi.config.ts` and are picked up automatically by integrations.
+| Option               | Type            | Description                                                                                                                                           |
+| -------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roots`              | `RootEntry[]`   | Directories (or named root entries) scanned recursively for source files.                                                                             |
+| `extractors`         | `StyleExtractor[]` | Style extractors that identify and capture style function calls.                                                                                   |
+| `bundler`            | `Bundler`       | Bundler implementation. Use `RolldownBundler`.                                                                                                        |
+| `runner`             | `Runner`        | Code runner implementation. Use `VmRunner`.                                                                                                           |
+| `splitCss`           | `boolean`       | When `true`, CSS is split per source file instead of merged. Default: `false`.                                                                        |
+| `onDiagnostic`       | `function`      | Callback for structured warnings and non-fatal errors.                                                                                                |
+| `filePreProcess`     | `function`      | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string. |
+| `preEvalTransforms`  | `AstPostProcessor[]` | Hooks that run after analysis, before execution. May mutate the AST. Use `context.markForEval(filePath, expr)` to include additional expressions in the bundle.  |
+| `postEvalTransforms` | `AstPostProcessor[]` | Hooks that run after execution. The evaluator is populated — use `context.evaluator.getTrackedValue()` to read runtime values.                   |
+| `emitHooks`          | `EmitHook[]`    | Hooks that run after postEvalTransforms. Call `context.emitChunk(path, content)` to emit files.                                                       |
+| `emitDir`            | `string`        | Base directory for files produced via `context.emitChunk()`.                                                                                          |
+| `cleanup`            | `function`      | Called once at the end of the pipeline. Use to release caches built during pre/postEvalTransforms.                                                    |
 
 #### CSS output
 
@@ -145,10 +155,75 @@ interface StyleGenerator {
         global?: string
         files?: Record<string, string>
     }>
+
+    // Optional: return AST replacement expressions after generateStyles().
+    // One entry per collectArgs call (same order). The builder substitutes these
+    // back into the source AST — enabling compile-time replacement of style objects.
+    getArgReplacements?(): Array<{ source: string; expression: SWC.Expression }>
 }
 ```
 
 Returning a `Record<string, StyleGenerator>` from `collectArgs` enables derived extractor patterns - each key corresponds to a property name in the destructuring of the call's return value.
+
+---
+
+### `AnalysisContext`
+
+Passed to `preEvalTransforms`, `postEvalTransforms`, and `emitHooks`.
+
+```typescript
+type AnalysisContext = {
+    onDiagnostic?: OnDiagnostic
+    evaluator: Evaluator
+    // Emit a chunk of content to a file in emitDir. Multiple chunks for the same path are
+    // deduplicated by content and joined with "\n\n".
+    emitChunk(path: string, content: string): void
+    // Mark an AST expression for inclusion in the eval bundle for a given file.
+    // The expression's identifier dependencies are traced and its value is captured at runtime.
+    // Wrap with evaluator.valueWithTracking() first to read back the runtime value later.
+    markForEval(filePath: string, expression: SWC.Expression): void
+}
+```
+
+---
+
+### `EmitHook`
+
+A hook that runs after code execution. Call `context.emitChunk()` to emit files.
+
+```typescript
+type EmitHook = (
+    index: ProjectIndex,
+    context: AnalysisContext,
+) => void | Promise<void>
+```
+
+Keys are relative paths (resolved against `emitDir`). A `string` value writes the file; `null` deletes it. Files written on a previous run that are absent on the next run are automatically deleted (tracked via `.mochi-emit.json` in `emitDir`).
+
+---
+
+### `createExtractorsPlugin`
+
+Packages extractors and their generators as a portable plugin object, making the full extractor/generator lifecycle easy to compose into a `Builder`:
+
+```typescript
+import { createExtractorsPlugin } from "@mochi-css/builder"
+
+const plugin = createExtractorsPlugin([mochiCssFunctionExtractor])
+
+const builder = new Builder({
+    roots: ["./src"],
+    extractors: plugin.extractors,
+    bundler: new RolldownBundler(),
+    runner: new VmRunner(),
+    preEvalTransforms: plugin.preEvalTransforms,
+    emitHooks: plugin.emitHooks,
+    emitDir: "./dist/mochi",
+    cleanup: plugin.cleanup,
+})
+```
+
+The plugin's `emitHook` calls `generateStyles()` and `getArgReplacements()` on each generator, writes CSS files keyed by source path, and applies AST arg replacements.
 
 ---
 

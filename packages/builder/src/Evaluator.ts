@@ -20,6 +20,7 @@ export class Evaluator {
     private nextId = 0
     private readonly values = new Map<number, unknown>()
     private readonly astToIdMapping = new Map<SWC.Expression, number>()
+    private readonly globals = new Map<string, unknown>()
 
     get freshId() {
         return this.nextId++
@@ -31,6 +32,11 @@ export class Evaluator {
         this.nextId = 0
         this.values.clear()
         this.astToIdMapping.clear()
+        this.globals.clear()
+    }
+
+    setGlobal(name: string, value: unknown): void {
+        this.globals.set(name, value)
     }
 
     valueWithTracking(expression: SWC.Expression) {
@@ -62,7 +68,7 @@ export class Evaluator {
         return this.values.get(id)
     }
 
-    async evaluate(code: string, context: Record<string, unknown>) {
+    async evaluate(code: string) {
         const interceptedValues = new Map<number, unknown>()
 
         function tracker(id: number, value: unknown) {
@@ -70,7 +76,7 @@ export class Evaluator {
             return value
         }
 
-        await this.runner.execute(code, { ...context, [trackerName]: tracker })
+        await this.runner.execute(code, { ...Object.fromEntries(this.globals), [trackerName]: tracker })
         for (const [key, value] of interceptedValues.entries()) {
             this.values.set(key, value)
         }

@@ -5534,7 +5534,7 @@ __metadata:
     "@arethetypeswrong/cli": "npm:^0.18.2"
     "@changesets/cli": "npm:^2.29.7"
     tsdown: "npm:^0.15.7"
-    turbo: "npm:^2.8.12"
+    turbo: "npm:^2.8.20"
     typescript: "npm:^5.9.3"
   languageName: unknown
   linkType: soft
@@ -7269,7 +7269,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"turbo@npm:^2.8.12":
+"turbo@npm:^2.8.20":
   version: 2.8.20
   resolution: "turbo@npm:2.8.20"
   dependencies:

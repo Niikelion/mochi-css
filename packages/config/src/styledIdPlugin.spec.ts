@@ -2,11 +2,19 @@ import { describe, it, expect } from "vitest"
 import * as SWC from "@swc/core"
 import { styledIdPlugin } from "./styledIdPlugin"
 import { FullContext } from "@/plugin"
-import { ProjectIndex } from "@mochi-css/builder"
+import { type AnalysisContext, ProjectIndex } from "@mochi-css/builder"
 
 function makeIndex(source: string, filePath = "src/Button.ts"): ProjectIndex {
     const ast = SWC.parseSync(source, { syntax: "typescript" })
     return { files: [[filePath, { ast }]] } as unknown as ProjectIndex
+}
+
+const fakeContext: AnalysisContext = {
+    evaluator: undefined as unknown as AnalysisContext["evaluator"],
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    emitChunk: () => {},
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    markForEval: () => {},
 }
 
 describe("styledIdPlugin — sourceTransform (runtime injection)", () => {
@@ -64,7 +72,7 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
         plugin.onLoad?.(context)
 
         const index = makeIndex(`const Button = styled('button', { color: 'red' })`)
-        await context.getAnalysisHooks()[0]?.(index, {})
+        await context.getAnalysisHooks()[0]?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const varDecl = ast?.body[0] as SWC.VariableDeclaration
@@ -81,7 +89,7 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
         plugin.onLoad?.(context)
 
         const index = makeIndex(`const Button = styled('button', {})\nconst Link = styled('a', {})`)
-        await context.getAnalysisHooks()[0]?.(index, {})
+        await context.getAnalysisHooks()[0]?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const id0 = ((ast?.body[0] as SWC.VariableDeclaration).declarations[0]?.init as SWC.CallExpression).arguments[2]
@@ -98,8 +106,8 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
 
         const index = makeIndex(`const Button = styled('button', { color: 'red' })`)
         const [hook] = context.getAnalysisHooks()
-        await hook?.(index, {})
-        await hook?.(index, {})
+        await hook?.(index, fakeContext)
+        await hook?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const varDecl = ast?.body[0] as SWC.VariableDeclaration
@@ -113,7 +121,7 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
         plugin.onLoad?.(context)
 
         const index = makeIndex(`export const Card = styled('section', { padding: 16 })`)
-        await context.getAnalysisHooks()[0]?.(index, {})
+        await context.getAnalysisHooks()[0]?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const exportDecl = ast?.body[0] as SWC.ExportDeclaration
