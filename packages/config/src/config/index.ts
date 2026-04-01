@@ -1,4 +1,4 @@
-import { OnDiagnostic, RootEntry, StyleExtractor } from "@mochi-css/builder"
+import { OnDiagnostic, RootEntry } from "@mochi-css/builder"
 import { makePipeline, Plugin } from "@/plugin"
 import { mergeArrays, mergeCallbacks } from "@/merge"
 import path from "path"
@@ -7,7 +7,6 @@ import { createJiti } from "jiti"
 
 export interface Config {
     roots: RootEntry[]
-    extractors: StyleExtractor[]
     splitCss: boolean
     onDiagnostic?: OnDiagnostic
     plugins: Plugin<Config>[]
@@ -30,7 +29,6 @@ export async function resolveConfig(
 
     const resolved: Config = {
         roots: mergeArrays(fileConfig.roots, inlineConfig?.roots) ?? defaults?.roots ?? [],
-        extractors: mergeArrays(fileConfig.extractors, inlineConfig?.extractors) ?? defaults?.extractors ?? [],
         splitCss: inlineConfig?.splitCss ?? fileConfig.splitCss ?? defaults?.splitCss ?? false,
         onDiagnostic: mergeCallbacks(fileConfig.onDiagnostic, inlineConfig?.onDiagnostic),
         plugins,

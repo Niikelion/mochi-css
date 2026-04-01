@@ -1,7 +1,7 @@
 import * as SWC from "@swc/core"
-import { StyleGenerator } from "@/generators/StyleGenerator"
-import { CSSObject, MochiCSS, StyleProps, isMochiCSS, mergeMochiCss, AllVariants } from "@mochi-css/vanilla"
-import { OnDiagnostic, getErrorMessage } from "@/diagnostics"
+import type { StyleGenerator } from "@mochi-css/builder"
+import { OnDiagnostic, getErrorMessage } from "@mochi-css/builder"
+import { CSSObject, MochiCSS, StyleProps, isMochiCSS, mergeMochiCss, AllVariants } from "../index"
 
 const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
 

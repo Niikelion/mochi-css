@@ -1,7 +1,6 @@
-import { StyleExtractor } from "@/extractors/StyleExtractor"
-import { CallExpression, Expression } from "@swc/core"
-import { StyleGenerator, VanillaCssGenerator } from "@/generators"
-import { OnDiagnostic } from "@/diagnostics"
+import type { StyleExtractor, StyleGenerator, OnDiagnostic } from "@mochi-css/builder"
+import type { CallExpression, Expression } from "@swc/core"
+import { VanillaCssGenerator } from "./VanillaCssGenerator"
 
 export class VanillaCssExtractor implements StyleExtractor {
     public readonly importPath: string

@@ -3,25 +3,16 @@ import fs from "fs/promises"
 import * as SWC from "@swc/core"
 import { createPatch } from "diff"
 import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
-import {
-    ImportSpecStage,
-    DerivedExtractorStage,
-    StyleExprStage,
-    BindingStage,
-    CrossFileDerivedStage,
-} from "@/analysis/stages"
 import type { StageDefinition } from "@/analysis/Stage"
 import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
 import { Runner } from "@/Runner"
 import dedent from "dedent"
-import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
 import { extractRelevantSymbols } from "@/extractRelevantSymbols"
 import { wrapIndexWithProxies } from "@/AstProxy"
 import { Evaluator } from "@/Evaluator"
-import { createExtractorsPlugin } from "@/ExtractorsPlugin"
 
 export type AnalysisContext = {
     onDiagnostic?: OnDiagnostic
@@ -33,14 +24,6 @@ export type AnalysisContext = {
 export type AstPostProcessor = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
 
 export type EmitHook = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
-
-const builtinStages = [
-    ImportSpecStage,
-    DerivedExtractorStage,
-    StyleExprStage,
-    BindingStage,
-    CrossFileDerivedStage,
-] as const
 
 const rootFileSuffix = dedent`
     declare global {
@@ -64,8 +47,6 @@ export type RootEntry = string | { path: string; package: string }
 export type BuilderOptions = {
     /** Directories (or named root entries) scanned recursively for `.ts`/`.tsx` source files. */
     roots: RootEntry[]
-    /** Style extractors that identify and capture style function calls. Use `defaultExtractors` for vanilla Mochi CSS. */
-    extractors: StyleExtractor[]
     /**
      * Bundler used to bundle the extracted minimal source code into a single executable module.
      * Use `RolldownBundler` unless you need a custom bundler.
@@ -94,7 +75,7 @@ export type BuilderOptions = {
     emitDir?: string
     /** Called once at the end of the pipeline. Use to release any caches built between sourceTransforms and postEvalTransforms. */
     cleanup?: () => void | Promise<void>
-    /** Additional analysis stages to run alongside the built-in stages. Access their output in any hook via index.getInstance(stage). */
+    /** Analysis stages to run. Pass stages from createExtractorsPlugin() here — they carry the extractor configuration. */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     stages?: readonly StageDefinition<any[], any>[]
 }
@@ -172,8 +153,7 @@ export class Builder {
         const evalModules = modules.map((m) => ({ ...m, ast: structuredClone(m.ast) }))
         const evalIndex = new ProjectIndex(
             evalModules,
-            [...builtinStages, ...(this.options.stages ?? [])],
-            this.options.extractors,
+            this.options.stages ?? [],
             resolveImport,
             this.options.onDiagnostic,
         )
@@ -234,13 +214,7 @@ export class Builder {
     public async collectStylesFromModules(modules: Module[]): Promise<Map<string, Set<string>>> {
         const resolveImport = this.buildResolveImport(modules)
         const onDiagnostic = this.options.onDiagnostic
-        const index = new ProjectIndex(
-            modules,
-            [...builtinStages, ...(this.options.stages ?? [])],
-            this.options.extractors,
-            resolveImport,
-            onDiagnostic,
-        )
+        const index = new ProjectIndex(modules, this.options.stages ?? [], resolveImport, onDiagnostic)
         const evaluator = new Evaluator(this.options.runner)
         const chunks = new Map<string, Set<string>>()
         const markedForEval = new Map<string, Set<SWC.Expression>>()
@@ -382,16 +356,7 @@ export class Builder {
             }),
         )
 
-        const plugin = createExtractorsPlugin(this.options.extractors, { onDiagnostic: this.options.onDiagnostic })
-        const chunks = await new Builder({
-            ...this.options,
-            sourceTransforms: [...plugin.sourceTransforms, ...(this.options.sourceTransforms ?? [])],
-            emitHooks: [...(this.options.emitHooks ?? []), ...plugin.emitHooks],
-            cleanup: async () => {
-                plugin.cleanup()
-                await this.options.cleanup?.()
-            },
-        }).collectStylesFromModules(modules)
+        const chunks = await this.collectStylesFromModules(modules)
 
         const globalCss: string[] = []
         const filesCss: Record<string, string> = {}

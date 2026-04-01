@@ -3,47 +3,68 @@ import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { OnDiagnostic } from "@/diagnostics"
 import { type ResolveImport, RefMap } from "@/analysis/types"
 import { defineStage } from "@/analysis/Stage"
-import type { CacheRegistry, FileInput } from "@/analysis/CacheEngine"
-import { idToRef } from "@/analysis/helpers"
+import type { CacheRegistry, FileCache, FileInput } from "@/analysis/CacheEngine"
+import { idToRef, getOrInsert } from "@/analysis/helpers"
+import type { StageDefinition } from "@/analysis/Stage"
 
 export type ExtractorLookup = Map<string, Map<string, StyleExtractor>>
 
 export type FileData = {
     ast: SWC.Module
     filePath: string
-    extractorLookup: ExtractorLookup
     resolveImport: ResolveImport
     onDiagnostic: OnDiagnostic | undefined
 }
 
-export const ImportSpecStage = defineStage({
-    dependsOn: [],
-    init(registry: CacheRegistry) {
-        const fileData: FileInput<FileData> = registry.fileInput<FileData>()
+export type ImportSpecStageOut = {
+    fileData: FileInput<FileData>
+    importSpecs: FileCache<RefMap<StyleExtractor>>
+}
 
-        const importSpecs = registry.fileCache(
-            (file) => [fileData.cache.for(file)],
-            (file): RefMap<StyleExtractor> => {
-                const data = fileData.cache.for(file).get()
-                const result = new RefMap<StyleExtractor>()
-                for (const item of data.ast.body) {
-                    if (item.type !== "ImportDeclaration") continue
-                    const possibleExtractors = data.extractorLookup.get(item.source.value)
-                    if (!possibleExtractors) continue
-                    for (const specifier of item.specifiers) {
-                        if (specifier.type === "ImportNamespaceSpecifier") continue
-                        const ref = idToRef(specifier.local)
-                        const sourceName =
-                            specifier.type === "ImportSpecifier" ? (specifier.imported?.value ?? ref.name) : ref.name
-                        const source = possibleExtractors.get(sourceName)
-                        if (!source) continue
-                        result.set(ref, source)
+export const IMPORT_SPEC_STAGE = Symbol.for("ImportSpecStage")
+
+export function makeImportSpecStage(extractors: StyleExtractor[]): StageDefinition<[], ImportSpecStageOut> {
+    const extractorLookup: ExtractorLookup = new Map()
+    for (const extractor of extractors) {
+        getOrInsert(extractorLookup, extractor.importPath, () => new Map()).set(extractor.symbolName, extractor)
+    }
+
+    const stage = defineStage({
+        dependsOn: [],
+        init(registry: CacheRegistry): ImportSpecStageOut {
+            const fileData: FileInput<FileData> = registry.fileInput<FileData>()
+
+            const importSpecs = registry.fileCache(
+                (file) => [fileData.cache.for(file)],
+                (file): RefMap<StyleExtractor> => {
+                    const data = fileData.cache.for(file).get()
+                    const result = new RefMap<StyleExtractor>()
+                    for (const item of data.ast.body) {
+                        if (item.type !== "ImportDeclaration") continue
+                        const possibleExtractors = extractorLookup.get(item.source.value)
+                        if (!possibleExtractors) continue
+                        for (const specifier of item.specifiers) {
+                            if (specifier.type === "ImportNamespaceSpecifier") continue
+                            const ref = idToRef(specifier.local)
+                            const sourceName =
+                                specifier.type === "ImportSpecifier"
+                                    ? (specifier.imported?.value ?? ref.name)
+                                    : ref.name
+                            const source = possibleExtractors.get(sourceName)
+                            if (!source) continue
+                            result.set(ref, source)
+                        }
                     }
-                }
-                return result
-            },
-        )
+                    return result
+                },
+            )
 
-        return { fileData, importSpecs }
-    },
-})
+            return { fileData, importSpecs }
+        },
+    })
+
+    return Object.assign(stage, { [IMPORT_SPEC_STAGE]: true as const })
+}
+
+// Backward-compatible singleton with no extractors
+export const ImportSpecStage = makeImportSpecStage([])

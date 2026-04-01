@@ -6,8 +6,15 @@ import type { CacheRegistry } from "@/analysis/CacheEngine"
 import { RefMap } from "@/analysis/types"
 import type { DerivedExtractorBinding } from "@/analysis/types"
 import { idToRef, type Ref } from "@/analysis/helpers"
-import { BindingStage } from "./BindingStage"
-import { DerivedExtractorStage } from "./DerivedExtractorStage"
+import {
+    BindingStage,
+    makeBindingStage,
+    type BindingStageOut,
+    DerivedExtractorStage,
+    makeDerivedExtractorStage,
+    type DerivedExtractorStageOut,
+} from "@/analysis"
+import type { StageDefinition } from "@/analysis/Stage"
 
 export type CrossFileExtra = {
     additionalDerivedBindings: RefMap<DerivedExtractorBinding>
@@ -58,76 +65,96 @@ function scanForDerivedCalls(ast: SWC.Module, ref: Ref, binding: DerivedExtracto
 
 export type CrossFileResult = Map<string, CrossFileExtra>
 
-export const CrossFileDerivedStage = defineStage({
-    dependsOn: [DerivedExtractorStage, BindingStage],
-    init(
-        registry: CacheRegistry,
-        derivedInst: ReturnType<typeof DerivedExtractorStage.init>,
-        bindingInst: ReturnType<typeof BindingStage.init>,
-    ) {
-        const filePaths = registry.getFilePaths()
+export type CrossFileDerivedStageOut = {
+    crossFileResult: import("@/analysis/CacheEngine").ProjectCache<CrossFileResult>
+    fileData: DerivedExtractorStageOut["fileData"]
+}
 
-        const crossFileResult = registry.projectCache(
-            () => filePaths.flatMap((f) => [derivedInst.derived.for(f), bindingInst.fileBindings.for(f)]),
-            (): CrossFileResult => {
-                const result = new Map<string, CrossFileExtra>()
+export const CROSS_FILE_DERIVED_STAGE = Symbol.for("CrossFileDerivedStage")
 
-                const getExtra = (filePath: string): CrossFileExtra => {
-                    const existing = result.get(filePath)
-                    if (existing) return existing
-                    const extra: CrossFileExtra = {
-                        additionalDerivedBindings: new RefMap<DerivedExtractorBinding>(),
-                        additionalStyleExprs: new Set<SWC.Expression>(),
-                        additionalExtractedExprs: new Map<StyleExtractor, SWC.Expression[]>(),
-                        additionalExtractedCallExprs: new Map<StyleExtractor, SWC.CallExpression[]>(),
-                        usedImportRefs: new Set<Ref>(),
+export function makeCrossFileDerivedStage(
+    derivedStage: ReturnType<typeof makeDerivedExtractorStage>,
+    bindingStage: ReturnType<typeof makeBindingStage>,
+): StageDefinition<
+    [ReturnType<typeof makeDerivedExtractorStage>, ReturnType<typeof makeBindingStage>],
+    CrossFileDerivedStageOut
+> {
+    const stage = defineStage({
+        dependsOn: [derivedStage, bindingStage] as const,
+        init(
+            registry: CacheRegistry,
+            derivedInst: DerivedExtractorStageOut,
+            bindingInst: BindingStageOut,
+        ): CrossFileDerivedStageOut {
+            const filePaths = registry.getFilePaths()
+
+            const crossFileResult = registry.projectCache(
+                () => filePaths.flatMap((f) => [derivedInst.derived.for(f), bindingInst.fileBindings.for(f)]),
+                (): CrossFileResult => {
+                    const result = new Map<string, CrossFileExtra>()
+
+                    const getExtra = (filePath: string): CrossFileExtra => {
+                        const existing = result.get(filePath)
+                        if (existing) return existing
+                        const extra: CrossFileExtra = {
+                            additionalDerivedBindings: new RefMap<DerivedExtractorBinding>(),
+                            additionalStyleExprs: new Set<SWC.Expression>(),
+                            additionalExtractedExprs: new Map<StyleExtractor, SWC.Expression[]>(),
+                            additionalExtractedCallExprs: new Map<StyleExtractor, SWC.CallExpression[]>(),
+                            usedImportRefs: new Set<Ref>(),
+                        }
+                        result.set(filePath, extra)
+                        return extra
                     }
-                    result.set(filePath, extra)
-                    return extra
-                }
 
-                let changed = true
-                while (changed) {
-                    changed = false
-                    for (const filePath of filePaths) {
-                        const { localImports } = bindingInst.fileBindings.for(filePath).get()
-                        const { derivedBindings } = derivedInst.derived.for(filePath).get()
-                        const extra = getExtra(filePath)
+                    let changed = true
+                    while (changed) {
+                        changed = false
+                        for (const filePath of filePaths) {
+                            const { localImports } = bindingInst.fileBindings.for(filePath).get()
+                            const { derivedBindings } = derivedInst.derived.for(filePath).get()
+                            const extra = getExtra(filePath)
 
-                        for (const localImport of localImports.values()) {
-                            const { exportedDerivedExtractors } = bindingInst.fileBindings
-                                .for(localImport.sourcePath)
-                                .get()
+                            for (const localImport of localImports.values()) {
+                                const { exportedDerivedExtractors } = bindingInst.fileBindings
+                                    .for(localImport.sourcePath)
+                                    .get()
 
-                            const derivedBinding = exportedDerivedExtractors.get(localImport.exportName)
-                            if (!derivedBinding) continue
-                            if (derivedBindings.has(localImport.localRef)) continue
-                            if (extra.additionalDerivedBindings.has(localImport.localRef)) continue
+                                const derivedBinding = exportedDerivedExtractors.get(localImport.exportName)
+                                if (!derivedBinding) continue
+                                if (derivedBindings.has(localImport.localRef)) continue
+                                if (extra.additionalDerivedBindings.has(localImport.localRef)) continue
 
-                            const data = derivedInst.fileData.cache.for(filePath).get()
-                            const { moduleBindings } = bindingInst.fileBindings.for(filePath).get()
+                                const data = derivedInst.fileData.cache.for(filePath).get()
+                                const { moduleBindings } = bindingInst.fileBindings.for(filePath).get()
 
-                            const importedBinding: DerivedExtractorBinding = {
-                                extractor: derivedBinding.extractor,
-                                parentExtractor: derivedBinding.parentExtractor,
-                                parentCallExpression: derivedBinding.parentCallExpression,
-                                propertyName: derivedBinding.propertyName,
-                                localIdentifier:
-                                    moduleBindings.get(localImport.localRef)?.identifier ??
-                                    derivedBinding.localIdentifier,
+                                const importedBinding: DerivedExtractorBinding = {
+                                    extractor: derivedBinding.extractor,
+                                    parentExtractor: derivedBinding.parentExtractor,
+                                    parentCallExpression: derivedBinding.parentCallExpression,
+                                    propertyName: derivedBinding.propertyName,
+                                    localIdentifier:
+                                        moduleBindings.get(localImport.localRef)?.identifier ??
+                                        derivedBinding.localIdentifier,
+                                }
+
+                                extra.additionalDerivedBindings.set(localImport.localRef, importedBinding)
+                                scanForDerivedCalls(data.ast, localImport.localRef, importedBinding, extra)
+                                changed = true
                             }
-
-                            extra.additionalDerivedBindings.set(localImport.localRef, importedBinding)
-                            scanForDerivedCalls(data.ast, localImport.localRef, importedBinding, extra)
-                            changed = true
                         }
                     }
-                }
 
-                return result
-            },
-        )
+                    return result
+                },
+            )
 
-        return { crossFileResult, fileData: derivedInst.fileData }
-    },
-})
+            return { crossFileResult, fileData: derivedInst.fileData }
+        },
+    })
+
+    return Object.assign(stage, { [CROSS_FILE_DERIVED_STAGE]: true as const })
+}
+
+// Backward-compatible singleton
+export const CrossFileDerivedStage = makeCrossFileDerivedStage(DerivedExtractorStage, BindingStage)

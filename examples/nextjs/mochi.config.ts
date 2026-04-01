@@ -1,4 +1,4 @@
-import { defineConfig, styledIdPlugin } from "@mochi-css/config"
+import { defineConfig, styledIdPlugin } from "@mochi-css/vanilla/config"
 
 export default defineConfig({
     roots: ["src"],

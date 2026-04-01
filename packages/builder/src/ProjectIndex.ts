@@ -1,10 +1,9 @@
 import * as SWC from "@swc/core"
-import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { OnDiagnostic } from "@/diagnostics"
 import { createCacheRegistry } from "@/analysis/CacheEngine"
 import type { StageDefinition } from "@/analysis/Stage"
 import { propagateUsagesFromExpr } from "@/analysis/propagation"
-import { topoSort, getOrInsert } from "@/analysis/helpers"
+import { topoSort } from "@/analysis/helpers"
 import {
     type BindingInfo,
     type DerivedExtractorBinding,
@@ -14,11 +13,19 @@ import {
     RefMap,
     type ResolveImport,
 } from "@/analysis/types"
-import { ImportSpecStage, type ExtractorLookup } from "@/analysis/stages/ImportSpecStage"
-import { DerivedExtractorStage } from "@/analysis/stages/DerivedExtractorStage"
-import { StyleExprStage } from "@/analysis/stages/StyleExprStage"
-import { BindingStage } from "@/analysis/stages/BindingStage"
-import { CrossFileDerivedStage, type CrossFileResult } from "@/analysis/stages/CrossFileDerivedStage"
+import {
+    IMPORT_SPEC_STAGE,
+    DERIVED_EXTRACTOR_STAGE,
+    STYLE_EXPR_STAGE,
+    BINDING_STAGE,
+    CROSS_FILE_DERIVED_STAGE,
+    type ImportSpecStageOut,
+    type DerivedExtractorStageOut,
+    type StyleExprStageOut,
+    type BindingStageOut,
+    type CrossFileDerivedStageOut,
+    type CrossFileResult,
+} from "@/analysis/stages"
 
 export type { Module, ImportSpec, FileInfo, ResolveImport }
 export type { BindingInfo, BindingDeclarator, LocalImport, DerivedExtractorBinding } from "@/analysis/types"
@@ -44,22 +51,20 @@ function mergeMap<K, V extends unknown[]>(base: Map<K, V>, extra: Map<K, V>): Ma
 
 export class ProjectIndex {
     private readonly modules: Module[]
-    private readonly extractorLookup: ExtractorLookup
     private readonly resolveImport: ResolveImport
     private readonly onDiagnostic: OnDiagnostic | undefined
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private readonly instanceMap: Map<StageDefinition<any[], any>, unknown>
-    private readonly importInst: ReturnType<typeof ImportSpecStage.init>
-    private readonly crossFileDerived: ReturnType<typeof CrossFileDerivedStage.init>
-    private readonly bindingStage: ReturnType<typeof BindingStage.init>
-    private readonly styleExprStage: ReturnType<typeof StyleExprStage.init>
-    private readonly derivedStage: ReturnType<typeof DerivedExtractorStage.init>
+    private readonly importInst: ImportSpecStageOut
+    private readonly crossFileDerived: CrossFileDerivedStageOut
+    private readonly bindingStage: BindingStageOut
+    private readonly styleExprStage: StyleExprStageOut
+    private readonly derivedStage: DerivedExtractorStageOut
     private analyzedBindings = new Set<string>()
     // Stable usedBindings sets (cleared in-place on reset; same Set reused across cache rebuilds)
     private readonly perFileUsedBindings = new Map<string, Set<BindingInfo>>()
     // Stable FileInfo cache — returned by-reference so AstProxy mutations persist
     private fileInfoCache: Map<string, FileInfo> | null = null
-    public readonly extractors: StyleExtractor[]
 
     private assembleFileInfo(m: Module, crossFileMap: CrossFileResult): FileInfo {
         const { moduleBindings, localImports, references, exports, exportedDerivedExtractors } =
@@ -127,22 +132,12 @@ export class ProjectIndex {
         modules: Module[],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         stages: readonly StageDefinition<any[], any>[],
-        extractors: StyleExtractor[],
         resolveImport: ResolveImport,
         onDiagnostic?: OnDiagnostic,
     ) {
         this.modules = modules
-        this.extractors = extractors
         this.resolveImport = resolveImport
         this.onDiagnostic = onDiagnostic
-
-        this.extractorLookup = new Map<string, Map<string, StyleExtractor>>()
-        for (const extractor of extractors) {
-            getOrInsert(this.extractorLookup, extractor.importPath, () => new Map()).set(
-                extractor.symbolName,
-                extractor,
-            )
-        }
 
         const filePaths = modules.map((m) => m.filePath)
         const registry = createCacheRegistry(filePaths)
@@ -153,28 +148,34 @@ export class ProjectIndex {
         for (const stage of sorted) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             const deps = stage.dependsOn.map((d) => instanceMap.get(d))
-
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const instance = stage.init(registry, ...deps)
             instanceMap.set(stage, instance)
         }
         this.instanceMap = instanceMap
 
-        this.importInst = this.getInstance(ImportSpecStage)
-        this.derivedStage = this.getInstance(DerivedExtractorStage)
-        this.styleExprStage = this.getInstance(StyleExprStage)
-        this.bindingStage = this.getInstance(BindingStage)
-        this.crossFileDerived = this.getInstance(CrossFileDerivedStage)
+        this.importInst = this.findInstance<ImportSpecStageOut>(IMPORT_SPEC_STAGE)
+        this.derivedStage = this.findInstance<DerivedExtractorStageOut>(DERIVED_EXTRACTOR_STAGE)
+        this.styleExprStage = this.findInstance<StyleExprStageOut>(STYLE_EXPR_STAGE)
+        this.bindingStage = this.findInstance<BindingStageOut>(BINDING_STAGE)
+        this.crossFileDerived = this.findInstance<CrossFileDerivedStageOut>(CROSS_FILE_DERIVED_STAGE)
 
         for (const m of modules) {
             this.importInst.fileData.set(m.filePath, {
                 ast: m.ast,
                 filePath: m.filePath,
-                extractorLookup: this.extractorLookup,
                 resolveImport,
                 onDiagnostic,
             })
         }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+    private findInstance<T>(tag: symbol): T {
+        for (const [stage, inst] of this.instanceMap) {
+            if ((stage as Record<symbol, unknown>)[tag] === true) return inst as T
+        }
+        throw new Error(`Required stage not found (${String(tag)}). Make sure to include extractor stages.`)
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

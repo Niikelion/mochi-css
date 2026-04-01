@@ -83,20 +83,20 @@ class Builder {
 
 #### `BuilderOptions`
 
-| Option               | Type            | Description                                                                                                                                           |
-| -------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roots`              | `RootEntry[]`   | Directories (or named root entries) scanned recursively for source files.                                                                             |
-| `extractors`         | `StyleExtractor[]` | Style extractors that identify and capture style function calls.                                                                                   |
-| `bundler`            | `Bundler`       | Bundler implementation. Use `RolldownBundler`.                                                                                                        |
-| `runner`             | `Runner`        | Code runner implementation. Use `VmRunner`.                                                                                                           |
-| `splitCss`           | `boolean`       | When `true`, CSS is split per source file instead of merged. Default: `false`.                                                                        |
-| `onDiagnostic`       | `function`      | Callback for structured warnings and non-fatal errors.                                                                                                |
-| `filePreProcess`     | `function`      | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string. |
-| `preEvalTransforms`  | `AstPostProcessor[]` | Hooks that run after analysis, before execution. May mutate the AST. Use `context.markForEval(filePath, expr)` to include additional expressions in the bundle.  |
-| `postEvalTransforms` | `AstPostProcessor[]` | Hooks that run after execution. The evaluator is populated — use `context.evaluator.getTrackedValue()` to read runtime values.                   |
-| `emitHooks`          | `EmitHook[]`    | Hooks that run after postEvalTransforms. Call `context.emitChunk(path, content)` to emit files.                                                       |
-| `emitDir`            | `string`        | Base directory for files produced via `context.emitChunk()`.                                                                                          |
-| `cleanup`            | `function`      | Called once at the end of the pipeline. Use to release caches built during pre/postEvalTransforms.                                                    |
+| Option               | Type                 | Description                                                                                                                                                     |
+| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roots`              | `RootEntry[]`        | Directories (or named root entries) scanned recursively for source files.                                                                                       |
+| `extractors`         | `StyleExtractor[]`   | Style extractors that identify and capture style function calls.                                                                                                |
+| `bundler`            | `Bundler`            | Bundler implementation. Use `RolldownBundler`.                                                                                                                  |
+| `runner`             | `Runner`             | Code runner implementation. Use `VmRunner`.                                                                                                                     |
+| `splitCss`           | `boolean`            | When `true`, CSS is split per source file instead of merged. Default: `false`.                                                                                  |
+| `onDiagnostic`       | `function`           | Callback for structured warnings and non-fatal errors.                                                                                                          |
+| `filePreProcess`     | `function`           | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string.           |
+| `preEvalTransforms`  | `AstPostProcessor[]` | Hooks that run after analysis, before execution. May mutate the AST. Use `context.markForEval(filePath, expr)` to include additional expressions in the bundle. |
+| `postEvalTransforms` | `AstPostProcessor[]` | Hooks that run after execution. The evaluator is populated — use `context.evaluator.getTrackedValue()` to read runtime values.                                  |
+| `emitHooks`          | `EmitHook[]`         | Hooks that run after postEvalTransforms. Call `context.emitChunk(path, content)` to emit files.                                                                 |
+| `emitDir`            | `string`             | Base directory for files produced via `context.emitChunk()`.                                                                                                    |
+| `cleanup`            | `function`           | Called once at the end of the pipeline. Use to release caches built during pre/postEvalTransforms.                                                              |
 
 #### CSS output
 
@@ -192,10 +192,7 @@ type AnalysisContext = {
 A hook that runs after code execution. Call `context.emitChunk()` to emit files.
 
 ```typescript
-type EmitHook = (
-    index: ProjectIndex,
-    context: AnalysisContext,
-) => void | Promise<void>
+type EmitHook = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
 ```
 
 Keys are relative paths (resolved against `emitDir`). A `string` value writes the file; `null` deletes it. Files written on a previous run that are absent on the next run are automatically deleted (tracked via `.mochi-emit.json` in `emitDir`).

@@ -121,6 +121,8 @@ function generateKnownPropertiesFileContent(names: string[]) {
 
 export default definePackageConfig({
     attw: true,
+    format: ["esm", "cjs"],
+    entry: ["src/index.ts", "src/config/index.ts", "!src/**/__tests__/**", "!src/**/*.test.*", "!src/**/*.spec.*"],
     hooks: {
         "build:prepare": async () => {
             const { properties, types } = await listAll()

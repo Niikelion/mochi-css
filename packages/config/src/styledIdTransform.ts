@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import { shortHash } from "@mochi-css/vanilla"
+import { shortHash } from "@mochi-css/core"
 
 export const STABLE_ID_RE = /^s-[0-9A-Za-z_-]+$/
 

@@ -35,15 +35,14 @@ describe("createMochiConfigModule", () => {
         await createMochiConfigModule().run(ctx)
         const content = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
         expect(content).toContain("defineConfig")
-        expect(content).toContain("@mochi-css/config")
+        expect(content).toContain("@mochi-css/vanilla/config")
     })
 
     it("creates mochi.config.ts with styledIdPlugin when styledId: true", async () => {
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const content = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
         expect(content).toContain("styledIdPlugin()")
-        expect(content).toContain("@mochi-css/builder")
-        expect(content).toContain("@mochi-css/config")
+        expect(content).toContain("@mochi-css/vanilla/config")
     })
 
     it("adds styledIdPlugin to existing defineConfig mochi.config.ts", async () => {
@@ -55,7 +54,7 @@ describe("createMochiConfigModule", () => {
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const content = await fs.readFile(configPath, "utf-8")
         expect(content).toContain("styledIdPlugin()")
-        expect(content).toContain("@mochi-css/builder")
+        expect(content).toContain("@mochi-css/vanilla/config")
     })
 
     it("adds styledIdPlugin to existing config with no plugins property", async () => {
@@ -106,10 +105,10 @@ describe("createMochiConfigModule", () => {
         expect(content).toBe(original)
     })
 
-    it("requires @mochi-css/config package", async () => {
+    it("requires @mochi-css/vanilla package", async () => {
         const requirePackage = vi.fn()
         await createMochiConfigModule().run({ ...ctx, requirePackage })
-        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/config@^2.0.0")
+        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla@^2.0.0")
     })
 
     it("does not explicitly require @mochi-css/builder (it installs transitively)", async () => {

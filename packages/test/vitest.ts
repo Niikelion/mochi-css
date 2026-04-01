@@ -1,7 +1,12 @@
 import { defineConfig } from "vitest/config"
-import tsconfigPaths from "vite-tsconfig-paths"
 
 export const vitestConfig = defineConfig({
-    plugins: [tsconfigPaths()],
-    test: {},
+    test: {
+        coverage: {
+            provider: "v8"
+        }
+    },
+    resolve: {
+        tsconfigPaths: true
+    }
 })

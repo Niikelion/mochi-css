@@ -49,9 +49,14 @@ const fileInfo: FileInfo = {
 }
 ```
 
-#### New: `emitHooks` and `emitDir`
+#### New: `preEvalTransforms`, `postEvalTransforms`, `emitHooks`, and `emitDir`
 
-Plugins can now produce output files from the pipeline. Add `emitHooks` and `emitDir` to `BuilderOptions`:
+Four new `BuilderOptions` fields control the extended pipeline:
+
+- **`preEvalTransforms`** — run on a deep copy of the ASTs before evaluation. Mutations here do NOT persist in the canonical index.
+- **`postEvalTransforms`** — run after code execution on the canonical index. The evaluator is populated; use `evaluator.getTrackedValue()` to read back runtime values.
+- **`emitHooks`** — run after `postEvalTransforms`. Call `context.emitChunk(path, content)` to write files into `emitDir`.
+- **`emitDir`** — base directory for files produced via `context.emitChunk()`.
 
 ```typescript
 const builder = new Builder({
@@ -59,16 +64,21 @@ const builder = new Builder({
     extractors: defaultExtractors,
     bundler: new RolldownBundler(),
     runner: new VmRunner(),
+    postEvalTransforms: [
+        (_index, { evaluator }) => {
+            // read back values captured via evaluator.valueWithTracking()
+        },
+    ],
     emitHooks: [
-        async (index, context) => {
-            return { "styles.css": "/* generated CSS */" }
+        async (_index, context) => {
+            context.emitChunk("styles.css", "/* generated CSS */")
         },
     ],
     emitDir: "./dist/mochi",
 })
 ```
 
-Files are written to `emitDir`. A `null` value deletes the file. Files no longer present in the hook's output are automatically deleted on the next run (tracked via `.mochi-emit.json` in `emitDir`).
+Files are written to `emitDir`. Passing `null` to `emitChunk` deletes the file. Files no longer emitted are automatically deleted on the next run (tracked via `.mochi-emit.json` in `emitDir`).
 
 #### New: `createExtractorsPlugin`
 
@@ -91,6 +101,16 @@ const builder = new Builder({
 })
 ```
 
+`createExtractorsPlugin` returns an `ExtractorsPluginResult` with these fields:
+
+| Field | Description |
+|-------|-------------|
+| `extractors` | Extractor instances to pass to `Builder` |
+| `sourceTransforms` | AST transform hooks to wire into `sourceTransforms` |
+| `emitHooks` | Emit hooks to wire into `emitHooks` |
+| `getGenerators()` | Returns the `Map<string, StyleGenerator>` of generators captured during the last build |
+| `cleanup` | Releases internal caches — wire into `cleanup` |
+
 This is the recommended pattern for integrations that need CSS files written to disk.
 
 #### New: `context.markForEval`
@@ -110,10 +130,10 @@ const sourceTransform: AstPostProcessor = (index, context) => {
 }
 ```
 
-Read the runtime value back in a `postEvalTransform`:
+Read the runtime value back in a `postEvalTransforms` handler:
 ```typescript
 const postTransform: AstPostProcessor = (_index, { evaluator }) => {
-    const value = evaluator.getTrackedValue(trackedNode)
+    const value = evaluator.getTrackedValue(tracked)
 }
 ```
 

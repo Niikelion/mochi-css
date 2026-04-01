@@ -1,0 +1,81 @@
+{
+    "name": "@mochi-css/vanilla-react",
+    "repository": "git@github.com:Niikelion/mochi-css.git",
+    "version": "3.0.0",
+    "license": "MIT",
+    "keywords": [
+        "css-in-js",
+        "styling",
+        "styles",
+        "react"
+    ],
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "typesVersions": {
+        "*": {
+            "config": [
+                "./dist/config.d.ts"
+            ]
+        }
+    },
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.mts",
+                "import": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.ts",
+                "require": "./dist/index.js"
+            }
+        },
+        "./config": {
+            "import": {
+                "types": "./dist/config.d.mts",
+                "import": "./dist/config.mjs"
+            },
+            "require": {
+                "types": "./dist/config.d.ts",
+                "require": "./dist/config.js"
+            }
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
+    },
+    "devDependencies": {
+        "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.2",
+        "@types/css-tree": "^2.3.10",
+        "@types/node": "^24.8.1",
+        "@types/react": "^19.2.2",
+        "@types/react-dom": "^19.2.3",
+        "@webref/css": "^8.2.3",
+        "css-tree": "^3.1.0",
+        "dedent": "^1.7.1",
+        "eslint": "^9.39.2",
+        "happy-dom": "^20.6.3",
+        "prettier": "^3.8.1",
+        "react-dom": "^19.2.4",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.15"
+    },
+    "dependencies": {
+        "@mochi-css/config": "^3.0.0",
+        "@mochi-css/plugins": "^3.0.0",
+        "@mochi-css/vanilla": "^3.0.0",
+        "clsx": "^2.1.1",
+        "react": ">= 18 || >= 19"
+    }
+}

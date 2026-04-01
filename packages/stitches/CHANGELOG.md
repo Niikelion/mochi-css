@@ -6,7 +6,7 @@
 
 - c7c2adb: Bigfixes
 - Updated dependencies [c7c2adb]
-  - @mochi-css/vanilla@3.0.1
+    - @mochi-css/vanilla@3.0.1
 
 ## 0.1.0
 

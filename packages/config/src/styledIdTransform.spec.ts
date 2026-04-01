@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { transformStyledIds } from "./styledIdTransform"
-import { shortHash } from "@mochi-css/vanilla"
+import { shortHash } from "@mochi-css/core"
 import dedent from "dedent"
 
 const FILE = "/project/src/Button.tsx"

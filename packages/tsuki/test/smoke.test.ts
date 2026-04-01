@@ -10,8 +10,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const distPath = path.resolve(__dirname, "../dist/index.js")
 const fixturesDir = path.resolve(__dirname, "../fixtures")
+const mochiRoot = path.resolve(__dirname, "../../..")
 
 const TIMEOUT = 30_000
+const BUILD_TIMEOUT = 120_000
 
 beforeAll(() => {
     if (!fsExtra.existsSync(distPath))
@@ -34,6 +36,20 @@ function runTsuki(cwd: string, args: string[]): Promise<void> {
     })
 }
 
+function runCommand(cmd: string, args: string[], cwd: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const chunks: Buffer[] = []
+        const proc = spawn(cmd, args, { cwd, stdio: ["pipe", "pipe", "pipe"], shell: true })
+        proc.stdout.on("data", (d: Buffer) => chunks.push(d))
+        proc.stderr.on("data", (d: Buffer) => chunks.push(d))
+        proc.on("close", (code) => {
+            if (code === 0) resolve()
+            else reject(new Error(`${cmd} ${args.join(" ")} exited ${code}\n${Buffer.concat(chunks).toString()}`))
+        })
+        proc.on("error", reject)
+    })
+}
+
 async function copyFixture(name: string, dest: string): Promise<void> {
     const fixtureDir = path.join(fixturesDir, name)
     const entries = await fs.readdir(fixtureDir)
@@ -44,10 +60,26 @@ async function copyFixture(name: string, dest: string): Promise<void> {
     }
 }
 
+async function applyOverlay(name: string, dest: string): Promise<void> {
+    const overlayDir = path.join(fixturesDir, name + "-overlay")
+    if (!fsExtra.existsSync(overlayDir)) return
+    const entries = await fs.readdir(overlayDir)
+    for (const entry of entries) {
+        let content = await fs.readFile(path.join(overlayDir, entry), "utf-8")
+        content = content.replaceAll("__MOCHI_ROOT__", mochiRoot.replaceAll("\\", "/"))
+        await fs.writeFile(path.join(dest, entry), content)
+    }
+}
+
 let tmpDir: string
 
 beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-smoke-"))
+    // On Windows, create temp dirs on the same drive as the monorepo so that npm's
+    // directory junctions for file: packages stay on the same volume (junctions are
+    // same-volume only on Windows; cross-volume junctions silently break)
+    const baseDir = process.platform === "win32" ? path.resolve(mochiRoot, ".smoke-tmp") : os.tmpdir()
+    await fs.mkdir(baseDir, { recursive: true })
+    tmpDir = await fs.mkdtemp(path.join(baseDir, "mochi-smoke-"))
 })
 
 afterEach(async () => {
@@ -74,11 +106,16 @@ describe("smoke", () => {
 
             const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
             expect(mochi).toContain(".mochi")
+            expect(mochi).toContain("@mochi-css/vanilla/config")
 
             const vite = await fs.readFile(path.join(tmpDir, "vite.config.ts"), "utf-8")
             expect(vite).toContain("mochiCss()")
+
+            await applyOverlay("plain", tmpDir)
+            await runCommand("npm", ["install"], tmpDir)
+            await runCommand("npm", ["run", "build"], tmpDir)
         },
-        TIMEOUT,
+        BUILD_TIMEOUT,
     )
 
     it(
@@ -92,11 +129,16 @@ describe("smoke", () => {
 
             const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
             expect(mochi).toContain(".mochi")
+            expect(mochi).toContain("@mochi-css/vanilla-react/config")
 
             const next = await fs.readFile(path.join(tmpDir, "next.config.mjs"), "utf-8")
             expect(next).toContain("withMochi")
+
+            await applyOverlay("nextjs", tmpDir)
+            await runCommand("npm", ["install"], tmpDir)
+            await runCommand("npm", ["run", "build"], tmpDir)
         },
-        TIMEOUT,
+        BUILD_TIMEOUT,
     )
 
     it(

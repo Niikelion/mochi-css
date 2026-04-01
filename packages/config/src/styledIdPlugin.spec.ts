@@ -17,62 +17,65 @@ const fakeContext: AnalysisContext = {
     markForEval: () => {},
 }
 
-describe("styledIdPlugin — sourceTransform (runtime injection)", () => {
-    it("registers a source transformation via onLoad", () => {
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const noop = () => {}
+
+describe("styledIdPlugin — filePreProcess (runtime injection)", () => {
+    it("registers a file transformation via onLoad", () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
-        expect(context.sourceTransform.getTransformations()).toHaveLength(1)
+        expect(context.filePreProcess.getTransformations()).toHaveLength(1)
     })
 
     it("the registered transformation injects styled IDs", async () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
 
         const source = `const Button = styled('button', { color: 'red' })`
-        const result = await context.sourceTransform.transform(source, { filePath: "Button.tsx" })
+        const result = await context.filePreProcess.transform(source, { filePath: "Button.tsx" })
         expect(result).toMatch(/styled\('button', \{ color: 'red' }, 's-[0-9A-Za-z_-]+'\)/)
     })
 
     it("does not transform files outside the glob filter", async () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
 
         const source = `const Button = styled('button', { color: 'red' })`
-        const result = await context.sourceTransform.transform(source, { filePath: "Button.css" })
+        const result = await context.filePreProcess.transform(source, { filePath: "Button.css" })
         expect(result).toBe(source)
     })
 
     it("transforms all supported extensions", async () => {
         for (const ext of ["ts", "tsx", "js", "jsx"]) {
             const plugin = styledIdPlugin()
-            const context = new FullContext()
+            const context = new FullContext(noop)
             plugin.onLoad?.(context)
 
             const source = `const Button = styled('button', {})`
-            const result = await context.sourceTransform.transform(source, { filePath: `Button.${ext}` })
+            const result = await context.filePreProcess.transform(source, { filePath: `Button.${ext}` })
             expect(result).toContain("'s-")
         }
     })
 })
 
-describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
+describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
     it("registers an analysis hook via onLoad", () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
-        expect(context.getAnalysisHooks()).toHaveLength(1)
+        expect(context.sourceTransforms.getAll()).toHaveLength(1)
     })
 
     it("injects s- ID into styled() call arguments", async () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
 
         const index = makeIndex(`const Button = styled('button', { color: 'red' })`)
-        await context.getAnalysisHooks()[0]?.(index, fakeContext)
+        await context.sourceTransforms.getAll()[0]?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const varDecl = ast?.body[0] as SWC.VariableDeclaration
@@ -85,11 +88,11 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
 
     it("uses the variable name in the hash", async () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
 
         const index = makeIndex(`const Button = styled('button', {})\nconst Link = styled('a', {})`)
-        await context.getAnalysisHooks()[0]?.(index, fakeContext)
+        await context.sourceTransforms.getAll()[0]?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const id0 = ((ast?.body[0] as SWC.VariableDeclaration).declarations[0]?.init as SWC.CallExpression).arguments[2]
@@ -101,11 +104,11 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
 
     it("is idempotent — does not inject if s- ID already present", async () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
 
         const index = makeIndex(`const Button = styled('button', { color: 'red' })`)
-        const [hook] = context.getAnalysisHooks()
+        const [hook] = context.sourceTransforms.getAll()
         await hook?.(index, fakeContext)
         await hook?.(index, fakeContext)
 
@@ -117,11 +120,11 @@ describe("styledIdPlugin — analysisTransform (AST mutation)", () => {
 
     it("handles exported styled calls", async () => {
         const plugin = styledIdPlugin()
-        const context = new FullContext()
+        const context = new FullContext(noop)
         plugin.onLoad?.(context)
 
         const index = makeIndex(`export const Card = styled('section', { padding: 16 })`)
-        await context.getAnalysisHooks()[0]?.(index, fakeContext)
+        await context.sourceTransforms.getAll()[0]?.(index, fakeContext)
 
         const ast = [...index.files.values()][0]?.[1]?.ast
         const exportDecl = ast?.body[0] as SWC.ExportDeclaration

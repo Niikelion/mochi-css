@@ -15,7 +15,7 @@ export function findMochiConfig(): string | undefined {
 
 // noinspection TypeScriptCheckImport
 const defaultMochiConfigBase = /* language=typescript */ dedent`
-    import { defineConfig } from "@mochi-css/config"
+    import { defineConfig } from "@mochi-css/vanilla/config"
 
     export default defineConfig({})
 `
@@ -29,11 +29,8 @@ function defaultMochiConfigWithOptions(tmpDir: string | undefined, styledId: boo
 
     const imports = styledId
         ? // noinspection TypeScriptCheckImport
-          dedent`
-              import { defineConfig } from "@mochi-css/config"
-              import { styledIdPlugin } from "@mochi-css/builder"
-          `
-        : `import { defineConfig } from "@mochi-css/config"`
+          `import { defineConfig, styledIdPlugin } from "@mochi-css/vanilla/config"`
+        : `import { defineConfig } from "@mochi-css/vanilla/config"`
 
     return `${imports}\n\nexport default defineConfig({\n${lines.join("\n")}\n})\n`
 }
@@ -83,7 +80,7 @@ async function addStyledIdToExistingConfig(configPath: string): Promise<void> {
     const content = await fs.readFile(configPath, "utf-8")
     if (content.includes("styledIdPlugin")) return
     const mod = parseModule(content)
-    mod.imports.$prepend({ from: "@mochi-css/builder", imported: "styledIdPlugin", local: "styledIdPlugin" })
+    mod.imports.$prepend({ from: "@mochi-css/vanilla/config", imported: "styledIdPlugin", local: "styledIdPlugin" })
     addStyledIdToAst(mod, configPath)
     const { code } = generateCode(mod)
     await fs.writeFile(configPath, code)
@@ -175,7 +172,7 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
                 }
             }
 
-            ctx.requirePackage(mochiPackage("@mochi-css/config"))
+            ctx.requirePackage(mochiPackage("@mochi-css/vanilla"))
         },
     }
 }

@@ -28,7 +28,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/vanilla": "^3.0.0",
+        "@mochi-css/core": "^3.0.0",
         "@swc/core": "^1.15.13",
         "jiti": "^2.6.1"
     },

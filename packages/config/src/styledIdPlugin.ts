@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import { shortHash } from "@mochi-css/vanilla"
+import { shortHash } from "@mochi-css/core"
 import { transformStyledIds, collectStyledCalls, STABLE_ID_RE } from "./styledIdTransform"
 import type { MochiPlugin } from "@/config"
 
@@ -14,19 +14,19 @@ function hasStableId(call: SWC.CallExpression): boolean {
 
 /**
  * Returns a MochiPlugin that injects stable `s-` class IDs into every `styled()` call.
- * - Registers a `sourceTransform` for runtime source injection (Vite/Next `transform` hook).
- * - Registers an `analysisTransform` for CSS extraction via direct AST mutation.
+ * - Registers a `filePreProcess` transformation for runtime source injection (Vite/Next `transform` hook).
+ * - Registers a `sourceTransforms` hook for CSS extraction via direct AST mutation.
  */
 export function styledIdPlugin(): MochiPlugin {
     return {
         name: "mochi-styled-ids",
         onLoad(context) {
-            context.sourceTransform.registerTransformation(
+            context.filePreProcess.registerTransformation(
                 (source, { filePath }) => transformStyledIds(source, filePath),
                 { filter: "*.{ts,tsx,js,jsx}" },
             )
 
-            context.analysisTransform.register((index) => {
+            context.sourceTransforms.register((index) => {
                 for (const [filePath, fileInfo] of index.files) {
                     const calls = collectStyledCalls(fileInfo.ast)
                     const toInject = calls.filter(({ call }) => !hasStableId(call))

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from "vitest"
 import { ProjectIndex } from "@/ProjectIndex"
 import { parseSource } from "@/parse"
-import { defaultStages } from "@/analysis/stages"
+import { createDefaultStages } from "@/analysis/stages"
 import type { OnDiagnostic } from "@/diagnostics"
 
 async function buildIndex(source: string, resolveImport = () => null, onDiagnostic?: OnDiagnostic) {
     const module = await parseSource(source, "test.ts")
-    const index = new ProjectIndex([module], defaultStages, [], resolveImport, onDiagnostic)
+    const index = new ProjectIndex([module], createDefaultStages([]), resolveImport, onDiagnostic)
     const fileInfo = index.files.find(([p]) => p === "test.ts")?.[1]
     if (!fileInfo) throw new Error("fileInfo not found")
     return fileInfo

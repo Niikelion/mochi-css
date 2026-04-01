@@ -30,7 +30,9 @@
     "dependencies": {
         "@mochi-css/builder": "^3.0.0",
         "@mochi-css/config": "^3.0.0",
-        "@mochi-css/stitches": "^0.1.0"
+        "@mochi-css/plugins": "^3.0.0",
+        "@mochi-css/stitches": "^0.1.0",
+        "@mochi-css/vanilla": "^3.0.0"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",

@@ -1,0 +1,10 @@
+{
+    "extends": "@gamedev-sensei/ts-config/tsconfig.json",
+    "compilerOptions": {
+        "lib": ["esnext", "dom", "dom.iterable"],
+        "jsx": "react-jsx",
+        "paths": { "@/*": ["../src/*"] },
+        "noEmit": true
+    },
+    "include": ["./**/*.ts", "./**/*.tsx"]
+}
