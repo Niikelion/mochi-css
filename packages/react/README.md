@@ -1,5 +1,21 @@
 # 🧁 Mochi-CSS/react
 
+> **Deprecated.** This package is superseded by [`@mochi-css/vanilla-react`](../vanilla-react/README.md), which provides the same `styled` runtime plus a pre-configured `defineConfig` entry point. Migrate by replacing your import:
+>
+> ```diff
+> - import { styled } from "@mochi-css/react"
+> + import { styled } from "@mochi-css/vanilla-react"
+> ```
+>
+> And update your `mochi.config.ts`:
+>
+> ```diff
+> - import { defineConfig } from "@mochi-css/config"
+> + import { defineConfig } from "@mochi-css/vanilla-react/config"
+> ```
+>
+> `@mochi-css/react` will not receive new features and will be removed in a future major version.
+
 This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css).
 It provides the `styled` utility for creating type-safe styled React components.
 
