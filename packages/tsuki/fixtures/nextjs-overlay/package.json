@@ -1,0 +1,32 @@
+{
+    "name": "my-next-app",
+    "private": true,
+    "packageManager": "npm@10.9.2",
+    "scripts": {
+        "build": "next build"
+    },
+    "dependencies": {
+        "@mochi-css/next": "file:__MOCHI_ROOT__/packages/next",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla",
+        "@mochi-css/vanilla-react": "file:__MOCHI_ROOT__/packages/vanilla-react",
+        "@mochi-css/postcss": "file:__MOCHI_ROOT__/packages/postcss",
+        "next": "^15.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "postcss": "^8.4.49"
+    },
+    "devDependencies": {
+        "@types/node": "^22",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "typescript": "^5"
+    },
+    "overrides": {
+        "@mochi-css/builder": "file:__MOCHI_ROOT__/packages/builder",
+        "@mochi-css/config": "file:__MOCHI_ROOT__/packages/config",
+        "@mochi-css/plugins": "file:__MOCHI_ROOT__/packages/plugins",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla",
+        "@mochi-css/next": "file:__MOCHI_ROOT__/packages/next",
+        "@mochi-css/vanilla-react": "file:__MOCHI_ROOT__/packages/vanilla-react"
+    }
+}

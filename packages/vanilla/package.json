@@ -15,14 +15,33 @@
     "files": [
         "/dist"
     ],
+    "typesVersions": {
+        "*": {
+            "config": [
+                "./dist/config/index.d.ts"
+            ]
+        }
+    },
     "exports": {
-        "import": {
-            "types": "./dist/index.d.mts",
-            "import": "./dist/index.mjs"
+        ".": {
+            "import": {
+                "types": "./dist/index.d.mts",
+                "import": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.ts",
+                "require": "./dist/index.js"
+            }
         },
-        "require": {
-            "types": "./dist/index.d.ts",
-            "require": "./dist/index.js"
+        "./config": {
+            "import": {
+                "types": "./dist/config/index.d.mts",
+                "import": "./dist/config/index.mjs"
+            },
+            "require": {
+                "types": "./dist/config/index.d.ts",
+                "require": "./dist/config/index.js"
+            }
         }
     },
     "scripts": {
@@ -34,8 +53,12 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
+        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/config": "^3.0.0",
+        "@mochi-css/plugins": "^3.0.0",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
+        "@swc/core": "^1.15.13",
         "@testing-library/dom": "^10.4.1",
         "@testing-library/react": "^16.3.2",
         "@types/css-tree": "^2.3.10",
@@ -46,15 +69,35 @@
         "css-tree": "^3.1.0",
         "dedent": "^1.7.1",
         "eslint": "^9.39.2",
-        "happy-dom": "^20.6.3",
+        "happy-dom": "^20.8.9",
         "prettier": "^3.8.1",
+        "react": "^19",
         "react-dom": "^19.2.4",
         "typescript": "^5.9.3",
         "vitest": "^4.0.15"
     },
     "dependencies": {
         "clsx": "^2.1.1",
-        "csstype": "^3.2.3",
-        "react": ">= 18 || >= 19"
+        "csstype": "^3.2.3"
+    },
+    "peerDependencies": {
+        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/config": "^3.0.0",
+        "@mochi-css/plugins": "^3.0.0",
+        "@swc/core": "^1"
+    },
+    "peerDependenciesMeta": {
+        "@mochi-css/builder": {
+            "optional": true
+        },
+        "@mochi-css/config": {
+            "optional": true
+        },
+        "@mochi-css/plugins": {
+            "optional": true
+        },
+        "@swc/core": {
+            "optional": true
+        }
     }
 }

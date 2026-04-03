@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { loadConfig, resolveConfig, FullContext } from "@mochi-css/config"
-import { Builder, defaultExtractors, RolldownBundler, VmRunner, fileHash, type RootEntry } from "@mochi-css/builder"
+import { Builder, RolldownBundler, VmRunner, fileHash, type RootEntry } from "@mochi-css/builder"
 
 type DiskManifest = {
     global?: string
@@ -72,7 +72,7 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
     const cwd = process.cwd()
 
     const fileConfig = await loadConfig()
-    const resolved = await resolveConfig(fileConfig, undefined, { extractors: defaultExtractors })
+    const resolved = await resolveConfig(fileConfig, undefined, {})
 
     const effectiveTmpDir = resolved.tmpDir
         ? path.resolve(cwd, resolved.tmpDir)
@@ -98,20 +98,22 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
         return
     }
 
-    const context = new FullContext()
+    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
     for (const plugin of resolved.plugins) {
         plugin.onLoad?.(context)
     }
 
     const builder = new Builder({
         roots: absoluteRoots,
-        extractors: resolved.extractors,
+        stages: [...context.stages.getAll()],
         bundler: new RolldownBundler(),
         runner: new VmRunner(),
         splitCss: resolved.splitCss,
         filePreProcess: ({ content, filePath }) =>
-            context.sourceTransform.transform(content, { filePath }),
-        astPostProcessors: context.getAnalysisHooks(),
+            context.filePreProcess.transform(content, { filePath }),
+        sourceTransforms: [...context.sourceTransforms.getAll()],
+        emitHooks: [...context.emitHooks.getAll()],
+        cleanup: () => { context.cleanup.runAll() },
     })
 
     let rebuildTimer: ReturnType<typeof setTimeout> | undefined

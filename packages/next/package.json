@@ -39,7 +39,9 @@
     "dependencies": {
         "@mochi-css/builder": "^3.0.0",
         "@mochi-css/config": "^3.0.0",
-        "diff": "^8.0.3",
+        "diff": "^8.0.3"
+    },
+    "peerDependencies": {
         "next": "^14 || ^15 || ^16"
     },
     "devDependencies": {
@@ -47,6 +49,9 @@
         "@mochi-css/test": "^2.0.0",
         "@types/diff": "^8.0.0",
         "@types/node": "^24.8.1",
+        "next": "^16",
+        "react": "^19",
+        "react-dom": "^19",
         "typescript": "^5.9.3",
         "vitest": "^4.0.15"
     }

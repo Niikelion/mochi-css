@@ -5,12 +5,36 @@ import * as SWC from "@swc/core"
 import { parseSource } from "@/parse"
 import { ProjectIndex, ResolveImport, RefMap, FileInfo, DerivedExtractorBinding, BindingInfo } from "@/ProjectIndex"
 import { extractRelevantSymbols } from "@/extractRelevantSymbols"
-import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
-import { mochiStyledFunctionExtractor } from "@/extractors/ReactStyledExtractor"
+import { createDefaultStages } from "@/analysis/stages"
 import { StyleExtractor } from "@/extractors/StyleExtractor"
 import { StyleGenerator } from "@/generators/StyleGenerator"
-import { VanillaCssGenerator } from "@/generators/VanillaCssGenerator"
 import { CallExpression, Expression } from "@swc/core"
+
+function makeExtractor(
+    importPath: string,
+    symbolName: string,
+    getArgs?: (call: CallExpression) => Expression[],
+): StyleExtractor {
+    return {
+        importPath,
+        symbolName,
+        extractStaticArgs: getArgs ?? ((call) => call.arguments.slice(0, 1).map((a) => a.expression)),
+        startGeneration(): StyleGenerator {
+            return {
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                collectArgs() {},
+                async generateStyles() {
+                    return {}
+                },
+            }
+        },
+    }
+}
+
+const testCssExtractor = makeExtractor("@mochi-css/vanilla", "css", (call) => call.arguments.map((a) => a.expression))
+const mochiStyledFunctionExtractor = makeExtractor("@mochi-css/react", "styled", (call) =>
+    call.arguments.map((a) => a.expression).slice(1),
+)
 
 function buildIndex(modules: { ast: SWC.Module; filePath: string }[], extractors: StyleExtractor[]): ProjectIndex {
     const knownFiles = new Set(modules.map((m) => m.filePath))
@@ -25,7 +49,7 @@ function buildIndex(modules: { ast: SWC.Module; filePath: string }[], extractors
         return null
     }
 
-    const index = new ProjectIndex(modules, extractors, resolveImport)
+    const index = new ProjectIndex(modules, createDefaultStages(extractors), resolveImport)
     index.discoverCrossFileDerivedExtractors()
     index.propagateUsages()
     return index
@@ -41,7 +65,13 @@ function createMockParentExtractor(importPath: string, symbolName: string, deriv
                 return call.arguments.map((a) => a.expression)
             },
             startGeneration(): StyleGenerator {
-                return new VanillaCssGenerator()
+                return {
+                    // eslint-disable-next-line @typescript-eslint/no-empty-function
+                    collectArgs() {},
+                    async generateStyles() {
+                        return {}
+                    },
+                }
             },
         })
     }
@@ -81,7 +111,7 @@ describe("extractRelevantSymbols", () => {
             "unrelated.ts",
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         expect(result["unrelated.ts"]).toBeNull()
@@ -96,7 +126,7 @@ describe("extractRelevantSymbols", () => {
             "styles.ts",
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         expect(result["styles.ts"]).toContain(`extractors["@mochi-css/vanilla:css"]`)
@@ -113,7 +143,7 @@ describe("extractRelevantSymbols", () => {
             "styles.ts",
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         // The import of css should appear in the module body
@@ -144,7 +174,7 @@ describe("extractRelevantSymbols", () => {
             stylesPath,
         )
 
-        const index = buildIndex([sharedModule, stylesModule], [mochiCssFunctionExtractor])
+        const index = buildIndex([sharedModule, stylesModule], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         // shared.ts has usedBindings (red) but no style expressions
@@ -169,7 +199,7 @@ describe("extractRelevantSymbols", () => {
             sharedPath,
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         // No style expressions, no usedBindings, no derived → null
@@ -195,7 +225,7 @@ describe("extractRelevantSymbols", () => {
             irrelevantPath,
         )
 
-        const index = buildIndex([relevantModule, irrelevantModule], [mochiCssFunctionExtractor])
+        const index = buildIndex([relevantModule, irrelevantModule], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         expect(result[relevantPath]).not.toBeNull()
@@ -282,7 +312,7 @@ describe("extractRelevantSymbols", () => {
             "strip.ts",
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         expect(result["strip.ts"]).toContain("used")
@@ -293,7 +323,7 @@ describe("extractRelevantSymbols", () => {
         // mochiStyledFunctionExtractor skips the first arg; styled(Tag) with no style arg returns []
         // This puts an empty array entry in extractedExpressions and triggers expressions.length === 0
         // css({ color }) is also present so hasExpressions=true and generateCallStatements is reached
-        // noinspection JSUnusedLocalSymbols
+        // noinspection JSUnusedLocalSymbols,TypeScriptCheckImport
         const module = await parseSource(
             /* language=typescript */ dedent`
                 import { css } from "@mochi-css/vanilla"
@@ -305,7 +335,7 @@ describe("extractRelevantSymbols", () => {
             "empty-args.ts",
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor, mochiStyledFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor, mochiStyledFunctionExtractor])
         const result = extractRelevantSymbols(index)
 
         expect(result["empty-args.ts"]).toContain(`extractors["@mochi-css/vanilla:css"]`)
@@ -327,7 +357,7 @@ describe("extractRelevantSymbols", () => {
             "dedup.ts",
         )
 
-        const index = buildIndex([module], [mochiCssFunctionExtractor])
+        const index = buildIndex([module], [testCssExtractor])
         const result = extractRelevantSymbols(index)
 
         const code = result["dedup.ts"]
@@ -401,12 +431,23 @@ describe("extractRelevantSymbols", () => {
             }
         }
 
+        function mockCallExprWithArg(arg: SWC.Expression): SWC.CallExpression & { ctxt: number } {
+            return {
+                type: "CallExpression",
+                span: emptySpan,
+                ctxt: 0,
+                callee: mockId("css", 0),
+                arguments: [{ expression: arg }],
+            }
+        }
+
         function makeFileInfo(extras: Partial<FileInfo>): FileInfo {
             return {
                 filePath: "mock.ts",
                 ast: { type: "Module", span: emptySpan, body: [], interpreter: "" },
                 styleExpressions: new Set(),
                 extractedExpressions: new Map(),
+                extractedCallExpressions: new Map(),
                 references: new Set(),
                 moduleBindings: new RefMap(),
                 localImports: new RefMap(),
@@ -433,7 +474,7 @@ describe("extractRelevantSymbols", () => {
             derivedExtractorBindings.set(
                 { name: "css", id: 1 },
                 {
-                    extractor: mochiCssFunctionExtractor,
+                    extractor: testCssExtractor,
                     parentExtractor: null as unknown as StyleExtractor,
                     parentCallExpression: mockCallExpr(),
                     propertyName: "css",
@@ -443,7 +484,8 @@ describe("extractRelevantSymbols", () => {
 
             const fileInfo = makeFileInfo({
                 derivedExtractorBindings,
-                extractedExpressions: new Map([[mochiCssFunctionExtractor, [redExpr]]]),
+                extractedExpressions: new Map([[testCssExtractor, [redExpr]]]),
+                extractedCallExpressions: new Map([[testCssExtractor, [mockCallExprWithArg(redExpr)]]]),
             })
 
             const result = extractRelevantSymbols(mockIndex(fileInfo))
@@ -459,8 +501,8 @@ describe("extractRelevantSymbols", () => {
             derivedExtractorBindings.set(
                 { name: "css", id: 99 },
                 {
-                    extractor: mochiCssFunctionExtractor,
-                    parentExtractor: mochiCssFunctionExtractor,
+                    extractor: testCssExtractor,
+                    parentExtractor: testCssExtractor,
                     parentCallExpression: mockCallExpr(),
                     propertyName: "css",
                     localIdentifier: localId,
@@ -469,7 +511,7 @@ describe("extractRelevantSymbols", () => {
 
             const fileInfo = makeFileInfo({
                 derivedExtractorBindings,
-                extractedExpressions: new Map([[mochiCssFunctionExtractor, [redExpr]]]),
+                extractedExpressions: new Map([[testCssExtractor, [redExpr]]]),
             })
 
             const result = extractRelevantSymbols(mockIndex(fileInfo))
@@ -496,7 +538,8 @@ describe("extractRelevantSymbols", () => {
 
             const fileInfo = makeFileInfo({
                 usedBindings,
-                extractedExpressions: new Map([[mochiCssFunctionExtractor, [redExpr]]]),
+                extractedExpressions: new Map([[testCssExtractor, [redExpr]]]),
+                extractedCallExpressions: new Map([[testCssExtractor, [mockCallExprWithArg(redExpr)]]]),
             })
 
             const result = extractRelevantSymbols(mockIndex(fileInfo))
@@ -517,7 +560,7 @@ describe("extractRelevantSymbols", () => {
                 "dep.ts",
             )
 
-            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const index = buildIndex([module], [testCssExtractor])
             const result = extractRelevantSymbols(index)
 
             const code = result["dep.ts"]
@@ -541,7 +584,7 @@ describe("extractRelevantSymbols", () => {
                 "once.ts",
             )
 
-            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const index = buildIndex([module], [testCssExtractor])
             const result = extractRelevantSymbols(index)
 
             const code = result["once.ts"]
@@ -563,7 +606,7 @@ describe("extractRelevantSymbols", () => {
                 "spread.ts",
             )
 
-            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const index = buildIndex([module], [testCssExtractor])
             const result = extractRelevantSymbols(index)
 
             const code = result["spread.ts"]
@@ -582,7 +625,7 @@ describe("extractRelevantSymbols", () => {
                 "nodep.ts",
             )
 
-            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const index = buildIndex([module], [testCssExtractor])
             const result = extractRelevantSymbols(index)
 
             const code = result["nodep.ts"]
@@ -604,7 +647,7 @@ describe("extractRelevantSymbols", () => {
                 "multi.ts",
             )
 
-            const index = buildIndex([module], [mochiCssFunctionExtractor])
+            const index = buildIndex([module], [testCssExtractor])
             const result = extractRelevantSymbols(index)
 
             const code = result["multi.ts"]

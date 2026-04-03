@@ -1,23 +1,29 @@
 import path from "path"
 import fs from "fs/promises"
+import * as SWC from "@swc/core"
 import { createPatch } from "diff"
 import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
+import type { StageDefinition } from "@/analysis/Stage"
 import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
-import { Runner, VmRunner } from "@/Runner"
+import { Runner } from "@/Runner"
 import dedent from "dedent"
-import { StyleExtractor } from "@/extractors/StyleExtractor"
-import { StyleGenerator } from "@/generators/StyleGenerator"
 import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
-import { getExtractorId, extractRelevantSymbols } from "@/extractRelevantSymbols"
+import { extractRelevantSymbols } from "@/extractRelevantSymbols"
 import { wrapIndexWithProxies } from "@/AstProxy"
+import { Evaluator } from "@/Evaluator"
 
 export type AnalysisContext = {
     onDiagnostic?: OnDiagnostic
+    evaluator: Evaluator
+    emitChunk(path: string, content: string): void
+    markForEval(filePath: string, expression: SWC.Expression): void
 }
 
 export type AstPostProcessor = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
+
+export type EmitHook = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
 
 const rootFileSuffix = dedent`
     declare global {
@@ -41,8 +47,6 @@ export type RootEntry = string | { path: string; package: string }
 export type BuilderOptions = {
     /** Directories (or named root entries) scanned recursively for `.ts`/`.tsx` source files. */
     roots: RootEntry[]
-    /** Style extractors that identify and capture style function calls. Use `defaultExtractors` for vanilla Mochi CSS. */
-    extractors: StyleExtractor[]
     /**
      * Bundler used to bundle the extracted minimal source code into a single executable module.
      * Use `RolldownBundler` unless you need a custom bundler.
@@ -59,8 +63,21 @@ export type BuilderOptions = {
     onDiagnostic?: OnDiagnostic
     /** Preprocessing hook that runs on every loaded file before parsing. */
     filePreProcess?(params: { content: string; filePath: string }): string | Promise<string>
-    /** Handlers that run after analysis, before CSS generation. Each handler may mutate AST nodes via a proxy layer. */
-    astPostProcessors?: AstPostProcessor[]
+    /** Handlers that run after analysis, before evaluation. Each handler may mutate AST nodes via a proxy layer. Mutations persist in the canonical index and are visible to postEvalTransforms. Can call evaluator.valueWithTracking() to mark expressions for capture. */
+    sourceTransforms?: AstPostProcessor[]
+    /** Handlers that run on a deep copy of the source ASTs, used only for bundling and evaluation. Mutations do NOT persist in the canonical index and are NOT visible to postEvalTransforms. */
+    preEvalTransforms?: AstPostProcessor[]
+    /** Handlers that run after code execution. The evaluator is populated — use evaluator.getTrackedValue() to read back runtime values. Receives the canonical index (unaffected by preEvalTransforms). */
+    postEvalTransforms?: AstPostProcessor[]
+    /** Hooks that run after postEvalTransforms. Call context.emitChunk() to emit files into emitDir. */
+    emitHooks?: EmitHook[]
+    /** Base directory for files produced via context.emitChunk(). */
+    emitDir?: string
+    /** Called once at the end of the pipeline. Use to release any caches built between sourceTransforms and postEvalTransforms. */
+    cleanup?: () => void | Promise<void>
+    /** Analysis stages to run. Pass stages from createExtractorsPlugin() here — they carry the extractor configuration. */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    stages?: readonly StageDefinition<any[], any>[]
 }
 
 /**
@@ -69,7 +86,6 @@ export type BuilderOptions = {
  * → bundle → execute → generate CSS.
  *
  * Use {@link Builder.collectMochiCss} for the common case of getting CSS strings directly.
- * Use {@link Builder.collectMochiStyles} when you need the raw generators before CSS is produced.
  * Use {@link Builder.collectStylesFromModules} to supply pre-parsed modules (useful in tests).
  */
 export class Builder {
@@ -79,82 +95,9 @@ export class Builder {
         return this.options.filePreProcess ? await this.options.filePreProcess({ content, filePath }) : content
     }
 
-    private async bundleFiles(files: Record<string, string | null>) {
-        // Prepare extracted project
-        const tmp = path.resolve(process.cwd(), ".mochi")
-        const rootPath = path.join(tmp, "__mochi-css__.ts")
-
-        const paths: string[] = []
-        const fileLookup: FileLookup = {}
-
-        for (const [filename, source] of Object.entries(files)) {
-            if (source === null) continue
-            const relativePath = path.relative(process.cwd(), filename)
-            paths.push(relativePath.replaceAll(path.win32.sep, path.posix.sep))
-
-            const filePath = path.join(tmp, relativePath)
-            fileLookup[filePath] = source
-        }
-        const rootImports = paths.map((f) => `import "./${f}"`).join("\n")
-
-        fileLookup[rootPath] = [rootImports, rootFileSuffix].join("\n\n")
-
-        // Bundle into single file
-        try {
-            return await this.options.bundler.bundle(rootPath, fileLookup)
-        } catch (err) {
-            const message = getErrorMessage(err)
-            throw new MochiError("MOCHI_BUNDLE", message, undefined, err)
-        }
-    }
-
-    private async executeCode(code: string, generators: Map<string, StyleGenerator>) {
-        const onDiagnostic = this.options.onDiagnostic
-        const runner = new VmRunner()
-
-        const wrapGenerator = (
-            generator: StyleGenerator,
-        ): ((source: string, ...args: unknown[]) => Record<string, unknown>) => {
-            return (source: string, ...args: unknown[]) => {
-                try {
-                    const subGenerators = generator.collectArgs(source, args)
-                    const result: Record<string, unknown> = {}
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                    for (const [name, subGen] of Object.entries(subGenerators ?? {})) {
-                        result[name] = wrapGenerator(subGen)
-                    }
-                    return result
-                } catch (err) {
-                    const message = getErrorMessage(err)
-                    onDiagnostic?.({
-                        code: "MOCHI_EXEC",
-                        message: `Failed to collect styles: ${message}`,
-                        severity: "warning",
-                        file: source,
-                    })
-                    return {}
-                }
-            }
-        }
-
-        const extractorsObj: Record<string, (source: string, ...args: unknown[]) => Record<string, unknown>> = {}
-        for (const [id, generator] of generators) {
-            extractorsObj[id] = wrapGenerator(generator)
-        }
-
-        try {
-            await runner.execute(code, { extractors: extractorsObj })
-        } catch (err) {
-            const message = getErrorMessage(err)
-            throw new MochiError("MOCHI_EXEC", message, undefined, err)
-        }
-    }
-
-    public async collectStylesFromModules(modules: Module[]) {
-        // Create a set of known file paths for resolving imports
+    private buildResolveImport(modules: Module[]): ResolveImport {
         const knownFiles = new Set(modules.map((m) => m.filePath))
 
-        // Build a map from package name to absolute source directory for named roots
         const packageMap = new Map<string, string>()
         for (const root of this.options.roots) {
             if (typeof root !== "string") {
@@ -162,7 +105,7 @@ export class Builder {
             }
         }
 
-        const resolveImport: ResolveImport = (fromFile, importSource) => {
+        return (fromFile, importSource) => {
             const dir = path.dirname(fromFile)
             // Try common extensions
             const extensions = ["", ".ts", ".tsx", ".js", ".jsx"]
@@ -196,53 +139,214 @@ export class Builder {
             }
             return null
         }
+    }
 
+    private async buildEvalIndex(
+        modules: Module[],
+        index: ProjectIndex,
+        resolveImport: ResolveImport,
+        context: AnalysisContext,
+        markedForEval: Map<string, Set<SWC.Expression>>,
+    ): Promise<ProjectIndex> {
+        if ((this.options.preEvalTransforms ?? []).length === 0) return index
+
+        const evalModules = modules.map((m) => ({ ...m, ast: structuredClone(m.ast) }))
+        const evalIndex = new ProjectIndex(
+            evalModules,
+            this.options.stages ?? [],
+            resolveImport,
+            this.options.onDiagnostic,
+        )
+
+        for (const handler of this.options.preEvalTransforms ?? []) {
+            evalIndex.discoverCrossFileDerivedExtractors()
+            evalIndex.propagateUsages(markedForEval)
+            const proxied = wrapIndexWithProxies(evalIndex)
+            await handler(evalIndex, context)
+            const dirtyFiles = proxied.getDirtyFiles()
+            if (dirtyFiles.size === 0) continue
+            evalIndex.reanalyzeFiles(dirtyFiles)
+            evalIndex.resetCrossFileState()
+        }
+        evalIndex.discoverCrossFileDerivedExtractors()
+        evalIndex.propagateUsages(markedForEval)
+        return evalIndex
+    }
+
+    private async bundleFiles(files: Record<string, string | null>) {
+        // Prepare extracted project
+        const tmp = path.resolve(process.cwd(), ".mochi")
+        const rootPath = path.join(tmp, "__mochi-css__.ts")
+
+        const paths: string[] = []
+        const fileLookup: FileLookup = {}
+
+        for (const [filename, source] of Object.entries(files)) {
+            if (source === null) continue
+            const relativePath = path.relative(process.cwd(), filename)
+            paths.push(relativePath.replaceAll(path.win32.sep, path.posix.sep))
+
+            const filePath = path.join(tmp, relativePath)
+            fileLookup[filePath] = source
+        }
+        const rootImports = paths.map((f) => `import "./${f}"`).join("\n")
+
+        fileLookup[rootPath] = [rootImports, rootFileSuffix].join("\n\n")
+
+        // Bundle into single file
+        try {
+            return await this.options.bundler.bundle(rootPath, fileLookup)
+        } catch (err) {
+            const message = getErrorMessage(err)
+            throw new MochiError("MOCHI_BUNDLE", message, undefined, err)
+        }
+    }
+
+    private async executeCode(code: string, evaluator: Evaluator) {
+        try {
+            await evaluator.evaluate(code)
+        } catch (err) {
+            const message = getErrorMessage(err)
+            throw new MochiError("MOCHI_EXEC", message, undefined, err)
+        }
+    }
+
+    public async collectStylesFromModules(modules: Module[]): Promise<Map<string, Set<string>>> {
+        const resolveImport = this.buildResolveImport(modules)
         const onDiagnostic = this.options.onDiagnostic
-        const index = new ProjectIndex(modules, this.options.extractors, resolveImport, onDiagnostic)
-        index.discoverCrossFileDerivedExtractors()
-        index.propagateUsages()
+        const index = new ProjectIndex(modules, this.options.stages ?? [], resolveImport, onDiagnostic)
+        const evaluator = new Evaluator(this.options.runner)
+        const chunks = new Map<string, Set<string>>()
+        const markedForEval = new Map<string, Set<SWC.Expression>>()
 
-        for (const handler of this.options.astPostProcessors ?? []) {
+        const context: AnalysisContext = {
+            onDiagnostic,
+            evaluator,
+            emitChunk(filePath: string, content: string) {
+                let set = chunks.get(filePath)
+                if (!set) {
+                    set = new Set()
+                    chunks.set(filePath, set)
+                }
+                set.add(content)
+            },
+            markForEval(filePath: string, expression: SWC.Expression) {
+                let set = markedForEval.get(filePath)
+                if (!set) {
+                    set = new Set()
+                    markedForEval.set(filePath, set)
+                }
+                set.add(expression)
+            },
+        }
+
+        for (const handler of this.options.sourceTransforms ?? []) {
+            index.discoverCrossFileDerivedExtractors()
+            index.propagateUsages(markedForEval)
             const proxied = wrapIndexWithProxies(index)
-            await handler(index, { onDiagnostic })
+            await handler(index, context)
             const dirtyFiles = proxied.getDirtyFiles()
             if (dirtyFiles.size === 0) continue
             index.reanalyzeFiles(dirtyFiles)
             index.resetCrossFileState()
-            index.discoverCrossFileDerivedExtractors()
-            index.propagateUsages()
         }
+        index.discoverCrossFileDerivedExtractors()
+        index.propagateUsages(markedForEval)
 
-        const resultingFiles = extractRelevantSymbols(index)
+        const indexForEval = await this.buildEvalIndex(modules, index, resolveImport, context, markedForEval)
 
-        // Create a generator for each extractor
-        const generators = new Map<string, StyleGenerator>()
-        for (const extractor of this.options.extractors) {
-            const id = getExtractorId(extractor)
-            generators.set(id, extractor.startGeneration(onDiagnostic))
-        }
+        const resultingFiles = extractRelevantSymbols(indexForEval, markedForEval)
 
         const code = await this.bundleFiles(resultingFiles)
-        await this.executeCode(code, generators)
+        await this.executeCode(code, evaluator)
 
-        return generators
+        for (const handler of this.options.postEvalTransforms ?? []) {
+            await handler(index, context)
+        }
+
+        for (const hook of this.options.emitHooks ?? []) {
+            await hook(index, context)
+        }
+
+        if (this.options.emitDir) {
+            const chunkFiles: Record<string, string> = {}
+            for (const [relPath, contentSet] of chunks) {
+                chunkFiles[relPath] = [...contentSet].join("\n\n")
+            }
+            await this.syncEmittedFiles(this.options.emitDir, chunkFiles)
+        }
+
+        await this.options.cleanup?.()
+
+        return chunks
     }
 
-    public async collectMochiStyles(onDep?: (path: string) => void) {
-        const rootPaths = this.options.roots.map((r) => (typeof r === "string" ? r : r.path))
-        const fileArrays = await Promise.all(rootPaths.map(findAllFiles))
-        const files = fileArrays.flat()
+    private async syncEmittedFiles(emitDir: string, files: Record<string, string | null>): Promise<void> {
+        await fs.mkdir(emitDir, { recursive: true })
 
-        if (onDep) {
-            for (const file of files) {
-                onDep(file)
+        const manifestPath = path.join(emitDir, ".mochi-emit.json")
+        let previousPaths: string[] = []
+        try {
+            const manifestContent = await fs.readFile(manifestPath, "utf8")
+            previousPaths = JSON.parse(manifestContent) as string[]
+        } catch {
+            // No manifest yet — first run
+        }
+
+        const newPaths: string[] = []
+
+        for (const [relPath, content] of Object.entries(files)) {
+            const absPath = path.resolve(emitDir, relPath)
+            if (content === null) {
+                try {
+                    await fs.unlink(absPath)
+                } catch {
+                    // already gone
+                }
+            } else {
+                await fs.mkdir(path.dirname(absPath), { recursive: true })
+                let existing: string | undefined
+                try {
+                    existing = await fs.readFile(absPath, "utf8")
+                } catch {
+                    // doesn't exist yet
+                }
+                if (existing !== content) {
+                    await fs.writeFile(absPath, content, "utf8")
+                }
+                newPaths.push(relPath)
             }
         }
 
-        const sourcemods: Record<string, string> = {}
+        // Delete files from previous run that are no longer present
+        for (const prevPath of previousPaths) {
+            if (!(prevPath in files)) {
+                const absPath = path.resolve(emitDir, prevPath)
+                try {
+                    await fs.unlink(absPath)
+                } catch {
+                    // already gone
+                }
+            }
+        }
 
+        await fs.writeFile(manifestPath, JSON.stringify(newPaths), "utf8")
+    }
+
+    public async collectMochiCss(
+        options?: CollectCssOptions,
+    ): Promise<{ global?: string; files?: Record<string, string>; sourcemods?: Record<string, string> }> {
+        const rootPaths = this.options.roots.map((r) => (typeof r === "string" ? r : r.path))
+        const fileArrays = await Promise.all(rootPaths.map(findAllFiles))
+        const allFiles = fileArrays.flat()
+
+        for (const file of allFiles) {
+            options?.onDep?.(file)
+        }
+
+        const sourcemods: Record<string, string> = {}
         const modules = await Promise.all(
-            files.map(async (filePath) => {
+            allFiles.map(async (filePath) => {
                 const source = await fs.readFile(filePath, "utf8")
                 const transformed = await this.preTransformFile(source, filePath)
                 if (transformed !== source) {
@@ -252,39 +356,26 @@ export class Builder {
             }),
         )
 
-        const generators = await this.collectStylesFromModules(modules)
-        return { generators, sourcemods }
-    }
+        const chunks = await this.collectStylesFromModules(modules)
 
-    public async collectMochiCss(
-        options?: CollectCssOptions,
-    ): Promise<{ global?: string; files?: Record<string, string>; sourcemods?: Record<string, string> }> {
-        const { generators, sourcemods } = await this.collectMochiStyles(options?.onDep)
-
-        // Collect and merge results from all generators
         const globalCss: string[] = []
-        const files: Record<string, string> = {}
-
-        for (const generator of generators.values()) {
-            const result = await generator.generateStyles()
-            if (result.global) {
-                globalCss.push(result.global)
-            }
-            if (result.files) {
-                for (const [source, css] of Object.entries(result.files)) {
-                    files[source] = files[source] ? `${files[source]}\n\n${css}` : css
-                }
+        const filesCss: Record<string, string> = {}
+        for (const [chunkPath, contentSet] of chunks) {
+            const content = [...contentSet].join("\n\n")
+            if (chunkPath === "global.css") {
+                globalCss.push(content)
+            } else {
+                filesCss[chunkPath] = filesCss[chunkPath] ? `${filesCss[chunkPath]}\n\n${content}` : content
             }
         }
 
         const resultSourcemods = Object.keys(sourcemods).length > 0 ? sourcemods : undefined
 
         if (!this.options.splitCss) {
-            // Merge files into global CSS
             const allCss = [...globalCss]
-            const sortedFiles = Object.keys(files).sort()
+            const sortedFiles = Object.keys(filesCss).sort()
             for (const key of sortedFiles) {
-                const css = files[key]
+                const css = filesCss[key]
                 if (css) allCss.push(css)
             }
             return {
@@ -295,7 +386,7 @@ export class Builder {
 
         return {
             global: globalCss.length > 0 ? globalCss.join("\n\n") : undefined,
-            files: Object.keys(files).length > 0 ? files : undefined,
+            files: Object.keys(filesCss).length > 0 ? filesCss : undefined,
             sourcemods: resultSourcemods,
         }
     }

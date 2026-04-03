@@ -29,14 +29,17 @@
     },
     "dependencies": {
         "@mochi-css/vanilla": "^3.0.1",
-        "clsx": "^2.1.1",
-        "react": ">= 18 || >= 19"
+        "clsx": "^2.1.1"
+    },
+    "peerDependencies": {
+        "react": "^18 || ^19"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
         "@eslint/js": "^9.18.0",
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "@mochi-css/builder": "^3.0.0",
         "@mochi-css/config": "*",
         "@mochi-css/shared-config": "^2.0.0",
         "@types/react": "^19.2.2",
@@ -45,13 +48,13 @@
         "eslint": "^9",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.5",
-        "happy-dom": "^20.6.3",
+        "happy-dom": "^20.8.9",
         "prettier": "^3.8.1",
+        "react": "^19",
         "react-dom": "^19.2.4",
         "tsdown": "^0.15.7",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.21.0",
-        "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.0.15"
     }
 }

@@ -317,6 +317,7 @@ export const knownPropertyNames: ReadonlySet<string> = new Set([
     "footnoteDisplay",
     "footnotePolicy",
     "forcedColorAdjust",
+    "frameSizing",
     "gap",
     "glyphOrientationVertical",
     "grid",

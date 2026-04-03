@@ -54,7 +54,6 @@ describe("resolveConfig", () => {
     it("fills in defaults when file config is empty", async () => {
         const result = await resolveConfig({}, undefined, {
             roots: ["src"],
-            extractors: [],
             splitCss: true,
         })
         expect(result.roots).toEqual(["src"])
@@ -112,7 +111,6 @@ describe("resolveConfig", () => {
     it("uses default values when all sources are empty", async () => {
         const result = await resolveConfig({})
         expect(result.roots).toEqual([])
-        expect(result.extractors).toEqual([])
         expect(result.splitCss).toBe(false)
         expect(result.onDiagnostic).toBeUndefined()
         expect(result.plugins).toEqual([])

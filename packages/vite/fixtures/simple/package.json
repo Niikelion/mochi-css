@@ -13,6 +13,7 @@
     "overrides": {
         "@mochi-css/builder": "file:__MOCHI_ROOT__/packages/builder",
         "@mochi-css/config": "file:__MOCHI_ROOT__/packages/config",
+        "@mochi-css/plugins": "file:__MOCHI_ROOT__/packages/plugins",
         "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla"
     }
 }

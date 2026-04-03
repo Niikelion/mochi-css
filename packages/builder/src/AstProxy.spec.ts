@@ -3,7 +3,26 @@ import * as SWC from "@swc/core"
 import { createAstProxy, wrapIndexWithProxies } from "@/AstProxy"
 import { ProjectIndex } from "@/ProjectIndex"
 import { parseSource } from "@/parse"
-import { mochiCssFunctionExtractor } from "@/extractors/VanillaCssExtractor"
+import { createDefaultStages } from "@/analysis/stages"
+import type { StyleExtractor } from "@/extractors/StyleExtractor"
+import type { CallExpression, Expression } from "@swc/core"
+
+const testCssExtractor: StyleExtractor = {
+    importPath: "@mochi-css/vanilla",
+    symbolName: "css",
+    extractStaticArgs(call: CallExpression): Expression[] {
+        return call.arguments.slice(0, 1).map((a) => a.expression)
+    },
+    startGeneration() {
+        return {
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            collectArgs() {},
+            async generateStyles() {
+                return {}
+            },
+        }
+    },
+}
 
 function makeMinimalAst(body: SWC.ModuleItem[] = []): SWC.Module {
     return { type: "Module", body, interpreter: "", span: { start: 0, end: 0, ctxt: 0 } }
@@ -94,7 +113,7 @@ describe("wrapIndexWithProxies", () => {
 export const s = css({ color: "red" })`,
             "test.ts",
         )
-        const index = new ProjectIndex([module], [mochiCssFunctionExtractor], () => null)
+        const index = new ProjectIndex([module], createDefaultStages([testCssExtractor]), () => null)
 
         const originalAst = index.files[0]?.[1]?.ast
         expect.assert(originalAst !== undefined)
@@ -112,7 +131,7 @@ export const s = css({ color: "red" })`,
     it("getDirtyFiles returns paths for mutated files and not others", async () => {
         const moduleA = await parseSource(`export const x = 1`, "a.ts")
         const moduleB = await parseSource(`export const y = 2`, "b.ts")
-        const index = new ProjectIndex([moduleA, moduleB], [], () => null)
+        const index = new ProjectIndex([moduleA, moduleB], createDefaultStages([]), () => null)
 
         const proxied = wrapIndexWithProxies(index)
         // Mutate a.ts by accessing body[0] through the proxy then setting a property
@@ -129,7 +148,7 @@ export const s = css({ color: "red" })`,
 
     it("getDirtyFiles returns empty set when no mutations were made", async () => {
         const module = await parseSource(`export const x = 1`, "a.ts")
-        const index = new ProjectIndex([module], [], () => null)
+        const index = new ProjectIndex([module], createDefaultStages([]), () => null)
 
         const proxied = wrapIndexWithProxies(index)
         // No mutations

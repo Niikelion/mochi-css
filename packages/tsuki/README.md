@@ -15,7 +15,7 @@ To get more info, run it with `-h` or `--help` option.
 ## What `tsuki` sets up
 
 During initialization, `tsuki` installs the required packages and creates a `mochi.config.ts` file in your project root.
-This file is the single place to configure all Mochi-CSS options (`roots`, `extractors`, `plugins`, etc.) - all integrations load it automatically.
+This file is the single place to configure all Mochi-CSS options (`roots`, `plugins`, `splitCss`, etc.) - all integrations load it automatically.
 
 ## Presets
 

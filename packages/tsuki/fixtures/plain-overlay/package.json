@@ -1,0 +1,22 @@
+{
+    "name": "my-vite-app",
+    "private": true,
+    "packageManager": "npm@10.9.2",
+    "type": "module",
+    "scripts": {
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@mochi-css/vite": "file:__MOCHI_ROOT__/packages/vite",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla",
+        "@mochi-css/postcss": "file:__MOCHI_ROOT__/packages/postcss",
+        "postcss": "^8.4.49",
+        "vite": "^6.0.0"
+    },
+    "overrides": {
+        "@mochi-css/builder": "file:__MOCHI_ROOT__/packages/builder",
+        "@mochi-css/config": "file:__MOCHI_ROOT__/packages/config",
+        "@mochi-css/plugins": "file:__MOCHI_ROOT__/packages/plugins",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla"
+    }
+}

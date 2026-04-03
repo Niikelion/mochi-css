@@ -78,12 +78,13 @@ The following options are specific to the Vite plugin and can be passed inline t
 
 ```typescript
 import { mochiCss } from "@mochi-css/vite"
-import { styledIdPlugin } from "@mochi-css/builder"
+import { styledIdPlugin } from "@mochi-css/config"
+import { myExtractor } from "./myExtractor"
 
 export default defineConfig({
     plugins: [
         mochiCss({
-            plugins: [styledIdPlugin()],
+            plugins: [styledIdPlugin([myExtractor])],
         }),
     ],
 })

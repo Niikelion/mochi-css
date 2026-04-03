@@ -1,9 +1,6 @@
 import { CallExpression, Expression } from "@swc/types";
-import {
-    StyleExtractor,
-    StyleGenerator,
-    VanillaCssExtractor,
-} from "@mochi-css/builder";
+import { StyleExtractor, StyleGenerator } from "@mochi-css/builder";
+import { VanillaCssExtractor } from "@mochi-css/vanilla/config";
 import { OnDiagnostic } from "@mochi-css/builder";
 import { StitchesGenerator } from "@/generator/StitchesGenerator";
 

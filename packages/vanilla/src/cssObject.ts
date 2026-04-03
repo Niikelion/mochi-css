@@ -316,12 +316,12 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
 
     /**
      * Serializes the entire CSS object to a CSS string.
-     * Outputs main block first, then all variant blocks in sorted order.
+     * Outputs the main block first, then all variant blocks in sorted order.
      * @returns Complete CSS string ready for injection into a stylesheet
      */
     public asCssString(): string {
         return [
-            this.mainBlock.asCssString(this.mainBlock.selector),
+            this.mainBlock.asCssString(""),
             ...Object.entries(this.variantBlocks)
                 .toSorted(compareStringKey)
                 .flatMap(([_, b]) => Object.entries(b).toSorted(compareStringKey))

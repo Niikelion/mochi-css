@@ -2,7 +2,6 @@ import type { Plugin, ViteDevServer } from "vite"
 import {
     Builder,
     BuilderOptions,
-    defaultExtractors,
     RolldownBundler,
     VmRunner,
     fileHash,
@@ -63,7 +62,6 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             const fileConfig = await loadConfig(viteConfig.root)
             resolved = await resolveConfig(fileConfig, opts, {
                 roots: ["src"],
-                extractors: defaultExtractors,
                 splitCss: true,
             })
         },
@@ -71,19 +69,21 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
         async buildStart() {
             if (!resolved) return
 
-            context = new FullContext()
-            const buildContext = context
+            const ctx = new FullContext(resolved.onDiagnostic ?? (() => {}))
+            context = ctx
             for (const plugin of resolved.plugins) {
-                plugin.onLoad?.(buildContext)
+                plugin.onLoad?.(ctx)
             }
             const options: BuilderOptions = {
                 roots: resolved.roots,
-                extractors: resolved.extractors,
+                stages: [...ctx.stages.getAll()],
                 bundler: opts?.bundler ?? new RolldownBundler(),
                 runner: opts?.runner ?? new VmRunner(),
                 splitCss: resolved.splitCss,
                 onDiagnostic: resolved.onDiagnostic,
-                astPostProcessors: buildContext.getAnalysisHooks(),
+                sourceTransforms: [...ctx.sourceTransforms.getAll()],
+                emitHooks: [...ctx.emitHooks.getAll()],
+                cleanup: () => { ctx.cleanup.runAll() },
             }
 
             builder = new Builder(options)
@@ -116,9 +116,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             }
 
             if (id.startsWith(RESOLVED_PREFIX)) {
-                const hash = id
-                    .slice(RESOLVED_PREFIX.length)
-                    .replace(/\.css$/, "")
+                const hash = id.slice(RESOLVED_PREFIX.length).replace(/\.css$/, "")
                 const source = hashToSource.get(hash)
                 if (source) {
                     return manifest.files[source] ?? ""
@@ -160,10 +158,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 }
             }
 
-            const allSources = new Set([
-                ...Object.keys(oldManifest.files),
-                ...Object.keys(manifest.files),
-            ])
+            const allSources = new Set([...Object.keys(oldManifest.files), ...Object.keys(manifest.files)])
             for (const source of allSources) {
                 if (oldManifest.files[source] !== manifest.files[source]) {
                     const hash = fileHash(source)
@@ -198,7 +193,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             const normalizedId = id.replaceAll("\\", "/")
 
             // Apply registered source transforms (e.g. styledIdPlugin for runtime s- id injection)
-            const transformed = await context.sourceTransform.transform(code, { filePath: normalizedId })
+            const transformed = await context.filePreProcess.transform(code, { filePath: normalizedId })
 
             // If this file has no CSS in the manifest, return transform result only
             if (!manifest || manifest.files[normalizedId] === undefined) {

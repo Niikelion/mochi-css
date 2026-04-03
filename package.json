@@ -1,7 +1,7 @@
 {
     "name": "mochi-css",
     "private": true,
-    "packageManager": "yarn@4.10.3",
+    "packageManager": "yarn@4.13.0",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "workspaces": [
         "packages/*",
@@ -10,8 +10,6 @@
     ],
     "scripts": {
         "build": "turbo build",
-        "build.examples": "turbo build-example",
-        "build.all": "yarn build && yarn build.examples",
         "test": "turbo test",
         "coverage": "turbo coverage",
         "dev": "turbo dev",
@@ -22,7 +20,7 @@
         "@arethetypeswrong/cli": "^0.18.2",
         "@changesets/cli": "^2.29.7",
         "tsdown": "^0.15.7",
-        "turbo": "^2.8.12",
+        "turbo": "^2.8.20",
         "typescript": "^5.9.3"
     }
 }

@@ -1,10 +1,13 @@
-export type { RootEntry, StyleExtractor, OnDiagnostic } from "@mochi-css/builder"
+export type { RootEntry, OnDiagnostic } from "@mochi-css/builder"
 export * from "./merge"
 export * from "./config"
 export { TransformationPipeline, FullContext } from "./plugin"
 export type {
     PluginContext,
-    AnalysisTransformHookProvider,
+    SourceTransformHookProvider,
+    StageHookProvider,
+    EmitHookProvider,
+    CleanupHookProvider,
     TransformationUser,
     TransformationHookProvider,
 } from "./plugin"

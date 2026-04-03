@@ -3,7 +3,6 @@ import * as fs from "fs";
 import * as path from "path";
 import {
     Builder,
-    defaultExtractors,
     BuilderOptions,
     RolldownBundler,
     VmRunner,
@@ -47,12 +46,9 @@ type Options = Partial<Pick<BuilderOptions, "runner" | "bundler">> & Partial<Con
 
 const pluginName = "postcss-mochi-css"
 
-const defaultOptions = {
-    globalCss: /\/globals\.css$/,
-    extractors: defaultExtractors,
-    bundler: new RolldownBundler(),
-    runner: new VmRunner(),
-}
+const defaultGlobalCssRegex = /\/globals\.css$/
+const defaultBundler = new RolldownBundler()
+const defaultRunner = new VmRunner()
 
 /**
  * PostCSS plugin that extracts Mochi CSS styles from TypeScript/TSX source files at build time
@@ -74,7 +70,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
 
     const getResolved = () => {
         resolvedPromise ??= loadConfig().then(fileConfig =>
-            resolveConfig(fileConfig, opts, defaultOptions).then(resolved => ({
+            resolveConfig(fileConfig, opts).then(resolved => ({
                 ...resolved,
                 tmpDir: resolved.tmpDir ?? opts?.tmpDir,
             }))
@@ -86,7 +82,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
     let currentResult: Result | undefined
     let builderGuard: Promise<void> | undefined
 
-    const globalCssRegex = opts?.globalCss ?? defaultOptions.globalCss
+    const globalCssRegex = opts?.globalCss ?? defaultGlobalCssRegex
 
     const postcssProcess: TransformCallback = async (root, result) => {
         currentResult = result
@@ -104,23 +100,26 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         const resolved = await getResolved()
 
         if (!builder) {
-            const context = new FullContext()
+            const onDiagnostic = mergeCallbacks(resolved.onDiagnostic, (diagnostic) => {
+                currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
+                    plugin: pluginName,
+                })
+            })
+            const context = new FullContext(onDiagnostic ?? (() => {}))
             for (const plugin of resolved.plugins) {
                 plugin.onLoad?.(context)
             }
             builder = new Builder({
-                onDiagnostic: mergeCallbacks(resolved.onDiagnostic, (diagnostic) => {
-                    currentResult?.warn(`[${diagnostic.code}] ${diagnostic.message}${diagnostic.file ? ` (${diagnostic.file})` : ''}`, {
-                        plugin: pluginName,
-                    })
-                }),
+                onDiagnostic,
                 roots: resolved.roots,
-                extractors: resolved.extractors,
-                bundler: opts?.bundler ?? defaultOptions.bundler,
-                runner: opts?.runner ?? defaultOptions.runner,
+                stages: [...context.stages.getAll()],
+                bundler: opts?.bundler ?? defaultBundler,
+                runner: opts?.runner ?? defaultRunner,
                 splitCss: resolved.splitCss,
-                filePreProcess: ({ content, filePath }) => context.sourceTransform.transform(content, { filePath }),
-                astPostProcessors: context.getAnalysisHooks(),
+                filePreProcess: ({ content, filePath }) => context.filePreProcess.transform(content, { filePath }),
+                sourceTransforms: [...context.sourceTransforms.getAll()],
+                emitHooks: [...context.emitHooks.getAll()],
+                cleanup: () => { context.cleanup.runAll() },
             })
         }
 

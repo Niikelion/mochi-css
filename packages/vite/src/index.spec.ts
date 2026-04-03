@@ -11,18 +11,19 @@ vi.mock("@mochi-css/config", () => ({
     resolveConfig: vi.fn(async (_file: unknown, _opts: unknown, defaults: unknown) => ({
         plugins: [],
         roots: ["src"],
-        extractors: [],
         splitCss: true,
         onDiagnostic: undefined,
         ...(defaults as object),
     })),
     FullContext: class {
-        sourceTransform = {
+        filePreProcess = {
             transform: (source: string, opts: { filePath: string }) => mockTransform(source, opts),
         }
-        getAnalysisHooks() {
-            return []
-        }
+        stages = { getAll: () => [] }
+        sourceTransforms = { getAll: () => [] }
+        emitHooks = { getAll: () => [] }
+        cleanup = { runAll: () => {} }
+        onDiagnostic = () => {}
     },
 }))
 
@@ -32,7 +33,6 @@ vi.mock("@mochi-css/builder", () => ({
             return mockCollectMochiCss()
         }
     },
-    defaultExtractors: [],
     RolldownBundler: class {},
     VmRunner: class {},
     fileHash: (id: string) => id.split("/").pop()?.replace(/\.[^.]+$/, "") ?? id,
