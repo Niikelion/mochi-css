@@ -9,7 +9,7 @@
         "lint": "eslint --config eslint.config.mjs"
     },
     "dependencies": {
-        "@mochi-css/vanilla": "^5.0.0",
+        "@mochi-css/vanilla": "^4.0.2",
         "@mochi-css/vanilla-react": "^4.0.0",
         "next": "^16.1.6",
         "react": "^19",

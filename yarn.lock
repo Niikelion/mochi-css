@@ -1273,7 +1273,7 @@ __metadata:
     "@mochi-css/config": "npm:^4.0.0"
     "@mochi-css/next": "npm:^4.0.0"
     "@mochi-css/postcss": "npm:^4.0.0"
-    "@mochi-css/vanilla": "npm:^5.0.0"
+    "@mochi-css/vanilla": "npm:^4.0.2"
     "@mochi-css/vanilla-react": "npm:^4.0.0"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
@@ -1493,7 +1493,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:^4.0.1, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:^4.0.1, @mochi-css/vanilla@npm:^4.0.2, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
@@ -1537,30 +1537,6 @@ __metadata:
       optional: true
   languageName: unknown
   linkType: soft
-
-"@mochi-css/vanilla@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "@mochi-css/vanilla@npm:5.0.0"
-  dependencies:
-    clsx: "npm:^2.1.1"
-    csstype: "npm:^3.2.3"
-  peerDependencies:
-    "@mochi-css/builder": ^4.0.0
-    "@mochi-css/config": ^4.0.0
-    "@mochi-css/plugins": ^4.0.0
-    "@swc/core": ^1
-  peerDependenciesMeta:
-    "@mochi-css/builder":
-      optional: true
-    "@mochi-css/config":
-      optional: true
-    "@mochi-css/plugins":
-      optional: true
-    "@swc/core":
-      optional: true
-  checksum: 10c0/7d32aa47472406ce2309adf6ec072cdcc46e8124bd99eb7ec0f557e2a0ec782cc1e50082ef42a57026b79a34d41b7d595770c86062e11d0bde0893fda7757421
-  languageName: node
-  linkType: hard
 
 "@mochi-css/vite@workspace:packages/vite":
   version: 0.0.0-use.local
