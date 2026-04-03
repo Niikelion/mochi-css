@@ -1,5 +1,11 @@
 # @mochi-css/vanilla
 
+## 4.0.2
+
+### Patch Changes
+
+- 73816ed: v4 release.
+
 ## 5.0.0
 
 ### Patch Changes
