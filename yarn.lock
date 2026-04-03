@@ -1187,7 +1187,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mochi-css/builder@npm:^3.0.0, @mochi-css/builder@workspace:packages/builder":
+"@mochi-css/builder@npm:^4.0.0, @mochi-css/builder@workspace:packages/builder":
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
@@ -1208,12 +1208,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/config@npm:*, @mochi-css/config@npm:^3.0.0, @mochi-css/config@workspace:packages/config":
+"@mochi-css/config@npm:*, @mochi-css/config@npm:^3.1.0, @mochi-css/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/config@workspace:packages/config"
   dependencies:
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
     "@mochi-css/core": "npm:^3.0.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
@@ -1243,12 +1243,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/next@npm:^3.0.0, @mochi-css/next@workspace:packages/next":
+"@mochi-css/next@npm:^3.0.1, @mochi-css/next@workspace:packages/next":
   version: 0.0.0-use.local
   resolution: "@mochi-css/next@workspace:packages/next"
   dependencies:
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
     "@types/diff": "npm:^8.0.0"
@@ -1269,12 +1269,12 @@ __metadata:
   resolution: "@mochi-css/nextjs-example@workspace:examples/nextjs"
   dependencies:
     "@eslint/eslintrc": "npm:^3"
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
-    "@mochi-css/next": "npm:^3.0.0"
-    "@mochi-css/postcss": "npm:^3.0.0"
-    "@mochi-css/vanilla": "npm:^3.0.1"
-    "@mochi-css/vanilla-react": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
+    "@mochi-css/next": "npm:^3.0.1"
+    "@mochi-css/postcss": "npm:^3.0.1"
+    "@mochi-css/vanilla": "npm:^4.0.0"
+    "@mochi-css/vanilla-react": "npm:^3.1.0"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -1287,14 +1287,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/plugins@npm:^3.0.0, @mochi-css/plugins@workspace:packages/plugins":
+"@mochi-css/plugins@npm:^3.1.0, @mochi-css/plugins@workspace:packages/plugins":
   version: 0.0.0-use.local
   resolution: "@mochi-css/plugins@workspace:packages/plugins"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
@@ -1307,12 +1307,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/postcss@npm:^3.0.0, @mochi-css/postcss@workspace:packages/postcss":
+"@mochi-css/postcss@npm:^3.0.1, @mochi-css/postcss@workspace:packages/postcss":
   version: 0.0.0-use.local
   resolution: "@mochi-css/postcss@workspace:packages/postcss"
   dependencies:
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@types/node": "npm:^24.8.1"
     postcss: "npm:^8.5.6"
@@ -1328,7 +1328,7 @@ __metadata:
   dependencies:
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^3.0.0"
+    "@mochi-css/vanilla": "npm:^4.0.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/css-tree": "npm:^2.3.10"
@@ -1376,12 +1376,12 @@ __metadata:
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
-    "@mochi-css/plugins": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
+    "@mochi-css/plugins": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
-    "@mochi-css/stitches": "npm:^0.1.0"
-    "@mochi-css/vanilla": "npm:^3.0.0"
+    "@mochi-css/stitches": "npm:^0.1.2"
+    "@mochi-css/vanilla": "npm:^4.0.0"
     "@swc/types": "npm:^0.1.25"
     "@types/node": "npm:^24.8.1"
     "@vitest/coverage-v8": "npm:^4.0.15"
@@ -1394,7 +1394,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/stitches@npm:^0.1.0, @mochi-css/stitches@workspace:packages/stitches":
+"@mochi-css/stitches@npm:^0.1.2, @mochi-css/stitches@workspace:packages/stitches":
   version: 0.0.0-use.local
   resolution: "@mochi-css/stitches@workspace:packages/stitches"
   dependencies:
@@ -1402,10 +1402,10 @@ __metadata:
     "@eslint/js": "npm:^9.18.0"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
     "@mochi-css/config": "npm:*"
     "@mochi-css/shared-config": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^3.0.1"
+    "@mochi-css/vanilla": "npm:^4.0.0"
     "@types/react": "npm:^19.2.2"
     "@types/react-dom": "npm:^19.2.3"
     "@vitest/coverage-v8": "npm:^4.0.15"
@@ -1461,16 +1461,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla-react@npm:^3.0.0, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
+"@mochi-css/vanilla-react@npm:^3.1.0, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla-react@workspace:packages/vanilla-react"
   dependencies:
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
-    "@mochi-css/plugins": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
+    "@mochi-css/plugins": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^3.0.0"
+    "@mochi-css/vanilla": "npm:^4.0.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/css-tree": "npm:^2.3.10"
@@ -1493,13 +1493,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:^3.0.0, @mochi-css/vanilla@npm:^3.0.1, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:^4.0.0, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
-    "@mochi-css/plugins": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
+    "@mochi-css/plugins": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
@@ -1522,9 +1522,9 @@ __metadata:
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.0.15"
   peerDependencies:
-    "@mochi-css/builder": ^3.0.0
-    "@mochi-css/config": ^3.0.0
-    "@mochi-css/plugins": ^3.0.0
+    "@mochi-css/builder": ^4.0.0
+    "@mochi-css/config": ^3.1.0
+    "@mochi-css/plugins": ^3.1.0
     "@swc/core": ^1
   peerDependenciesMeta:
     "@mochi-css/builder":
@@ -1542,8 +1542,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/vite@workspace:packages/vite"
   dependencies:
-    "@mochi-css/builder": "npm:^3.0.0"
-    "@mochi-css/config": "npm:^3.0.0"
+    "@mochi-css/builder": "npm:^4.0.0"
+    "@mochi-css/config": "npm:^3.1.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
     "@types/diff": "npm:^8.0.0"

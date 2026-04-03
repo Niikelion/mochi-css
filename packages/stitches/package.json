@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/stitches",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -28,7 +28,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/vanilla": "^3.0.1",
+        "@mochi-css/vanilla": "^4.0.0",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
@@ -39,7 +39,7 @@
         "@eslint/js": "^9.18.0",
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@gamedev-sensei/tsdown-config": "^2.1.0",
-        "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/builder": "^4.0.0",
         "@mochi-css/config": "*",
         "@mochi-css/shared-config": "^2.0.0",
         "@types/react": "^19.2.2",

@@ -1,5 +1,15 @@
 # @mochi-css/vanilla
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [ee02bb1]
+- Updated dependencies [7256944]
+    - @mochi-css/builder@4.0.0
+    - @mochi-css/plugins@3.1.0
+    - @mochi-css/config@3.1.0
+
 ## 3.0.1
 
 ### Patch Changes

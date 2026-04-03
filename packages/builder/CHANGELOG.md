@@ -1,5 +1,113 @@
 # @mochi-css/builder
 
+## 4.0.0
+
+### Major Changes
+
+- ee02bb1: ## Breaking changes (`@mochi-css/builder`)
+
+    ### `BuilderOptions.extractors` removed
+
+    The `extractors` field has been removed from `BuilderOptions`. Extractor configuration is now done through the plugin system via `stages`. Use `createExtractorsPlugin` from `@mochi-css/plugins` and wire the result through a `FullContext`:
+
+    **Before:**
+
+    ```typescript
+    new Builder({ roots, extractors: defaultExtractors, bundler, runner })
+    ```
+
+    **After:**
+
+    ```typescript
+    import { createExtractorsPlugin } from "@mochi-css/plugins"
+    import { FullContext } from "@mochi-css/config"
+
+    const ctx = new FullContext(onDiagnostic)
+    createExtractorsPlugin(defaultExtractors).onLoad(ctx)
+
+    new Builder({
+        roots,
+        stages: [...ctx.stages.getAll()],
+        bundler,
+        runner,
+        sourceTransforms: [...ctx.sourceTransforms.getAll()],
+        emitHooks: [...ctx.emitHooks.getAll()],
+        cleanup: () => ctx.cleanup.runAll(),
+    })
+    ```
+
+    ### `BuilderOptions.astPostProcessors` renamed to `sourceTransforms`
+
+    The `astPostProcessors` option has been renamed to `sourceTransforms` to better reflect its role.
+
+    ### `AnalysisContext` has new required fields
+
+    `AnalysisContext` now has `evaluator`, `emitChunk`, and `markForEval`. Code that manually constructs an `AnalysisContext` (typically tests or custom tooling) must add these fields:
+
+    **Before:**
+
+    ```typescript
+    const ctx: AnalysisContext = { onDiagnostic }
+    ```
+
+    **After:**
+
+    ```typescript
+    const ctx: AnalysisContext = {
+        onDiagnostic,
+        evaluator,
+        emitChunk: () => {},
+        markForEval: () => {},
+    }
+    ```
+
+    ### `FileInfo.extractedCallExpressions` is now required
+
+    `FileInfo` now has a required `extractedCallExpressions: Map<StyleExtractor, SWC.CallExpression[]>` field. Code that manually constructs `FileInfo` objects must add this field.
+
+    ***
+
+    ## New features (`@mochi-css/builder`)
+
+    ### `stages` — analysis pipeline configuration
+
+    `BuilderOptions` now accepts `stages: StageDefinition[]`. Stages carry extractor configuration through the analysis pipeline. Populate via `createExtractorsPlugin(...).onLoad(ctx)` and pass `ctx.stages.getAll()`.
+
+    ### `sourceTransforms`, `preEvalTransforms`, `postEvalTransforms`
+
+    Three new transform hooks control different phases of the pipeline:
+    - **`sourceTransforms`** — run after analysis on the canonical AST index. Mutations persist and are visible to `postEvalTransforms`.
+    - **`preEvalTransforms`** — run on a deep copy of the ASTs before evaluation. Mutations do NOT persist.
+    - **`postEvalTransforms`** — run after code execution. The evaluator is populated — use `context.evaluator.getTrackedValue()` to read runtime values.
+
+    ### `emitHooks` and `emitDir`
+
+    `emitHooks: EmitHook[]` run after `postEvalTransforms`. Call `context.emitChunk(path, content)` to write files to `emitDir`. Files no longer emitted are automatically deleted (tracked via `.mochi-emit.json`).
+
+    ```typescript
+    export type EmitHook = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
+    ```
+
+    ### `context.markForEval`
+
+    `AnalysisContext.markForEval(filePath, expression)` includes an expression in the eval bundle for a given file, tracing its identifier dependencies automatically. Combine with `evaluator.valueWithTracking(expr)` to read back the runtime value in a `postEvalTransforms` handler.
+
+    ### `StyleGenerator.getArgReplacements` (optional)
+
+    Generators may now implement `getArgReplacements(): Array<{ source: string; expression: SWC.Expression }>`. After `generateStyles()`, the builder substitutes these back into the source AST — enabling compile-time replacement of runtime style object arguments.
+
+    ### `cleanup`
+
+    `BuilderOptions.cleanup` is called once at the end of each build to release caches built up during the pipeline.
+
+    ***
+
+    ## Type improvement (`@mochi-css/react`)
+
+    ### `MochiCSS<V[K]>` in `styled()` spread params
+
+    The variadic spread params of `styled()` now use `MochiCSS<V[K]>` instead of bare `MochiCSS`, preserving variant type information when a typed `MochiCSS` instance is passed as a base style.
+
 ## 3.0.0
 
 ### Major Changes
