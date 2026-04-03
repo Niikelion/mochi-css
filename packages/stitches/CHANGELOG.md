@@ -1,5 +1,11 @@
 # @mochi-css/stitches
 
+## 0.1.3
+
+### Patch Changes
+
+- @mochi-css/vanilla@5.0.0
+
 ## 0.1.2
 
 ### Patch Changes

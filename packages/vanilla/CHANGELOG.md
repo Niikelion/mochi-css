@@ -1,5 +1,13 @@
 # @mochi-css/vanilla
 
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [71b74a6]
+    - @mochi-css/config@4.0.0
+    - @mochi-css/plugins@4.0.0
+
 ## 4.0.0
 
 ### Patch Changes

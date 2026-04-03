@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 4.0.0
+
+### Major Changes
+
+- 71b74a6: Align all packages to v4.
+
 ## 3.0.0
 
 ### Major Changes

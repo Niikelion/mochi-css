@@ -1,5 +1,18 @@
 # @mochi-css/react
 
+## 4.0.0
+
+### Major Changes
+
+- 71b74a6: Align all packages to v4.
+
+### Patch Changes
+
+- Updated dependencies [71b74a6]
+    - @mochi-css/config@4.0.0
+    - @mochi-css/plugins@4.0.0
+    - @mochi-css/vanilla@5.0.0
+
 ## 3.1.0
 
 ### Minor Changes
