@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vanilla",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "5.0.0",
+    "version": "4.0.1",
     "license": "MIT",
     "keywords": [
         "css-in-js",

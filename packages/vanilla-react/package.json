@@ -76,7 +76,7 @@
     "dependencies": {
         "@mochi-css/config": "^4.0.0",
         "@mochi-css/plugins": "^4.0.0",
-        "@mochi-css/vanilla": "^5.0.0",
+        "@mochi-css/vanilla": "^4.0.1",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {

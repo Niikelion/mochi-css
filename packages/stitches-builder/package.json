@@ -32,7 +32,7 @@
         "@mochi-css/config": "^4.0.0",
         "@mochi-css/plugins": "^4.0.0",
         "@mochi-css/stitches": "^0.1.3",
-        "@mochi-css/vanilla": "^5.0.0"
+        "@mochi-css/vanilla": "^4.0.1"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",
