@@ -29,6 +29,7 @@
     },
     "dependencies": {
         "@mochi-css/builder": "^3.0.0",
+        "@mochi-css/config": "^3.0.0",
         "@swc/core": "^1.15.13"
     },
     "devDependencies": {

@@ -1,6 +1,6 @@
 ![Mochi.css banner](assets/mochi-css-banner-wide.png)
 
-# Zero-runtime CSS-in-JS solution with build-time style extraction
+# Near zero-runtime CSS-in-JS solution with build-time style extraction
 
 Mochi.css brings the ergonomics of CSS-in-JS without paying the significant runtime cost.
 Styles are statically extracted at build time through a PostCSS plugin,
@@ -16,7 +16,7 @@ making your shipped bundle smaller, predictable, and framework-agnostic.
 
 ## ✨ Features
 
-- **Zero runtime** – no style injection logic in your final bundle
+- **Near zero runtime** – minimal style logic in your final bundle
 - **Build-time CSS extraction** – using a PostCSS plugin
 - **Style variants** – create variants for your styles with ease
 - **Nested selectors** – use sub-selectors in your styles
@@ -75,11 +75,13 @@ Detailed documentation about different parts of Mochi.css can be found here:
 
 ---
 
-## 🚧 Project Status
+## 🌱 Project Status
 
 **Early release** – starting with version 3, new features and improvements will be added while preserving code compatibility within the same major version.
 This guarantees that package upgrades within the same major version will not break your code, as long as you don't rely on bugs existing in the previous versions.
 If you want to upgrade to the next major version, please read release notes and migration guides to ensure a smooth transition.
+
+Starting with version 4, code-mods for upgrading to the next major version will be provided.
 
 Benchmarks and performance comparisons will be released at a later stage.
 
@@ -89,6 +91,7 @@ Benchmarks and performance comparisons will be released at a later stage.
 
 | Feature                      | Status         | Notes                                                                                                                                                  |
 |------------------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Zero runtime**             | 🚧 In Progress | Replace style object arguments with pre-computed values at build time, eliminating the remaining runtime overhead                                      |
 | **Benchmarks**               | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                                             |
 | **Mochi.css/mango**          | 🕒 Queued      | Theming library built on top of Mochi.css/vanilla                                                                                                      |
 | **Stitches.js adapter**      | 🚧 In Progress | Drop-in replacement for `css`, `styled`, `globalCss` and `createTheme` from Stiches.js that runs on Mochi.css                                          |

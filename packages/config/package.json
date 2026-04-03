@@ -28,16 +28,13 @@
         "format": "prettier --write ."
     },
     "dependencies": {
+        "@mochi-css/builder": "^3.0.0",
         "@mochi-css/core": "^3.0.0",
         "@swc/core": "^1.15.13",
         "jiti": "^2.6.1"
     },
-    "peerDependencies": {
-        "@mochi-css/builder": "^3.0.0"
-    },
     "devDependencies": {
         "@gamedev-sensei/tsdown-config": "^2.1.0",
-        "@mochi-css/builder": "^3.0.0",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
         "@swc/types": "^0.1.25",

@@ -1,8 +1,7 @@
-import { defineConfig, styledIdPlugin } from "@mochi-css/vanilla/config"
+import { defineConfig } from "@mochi-css/vanilla-react/config"
 
 export default defineConfig({
     roots: ["src"],
     tmpDir: ".mochi",
     splitCss: true,
-    plugins: [styledIdPlugin()],
 })

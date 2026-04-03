@@ -8,18 +8,18 @@ export type StyledCall = {
     varName: string | null
 }
 
-export function collectStyledCalls(ast: SWC.Module): StyledCall[] {
+export function collectCallsBySymbol(ast: SWC.Module, symbolNames: Set<string>): StyledCall[] {
     const results: StyledCall[] = []
 
     function visitExpr(expr: SWC.Expression, varName: string | null): void {
         if (expr.type === "CallExpression") {
             const callee = expr.callee
-            const isStyled =
-                (callee.type === "Identifier" && callee.value === "styled") ||
+            const isMatch =
+                (callee.type === "Identifier" && symbolNames.has(callee.value)) ||
                 (callee.type === "MemberExpression" &&
                     callee.property.type === "Identifier" &&
-                    callee.property.value === "styled")
-            if (isStyled) results.push({ call: expr, varName })
+                    symbolNames.has(callee.property.value))
+            if (isMatch) results.push({ call: expr, varName })
             for (const arg of expr.arguments) {
                 visitExpr(arg.expression, null)
             }
@@ -48,24 +48,25 @@ export function collectStyledCalls(ast: SWC.Module): StyledCall[] {
 }
 
 /**
- * Transforms source code to inject stable `s-` class IDs into every `styled()` call.
- * Idempotent: skips calls that already have an `s-` string as the last argument.
+ * Transforms source code to inject stable `s-` class IDs into every call matching
+ * one of the given symbol names. Idempotent: skips calls that already have an `s-`
+ * string as the last argument.
  */
-export function transformStyledIds(source: string, filePath: string): string {
-    if (!source.includes("styled")) return source
+export function transformCallIds(source: string, filePath: string, symbolNames: Set<string>): string {
+    if (![...symbolNames].some((name) => source.includes(name))) return source
 
     let ast: SWC.Module
     try {
         ast = SWC.parseSync(source, {
             syntax: "typescript",
-            tsx: filePath.endsWith(".tsx"),
+            tsx: filePath.endsWith(".tsx") || filePath.endsWith(".jsx"),
             target: "es2022",
         })
     } catch {
         return source
     }
 
-    const calls = collectStyledCalls(ast)
+    const calls = collectCallsBySymbol(ast, symbolNames)
     if (calls.length === 0) return source
 
     // Filter out calls that already have a stable s- id as the last arg
@@ -83,21 +84,28 @@ export function transformStyledIds(source: string, filePath: string): string {
     // sourceGlobalBase = global position of source[0].
     //
     // Strategy: process calls in source order (ascending span.start), find each
-    // "styled(" occurrence in the source with indexOf, and derive sourceGlobalBase
+    // symbol occurrence in the source with indexOf, and derive sourceGlobalBase
     // from the first call's known global position vs its local position in the source.
     const sortedAsc = [...toInject].sort((a, b) => a.call.span.start - b.call.span.start)
     let sourceGlobalBase = 0
     let searchFrom = 0
     const callsWithOffset: { entry: StyledCall; offset: number }[] = []
     for (const entry of sortedAsc) {
-        const idx = source.indexOf("styled(", searchFrom)
+        const symbolName =
+            entry.call.callee.type === "Identifier"
+                ? entry.call.callee.value
+                : entry.call.callee.type === "MemberExpression" && entry.call.callee.property.type === "Identifier"
+                  ? entry.call.callee.property.value
+                  : null
+        if (!symbolName) continue
+        const idx = source.indexOf(symbolName + "(", searchFrom)
         if (idx < 0) continue
         if (callsWithOffset.length === 0) {
             // First call: derive sourceGlobalBase
             const callee = entry.call.callee
-            const styledGlobal =
+            const symbolGlobal =
                 callee.type === "Identifier" ? callee.span.start : (callee as SWC.MemberExpression).property.span.start
-            sourceGlobalBase = styledGlobal - idx
+            sourceGlobalBase = symbolGlobal - idx
         }
         callsWithOffset.push({ entry, offset: entry.call.span.end - sourceGlobalBase - 1 })
         searchFrom = idx + 1

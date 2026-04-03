@@ -4,7 +4,7 @@ import * as p from "@clack/prompts"
 import { parseModule, generateCode } from "magicast"
 import type { Module, ModuleContext } from "@/types"
 import { mochiPackage } from "@/version"
-import { getPluginsElements, getPropKeyName, type ObjNode } from "./ast"
+import { getPropKeyName } from "./ast"
 import dedent from "dedent"
 
 const mochiConfigNames = ["mochi.config.ts", "mochi.config.mts", "mochi.config.js", "mochi.config.mjs"]
@@ -21,69 +21,13 @@ const defaultMochiConfigBase = /* language=typescript */ dedent`
 `
 
 function defaultMochiConfigWithOptions(tmpDir: string | undefined, styledId: boolean): string {
+    const importPath = styledId ? "@mochi-css/vanilla-react/config" : "@mochi-css/vanilla/config"
     const lines: string[] = []
     if (tmpDir !== undefined) lines.push(`    tmpDir: ${JSON.stringify(tmpDir)},`)
-    if (styledId) lines.push(`    plugins: [styledIdPlugin()],`)
 
     if (!styledId && lines.length === 0) return defaultMochiConfigBase
 
-    const imports = styledId
-        ? // noinspection TypeScriptCheckImport
-          `import { defineConfig, styledIdPlugin } from "@mochi-css/vanilla/config"`
-        : `import { defineConfig } from "@mochi-css/vanilla/config"`
-
-    return `${imports}\n\nexport default defineConfig({\n${lines.join("\n")}\n})\n`
-}
-
-function addStyledIdPluginToObj(obj: ObjNode, configPath: string): void {
-    const elements = getPluginsElements(obj, configPath)
-    elements.push({
-        type: "CallExpression",
-        callee: { type: "Identifier", name: "styledIdPlugin" },
-        arguments: [],
-    })
-}
-
-function addStyledIdToAst(mod: ReturnType<typeof parseModule>, configPath: string): void {
-    type ExportDefaultDecl = {
-        type: "ExportDefaultDeclaration"
-        declaration: Record<string, unknown>
-    }
-
-    const body = (mod.$ast as unknown as { body: unknown[] }).body
-    const exportDefault = body.find((s) => (s as { type: string }).type === "ExportDefaultDeclaration") as
-        | ExportDefaultDecl
-        | undefined
-
-    if (!exportDefault) throw new Error(`No default export found in ${configPath}`)
-
-    const decl = exportDefault.declaration
-
-    if (decl["type"] === "ObjectExpression") {
-        addStyledIdPluginToObj(decl as ObjNode, configPath)
-        return
-    }
-
-    if (decl["type"] === "CallExpression") {
-        const args = decl["arguments"] as Record<string, unknown>[]
-        const firstArg = args[0]
-        if (firstArg?.["type"] === "ObjectExpression") {
-            addStyledIdPluginToObj(firstArg as ObjNode, configPath)
-            return
-        }
-    }
-
-    throw new Error(`Failed to add styledIdPlugin to ${configPath}`)
-}
-
-async function addStyledIdToExistingConfig(configPath: string): Promise<void> {
-    const content = await fs.readFile(configPath, "utf-8")
-    if (content.includes("styledIdPlugin")) return
-    const mod = parseModule(content)
-    mod.imports.$prepend({ from: "@mochi-css/vanilla/config", imported: "styledIdPlugin", local: "styledIdPlugin" })
-    addStyledIdToAst(mod, configPath)
-    const { code } = generateCode(mod)
-    await fs.writeFile(configPath, code)
+    return `import { defineConfig } from "${importPath}"\n\nexport default defineConfig({\n${lines.join("\n")}\n})\n`
 }
 
 function getConfigObject(mod: ReturnType<typeof parseModule>): Record<string, unknown> | undefined {
@@ -132,8 +76,15 @@ async function addTmpDirToExistingConfig(configPath: string, tmpDir: string): Pr
     await fs.writeFile(configPath, code)
 }
 
+async function patchToVanillaReact(configPath: string): Promise<void> {
+    const content = await fs.readFile(configPath, "utf-8")
+    if (content.includes("@mochi-css/vanilla-react")) return
+    const patched = content.replace(/"@mochi-css\/vanilla\/config"/g, '"@mochi-css/vanilla-react/config"')
+    await fs.writeFile(configPath, patched)
+}
+
 export interface MochiConfigModuleOptions {
-    /** Whether to include styledIdPlugin for stable component selectors */
+    /** Whether to use @mochi-css/vanilla-react/config for stable component selectors */
     styledId?: boolean
     /** Intermediate directory for generated CSS files */
     tmpDir?: string
@@ -164,15 +115,20 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
                 }
                 if (styledId) {
                     try {
-                        await addStyledIdToExistingConfig(existing)
-                        p.log.success("Added styledIdPlugin to mochi.config.ts")
+                        await patchToVanillaReact(existing)
+                        p.log.success("Switched mochi.config to @mochi-css/vanilla-react/config")
                     } catch {
-                        p.log.warn(`Could not automatically add styledIdPlugin to ${existing} — add it manually`)
+                        p.log.warn(
+                            `Could not patch ${existing} — change the import to @mochi-css/vanilla-react/config manually`,
+                        )
                     }
                 }
             }
 
             ctx.requirePackage(mochiPackage("@mochi-css/vanilla"))
+            if (styledId) {
+                ctx.requirePackage(mochiPackage("@mochi-css/vanilla-react"))
+            }
         },
     }
 }

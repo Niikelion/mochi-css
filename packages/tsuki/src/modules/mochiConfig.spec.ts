@@ -38,48 +38,48 @@ describe("createMochiConfigModule", () => {
         expect(content).toContain("@mochi-css/vanilla/config")
     })
 
-    it("creates mochi.config.ts with styledIdPlugin when styledId: true", async () => {
+    it("creates mochi.config.ts with vanilla-react/config when styledId: true", async () => {
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const content = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
-        expect(content).toContain("styledIdPlugin()")
-        expect(content).toContain("@mochi-css/vanilla/config")
+        expect(content).toContain("@mochi-css/vanilla-react/config")
+        expect(content).not.toContain("styledIdPlugin")
     })
 
-    it("adds styledIdPlugin to existing defineConfig mochi.config.ts", async () => {
+    it("patches existing config to vanilla-react/config when styledId: true", async () => {
         const configPath = path.join(tmpDir, "mochi.config.ts")
         await fs.writeFile(
             configPath,
-            `import { defineConfig } from "@mochi-css/config"\nexport default defineConfig({ plugins: [] })\n`,
+            `import { defineConfig } from "@mochi-css/vanilla/config"\nexport default defineConfig({ plugins: [] })\n`,
         )
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const content = await fs.readFile(configPath, "utf-8")
-        expect(content).toContain("styledIdPlugin()")
-        expect(content).toContain("@mochi-css/vanilla/config")
+        expect(content).toContain("@mochi-css/vanilla-react/config")
+        expect(content).not.toContain("styledIdPlugin")
     })
 
-    it("adds styledIdPlugin to existing config with no plugins property", async () => {
+    it("patches existing config with no plugins property to vanilla-react/config", async () => {
         const configPath = path.join(tmpDir, "mochi.config.ts")
         await fs.writeFile(
             configPath,
-            `import { defineConfig } from "@mochi-css/config"\nexport default defineConfig({})\n`,
+            `import { defineConfig } from "@mochi-css/vanilla/config"\nexport default defineConfig({})\n`,
         )
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const content = await fs.readFile(configPath, "utf-8")
-        expect(content).toContain("styledIdPlugin()")
+        expect(content).toContain("@mochi-css/vanilla-react/config")
     })
 
-    it("is idempotent — does not duplicate styledIdPlugin on second call", async () => {
+    it("is idempotent — does not duplicate patch on second call", async () => {
         const configPath = path.join(tmpDir, "mochi.config.ts")
         await fs.writeFile(
             configPath,
-            `import { defineConfig } from "@mochi-css/config"\nexport default defineConfig({ plugins: [] })\n`,
+            `import { defineConfig } from "@mochi-css/vanilla/config"\nexport default defineConfig({ plugins: [] })\n`,
         )
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const afterFirst = await fs.readFile(configPath, "utf-8")
         await createMochiConfigModule({ styledId: true }).run(ctx)
         const afterSecond = await fs.readFile(configPath, "utf-8")
         expect(afterFirst).toBe(afterSecond)
-        expect(afterSecond.match(/styledIdPlugin/g)).toHaveLength(2) // import + call
+        expect(afterSecond).toContain("@mochi-css/vanilla-react/config")
     })
 
     it("is idempotent — does not duplicate tmpDir on second call", async () => {
@@ -109,6 +109,12 @@ describe("createMochiConfigModule", () => {
         const requirePackage = vi.fn()
         await createMochiConfigModule().run({ ...ctx, requirePackage })
         expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla@^2.0.0")
+    })
+
+    it("requires @mochi-css/vanilla-react when styledId: true", async () => {
+        const requirePackage = vi.fn()
+        await createMochiConfigModule({ styledId: true }).run({ ...ctx, requirePackage })
+        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla-react@^2.0.0")
     })
 
     it("does not explicitly require @mochi-css/builder (it installs transitively)", async () => {

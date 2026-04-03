@@ -1,5 +1,5 @@
 import { css, createToken } from "@mochi-css/vanilla";
-import { styled } from "@mochi-css/react";
+import { styled } from "@mochi-css/vanilla-react";
 
 function foo() {
     const css = (_: object) => {}

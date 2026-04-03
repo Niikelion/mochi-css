@@ -14,6 +14,6 @@ export function defineConfig(config: Partial<Config> & { extractors?: StyleExtra
     return vanillaDefineConfig({
         ...rest,
         extractors: [mochiStyledFunctionExtractor, ...extractors],
-        plugins: [styledIdPlugin(), ...(rest.plugins ?? [])],
+        plugins: [styledIdPlugin([mochiStyledFunctionExtractor]), ...(rest.plugins ?? [])],
     })
 }
