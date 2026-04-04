@@ -122,4 +122,35 @@ describe("createMochiConfigModule", () => {
         await createMochiConfigModule({ styledId: true }).run({ ...ctx, requirePackage })
         expect(requirePackage).not.toHaveBeenCalledWith(expect.stringContaining("@mochi-css/builder"))
     })
+
+    it("creates mochi.config.ts with splitCss when splitCss option is set", async () => {
+        await createMochiConfigModule({ splitCss: true }).run(ctx)
+        const content = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+        expect(content).toContain("splitCss: true")
+    })
+
+    it("patches existing config to add splitCss", async () => {
+        const configPath = path.join(tmpDir, "mochi.config.ts")
+        await fs.writeFile(
+            configPath,
+            `import { defineConfig } from "@mochi-css/vanilla/config"\nexport default defineConfig({})\n`,
+        )
+        await createMochiConfigModule({ splitCss: true }).run(ctx)
+        const content = await fs.readFile(configPath, "utf-8")
+        expect(content).toContain("splitCss")
+    })
+
+    it("is idempotent — does not duplicate splitCss on second call", async () => {
+        const configPath = path.join(tmpDir, "mochi.config.ts")
+        await fs.writeFile(
+            configPath,
+            `import { defineConfig } from "@mochi-css/vanilla/config"\nexport default defineConfig({})\n`,
+        )
+        await createMochiConfigModule({ splitCss: true }).run(ctx)
+        const afterFirst = await fs.readFile(configPath, "utf-8")
+        await createMochiConfigModule({ splitCss: true }).run(ctx)
+        const afterSecond = await fs.readFile(configPath, "utf-8")
+        expect(afterFirst).toBe(afterSecond)
+        expect(afterSecond.match(/splitCss/g)).toHaveLength(1)
+    })
 })

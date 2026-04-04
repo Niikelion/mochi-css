@@ -34,9 +34,6 @@ function injectImports(
     manifest: DiskManifest,
     source: string,
 ): string {
-    const cssPath = manifest.files[ctx.resourcePath]
-    if (!cssPath) return source
-
     const imports: string[] = []
     const sourceDir = path.dirname(ctx.resourcePath)
 
@@ -46,18 +43,22 @@ function injectImports(
         return rel
     }
 
-    // Import per-file CSS
-    const absoluteCssPath = path.resolve(cssPath)
-    imports.push(`import ${JSON.stringify(toImportPath(absoluteCssPath))};`)
-    ctx.addDependency(absoluteCssPath)
+    // Import per-file CSS (splitCss: true)
+    const cssPath = manifest.files[ctx.resourcePath.replaceAll("\\", "/")]
+    if (cssPath) {
+        const absoluteCssPath = path.resolve(cssPath)
+        imports.push(`import ${JSON.stringify(toImportPath(absoluteCssPath))};`)
+        ctx.addDependency(absoluteCssPath)
+    }
 
-    // Import global CSS (keyframes etc.)
+    // Import global CSS (keyframes, globalCss, and all CSS when splitCss: false)
     if (manifest.global) {
         const absoluteGlobalPath = path.resolve(manifest.global)
         imports.push(`import ${JSON.stringify(toImportPath(absoluteGlobalPath))};`)
         ctx.addDependency(absoluteGlobalPath)
     }
 
+    if (imports.length === 0) return source
     return imports.join("\n") + "\n" + source
 }
 
@@ -81,7 +82,7 @@ export default function mochiLoader(this: LoaderContext, source: string): void {
             return
         }
 
-        const sourcemod = manifest.sourcemods?.[resourcePath]
+        const sourcemod = manifest.sourcemods?.[resourcePath.replaceAll("\\", "/")]
         const transformed = sourcemod ? (applyPatch(source, sourcemod) || source) : source
 
         callback(null, injectImports(this, manifest, transformed as string))

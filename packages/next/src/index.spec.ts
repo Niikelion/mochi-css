@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { type NextConfig } from "next"
 
 vi.mock("@mochi-css/next/loader", () => ({}))
+vi.mock("./watcher.js", () => ({
+    startCssWatcher: vi.fn().mockResolvedValue(undefined),
+    buildCssOnce: vi.fn().mockResolvedValue(undefined),
+}))
 
 // Stub require.resolve before importing the module under test
 const LOADER_PATH = "/mock/loader.js"
@@ -168,6 +172,43 @@ describe("withMochi", () => {
             expect(calls).toEqual(["existing"])
             const rules = (out["module"] as { rules: unknown[] }).rules
             expect(rules).toHaveLength(1)
+        })
+    })
+
+    // ─── Production beforeRun plugin ─────────────────────────────────────────
+
+    describe("production webpack beforeRun plugin", () => {
+        it("adds a beforeRun plugin when NODE_ENV is production", async () => {
+            vi.stubEnv("NODE_ENV", "production")
+            vi.resetModules()
+            const { withMochi: withMochiProd } = await import("./index.js")
+
+            const result = withMochiProd({})
+            const webpackFn = result["webpack"] as (
+                config: Record<string, unknown>,
+                context: unknown,
+            ) => Record<string, unknown>
+            const out = webpackFn({ module: { rules: [] }, plugins: [] }, {})
+            const plugins = out["plugins"] as { apply: (compiler: unknown) => void }[]
+            expect(plugins.length).toBeGreaterThan(0)
+
+            const tapPromise = vi.fn()
+            const mockCompiler = { hooks: { beforeRun: { tapPromise } } }
+            plugins[0]!.apply(mockCompiler)
+            expect(tapPromise).toHaveBeenCalledWith("mochi-css", expect.any(Function))
+
+            vi.unstubAllEnvs()
+        })
+
+        it("does not add a beforeRun plugin when NODE_ENV is not production", () => {
+            const result = withMochi({})
+            const webpackFn = result["webpack"] as (
+                config: Record<string, unknown>,
+                context: unknown,
+            ) => Record<string, unknown>
+            const out = webpackFn({ module: { rules: [] }, plugins: [] }, {})
+            const plugins = out["plugins"] as unknown[]
+            expect(plugins).toHaveLength(0)
         })
     })
 })

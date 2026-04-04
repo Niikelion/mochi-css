@@ -1314,9 +1314,11 @@ __metadata:
     "@mochi-css/builder": "npm:^4.0.0"
     "@mochi-css/config": "npm:^4.0.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/test": "npm:^2.0.0"
     "@types/node": "npm:^24.8.1"
     postcss: "npm:^8.5.6"
     typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
   peerDependencies:
     postcss: ^8
   languageName: unknown

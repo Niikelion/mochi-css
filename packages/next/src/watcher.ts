@@ -31,7 +31,14 @@ async function writeCssFiles(
             .map(f => path.resolve(tmpDir, f)),
     )
 
-    const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
+    const normalizedSourcemods: Record<string, string> = {}
+    for (const [source, mod] of Object.entries(css.sourcemods ?? {})) {
+        normalizedSourcemods[source.replaceAll("\\", "/")] = mod
+    }
+    const diskManifest: DiskManifest = {
+        files: {},
+        sourcemods: Object.keys(normalizedSourcemods).length > 0 ? normalizedSourcemods : undefined,
+    }
     const writtenCssPaths = new Set<string>()
 
     if (css.global) {
@@ -44,7 +51,7 @@ async function writeCssFiles(
         const hash = fileHash(source)
         const cssPath = path.resolve(tmpDir, `${hash}.css`)
         await writeIfChanged(cssPath, fileCss)
-        diskManifest.files[source] = cssPath
+        diskManifest.files[source.replaceAll("\\", "/")] = cssPath
         writtenCssPaths.add(cssPath)
     }
 
@@ -67,6 +74,7 @@ let watcherStarted = false
 export async function startCssWatcher(tmpDir: string): Promise<void> {
     if (watcherStarted) return
     watcherStarted = true
+    ;(process as unknown as Record<string, unknown>)["__mochiWatcherActive"] = true
 
     // Capture CWD before any async operations — some frameworks may change it later
     const cwd = process.cwd()
@@ -149,4 +157,52 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
             }
         })
     }
+}
+
+/**
+ * Runs a single CSS build and writes the manifest to `tmpDir`.
+ * Used by `withMochi()` as a webpack `beforeRun` hook in production
+ * to ensure the manifest is populated before webpack processes any files.
+ */
+export async function buildCssOnce(tmpDir: string): Promise<void> {
+    const cwd = process.cwd()
+
+    const fileConfig = await loadConfig()
+    const resolved = await resolveConfig(fileConfig, undefined, {})
+
+    const effectiveTmpDir = resolved.tmpDir
+        ? path.resolve(cwd, resolved.tmpDir)
+        : tmpDir
+
+    const absoluteRoots: RootEntry[] = resolved.roots.map(root =>
+        typeof root === "string"
+            ? path.resolve(cwd, root)
+            : { ...root, path: path.resolve(cwd, root.path) },
+    )
+
+    if (absoluteRoots.length === 0) {
+        console.warn("[mochi-css] buildCssOnce: no roots configured — add `roots` to mochi.config.ts")
+        return
+    }
+
+    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
+    for (const plugin of resolved.plugins) {
+        plugin.onLoad?.(context)
+    }
+
+    const builder = new Builder({
+        roots: absoluteRoots,
+        stages: [...context.stages.getAll()],
+        bundler: new RolldownBundler(),
+        runner: new VmRunner(),
+        splitCss: resolved.splitCss,
+        filePreProcess: ({ content, filePath }) =>
+            context.filePreProcess.transform(content, { filePath }),
+        sourceTransforms: [...context.sourceTransforms.getAll()],
+        emitHooks: [...context.emitHooks.getAll()],
+        cleanup: () => { context.cleanup.runAll() },
+    })
+
+    const css = await builder.collectMochiCss()
+    await writeCssFiles(css, effectiveTmpDir)
 }

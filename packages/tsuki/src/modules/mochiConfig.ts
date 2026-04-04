@@ -20,10 +20,15 @@ const defaultMochiConfigBase = /* language=typescript */ dedent`
     export default defineConfig({})
 `
 
-function defaultMochiConfigWithOptions(tmpDir: string | undefined, styledId: boolean): string {
+function defaultMochiConfigWithOptions(
+    tmpDir: string | undefined,
+    styledId: boolean,
+    splitCss: boolean | undefined,
+): string {
     const importPath = styledId ? "@mochi-css/vanilla-react/config" : "@mochi-css/vanilla/config"
     const lines: string[] = []
     if (tmpDir !== undefined) lines.push(`    tmpDir: ${JSON.stringify(tmpDir)},`)
+    if (splitCss !== undefined) lines.push(`    splitCss: ${splitCss},`)
 
     if (!styledId && lines.length === 0) return defaultMochiConfigBase
 
@@ -76,6 +81,32 @@ async function addTmpDirToExistingConfig(configPath: string, tmpDir: string): Pr
     await fs.writeFile(configPath, code)
 }
 
+async function addSplitCssToExistingConfig(configPath: string, splitCss: boolean): Promise<void> {
+    const content = await fs.readFile(configPath, "utf-8")
+    const mod = parseModule(content)
+    const obj = getConfigObject(mod)
+    if (!obj) throw new Error(`Failed to add splitCss to ${configPath}`)
+
+    const hasSplitCss = (obj["properties"] as Record<string, unknown>[]).some(
+        (prop) => getPropKeyName(prop) === "splitCss",
+    )
+    if (hasSplitCss) return
+
+    obj["properties"] = [
+        {
+            type: "ObjectProperty",
+            key: { type: "StringLiteral", value: "splitCss" },
+            value: { type: "BooleanLiteral", value: splitCss },
+            computed: false,
+            shorthand: false,
+        },
+        ...(obj["properties"] as unknown[]),
+    ]
+
+    const { code } = generateCode(mod)
+    await fs.writeFile(configPath, code)
+}
+
 async function patchToVanillaReact(configPath: string): Promise<void> {
     const content = await fs.readFile(configPath, "utf-8")
     if (content.includes("@mochi-css/vanilla-react")) return
@@ -88,10 +119,12 @@ export interface MochiConfigModuleOptions {
     styledId?: boolean
     /** Intermediate directory for generated CSS files */
     tmpDir?: string
+    /** Whether to emit per-file CSS chunks instead of a single global file */
+    splitCss?: boolean
 }
 
 export function createMochiConfigModule(options: MochiConfigModuleOptions = {}): Module {
-    const { styledId = false, tmpDir } = options
+    const { styledId = false, tmpDir, splitCss } = options
 
     return {
         id: "mochi-config",
@@ -102,7 +135,7 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
 
             if (!existing) {
                 const configPath = "mochi.config.ts"
-                await fs.writeFile(configPath, defaultMochiConfigWithOptions(tmpDir, styledId))
+                await fs.writeFile(configPath, defaultMochiConfigWithOptions(tmpDir, styledId, splitCss))
                 p.log.success("Created mochi.config.ts")
             } else {
                 if (tmpDir !== undefined) {
@@ -111,6 +144,14 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
                         p.log.success(`Added tmpDir to ${existing}`)
                     } catch {
                         p.log.warn(`Could not automatically add tmpDir to ${existing} — add it manually`)
+                    }
+                }
+                if (splitCss !== undefined) {
+                    try {
+                        await addSplitCssToExistingConfig(existing, splitCss)
+                        p.log.success(`Added splitCss to ${existing}`)
+                    } catch {
+                        p.log.warn(`Could not automatically add splitCss to ${existing} — add it manually`)
                     }
                 }
                 if (styledId) {

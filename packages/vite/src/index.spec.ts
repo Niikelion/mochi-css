@@ -157,6 +157,18 @@ describe("mochiCss vite plugin transform", () => {
         expect(result?.code).toContain("virtual:mochi-css/global.css")
     })
 
+    it("injects global CSS import even when file has no per-file CSS (splitCss: false)", async () => {
+        const hooks = await setupPlugin({
+            files: {},
+            global: ".global { box-sizing: border-box; }",
+        })
+
+        const result = await hooks.transform("const x = 1", "/src/App.tsx")
+        expect(result).not.toBeUndefined()
+        expect(result?.code).toContain("virtual:mochi-css/global.css")
+        expect(result?.code).not.toContain("virtual:mochi-css/App.css")
+    })
+
     it("resolveId returns resolved id for virtual modules", async () => {
         const hooks = await setupPlugin()
 

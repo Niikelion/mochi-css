@@ -49,6 +49,7 @@ const pluginName = "postcss-mochi-css"
 const defaultGlobalCssRegex = /\/globals\.css$/
 const defaultBundler = new RolldownBundler()
 const defaultRunner = new VmRunner()
+let _warnedAboutWatcher = false
 
 /**
  * PostCSS plugin that extracts Mochi CSS styles from TypeScript/TSX source files at build time
@@ -86,6 +87,17 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
 
     const postcssProcess: TransformCallback = async (root, result) => {
         currentResult = result
+
+        if ((process as unknown as Record<string, unknown>)["__mochiWatcherActive"] === true) {
+            if (!_warnedAboutWatcher) {
+                _warnedAboutWatcher = true
+                console.warn(
+                    "[mochi-css] @mochi-css/postcss is not needed when withMochi() is in use — " +
+                    "remove @mochi-css/postcss from your postcss.config",
+                )
+            }
+            return
+        }
 
         const filePath = result.opts.from
 
@@ -165,7 +177,14 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                     .map(f => path.resolve(tmpDir, f))
             )
 
-            const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
+            const normalizedSourcemods: Record<string, string> = {}
+            for (const [source, mod] of Object.entries(css.sourcemods ?? {})) {
+                normalizedSourcemods[source.replaceAll("\\", "/")] = mod
+            }
+            const diskManifest: DiskManifest = {
+                files: {},
+                sourcemods: Object.keys(normalizedSourcemods).length > 0 ? normalizedSourcemods : undefined,
+            }
             const writtenCssPaths = new Set<string>()
 
             if (css.global) {
@@ -178,7 +197,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                 const hash = fileHash(source)
                 const cssPath = path.resolve(tmpDir, `${hash}.css`)
                 await writeIfChanged(cssPath, fileCss)
-                diskManifest.files[source] = cssPath
+                diskManifest.files[source.replaceAll("\\", "/")] = cssPath
                 writtenCssPaths.add(cssPath)
             }
 

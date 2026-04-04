@@ -45,7 +45,7 @@ describe("mochiLoader", () => {
         expect(callback).toHaveBeenCalledWith(null, "const x = 1")
     })
 
-    it("passes source through unchanged when manifest has no sourcemod for this file", () => {
+    it("passes source through unchanged when manifest has no entries for this file", () => {
         mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(JSON.stringify({ files: {} }))
 
@@ -126,7 +126,7 @@ describe("mochiLoader", () => {
         expect(result).toContain("const x = 2")
     })
 
-    it("injects global CSS import when manifest has global styles", () => {
+    it("injects global CSS import alongside per-file CSS (splitCss: true)", () => {
         const manifestPath = "/project/.mochi/manifest.json"
         const resourcePath = "/project/src/App.tsx"
 
@@ -143,6 +143,25 @@ describe("mochiLoader", () => {
 
         const result = callback.mock.calls[0]?.[1] as string
         expect(result).toContain("abc123.css")
+        expect(result).toContain("global.css")
+    })
+
+    it("injects global CSS even when file has no per-file CSS entry (splitCss: false)", () => {
+        const manifestPath = "/project/.mochi/manifest.json"
+        const resourcePath = "/project/src/App.tsx"
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({
+                files: {},
+                global: "/project/.mochi/global.css",
+            }),
+        )
+
+        const { ctx, callback } = makeCtx({ resourcePath, manifestPath })
+        mochiLoader.call(ctx, "const x = 1")
+
+        const result = callback.mock.calls[0]?.[1] as string
         expect(result).toContain("global.css")
     })
 
@@ -170,6 +189,32 @@ describe("mochiLoader", () => {
         mochiLoader.call(ctx, "const x = 1")
 
         expect(callback.mock.calls[0]?.[0]).toBeInstanceOf(Error)
+    })
+
+    it("matches manifest key with Windows-style backslash resourcePath", () => {
+        const resourcePath = "C:\\project\\src\\App.tsx"
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({ files: { "C:/project/src/App.tsx": "/project/.mochi/abc123.css" } }),
+        )
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, "const x = 1")
+        expect(callback.mock.calls[0]?.[1] as string).toContain("abc123.css")
+    })
+
+    it("applies sourcemod using Windows-style backslash resourcePath", () => {
+        const resourcePath = "C:\\project\\src\\App.tsx"
+        const normalizedKey = "C:/project/src/App.tsx"
+        const original = "const x = 1\n"
+        const modified = "const x = 2\n"
+        const sourcemod = createPatch(normalizedKey, original, modified)
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({ files: {}, sourcemods: { [normalizedKey]: sourcemod } }),
+        )
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, original)
+        expect(callback).toHaveBeenCalledWith(null, modified)
     })
 
     it("caches manifest across calls with the same mtime", () => {

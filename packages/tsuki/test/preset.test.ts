@@ -65,16 +65,12 @@ describe("vite preset integration", () => {
 })
 
 describe("nextjs preset integration", () => {
-    it("sets up postcss automatically and wraps next config", async () => {
-        await fs.writeFile(path.join(tmpDir, "postcss.config.js"), `export default { plugins: {} }`)
+    it("wraps next config and sets up mochi config (no postcss)", async () => {
         await fs.writeFile(path.join(tmpDir, "next.config.ts"), `export default {}`)
 
         const runner = new ModuleRunner()
         nextjsPreset.setup(runner)
         await runner.run()
-
-        const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.js"), "utf-8")
-        expect(postcssContent).toContain("@mochi-css/postcss")
 
         const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
         expect(mochiContent).toContain("tmpDir")
@@ -83,20 +79,13 @@ describe("nextjs preset integration", () => {
         const nextContent = await fs.readFile(path.join(tmpDir, "next.config.ts"), "utf-8")
         expect(nextContent).toContain("withMochi")
 
+        // Postcss plugin must NOT be added — withMochi() handles all CSS for Next.js
+        const postcssExists = await fs
+            .access(path.join(tmpDir, "postcss.config.mjs"))
+            .then(() => true)
+            .catch(() => false)
+        expect(postcssExists).toBe(false)
+
         expect(installPackages).toHaveBeenCalled()
-    })
-
-    it("creates postcss config when none exists", async () => {
-        await fs.writeFile(path.join(tmpDir, "next.config.ts"), `export default {}`)
-
-        const runner = new ModuleRunner()
-        nextjsPreset.setup(runner)
-        await runner.run()
-
-        const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
-        expect(postcssContent).toContain("@mochi-css/postcss")
-
-        const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
-        expect(mochiContent).toContain("tmpDir")
     })
 })
