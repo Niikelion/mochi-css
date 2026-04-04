@@ -44,7 +44,7 @@ function injectImports(
     }
 
     // Import per-file CSS (splitCss: true)
-    const cssPath = manifest.files[ctx.resourcePath]
+    const cssPath = manifest.files[ctx.resourcePath.replaceAll("\\", "/")]
     if (cssPath) {
         const absoluteCssPath = path.resolve(cssPath)
         imports.push(`import ${JSON.stringify(toImportPath(absoluteCssPath))};`)
@@ -82,7 +82,7 @@ export default function mochiLoader(this: LoaderContext, source: string): void {
             return
         }
 
-        const sourcemod = manifest.sourcemods?.[resourcePath]
+        const sourcemod = manifest.sourcemods?.[resourcePath.replaceAll("\\", "/")]
         const transformed = sourcemod ? (applyPatch(source, sourcemod) || source) : source
 
         callback(null, injectImports(this, manifest, transformed as string))

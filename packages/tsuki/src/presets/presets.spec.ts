@@ -104,27 +104,20 @@ describe("vitePreset", () => {
 })
 
 describe("nextjsPreset", () => {
-    it("registers mochi-config, postcss, next, ui-framework, and gitignore modules", () => {
+    it("registers mochi-config, next, ui-framework, and gitignore modules", () => {
         const { runner, modules } = makeRunner()
         nextjsPreset.setup(runner)
-        expect(modules).toHaveLength(5)
+        expect(modules).toHaveLength(4)
         expect(modules.at(0)?.id).toBe("mochi-config")
-        expect(modules.at(1)?.id).toBe("postcss")
-        expect(modules.at(2)?.id).toBe("next")
-        expect(modules.at(3)?.id).toBe("ui-framework")
-        expect(modules.at(4)?.id).toBe("gitignore")
+        expect(modules.at(1)?.id).toBe("next")
+        expect(modules.at(2)?.id).toBe("ui-framework")
+        expect(modules.at(3)?.id).toBe("gitignore")
     })
 
     it("calls createMochiConfigModule with styledId: true, tmpDir: .mochi, and splitCss: true", () => {
         const { runner } = makeRunner()
         nextjsPreset.setup(runner)
         expect(createMochiConfigModule).toHaveBeenCalledWith({ styledId: true, tmpDir: ".mochi", splitCss: true })
-    })
-
-    it("calls createPostcssModule with auto: true", () => {
-        const { runner } = makeRunner()
-        nextjsPreset.setup(runner)
-        expect(createPostcssModule).toHaveBeenCalledWith({ auto: true })
     })
 
     it("calls createUiFrameworkModule with auto: true", () => {

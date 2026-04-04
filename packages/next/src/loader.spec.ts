@@ -191,6 +191,32 @@ describe("mochiLoader", () => {
         expect(callback.mock.calls[0]?.[0]).toBeInstanceOf(Error)
     })
 
+    it("matches manifest key with Windows-style backslash resourcePath", () => {
+        const resourcePath = "C:\\project\\src\\App.tsx"
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({ files: { "C:/project/src/App.tsx": "/project/.mochi/abc123.css" } }),
+        )
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, "const x = 1")
+        expect(callback.mock.calls[0]?.[1] as string).toContain("abc123.css")
+    })
+
+    it("applies sourcemod using Windows-style backslash resourcePath", () => {
+        const resourcePath = "C:\\project\\src\\App.tsx"
+        const normalizedKey = "C:/project/src/App.tsx"
+        const original = "const x = 1\n"
+        const modified = "const x = 2\n"
+        const sourcemod = createPatch(normalizedKey, original, modified)
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({ files: {}, sourcemods: { [normalizedKey]: sourcemod } }),
+        )
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, original)
+        expect(callback).toHaveBeenCalledWith(null, modified)
+    })
+
     it("caches manifest across calls with the same mtime", () => {
         const manifestPath = "/project/.mochi/manifest.json"
         const mtime = nextMtime()

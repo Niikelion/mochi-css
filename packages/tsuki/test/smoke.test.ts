@@ -124,15 +124,16 @@ describe("smoke", () => {
             await copyFixture("nextjs", tmpDir)
             await runTsuki(tmpDir, ["--no-interactive", "--preset", "nextjs", "--next", "next.config.mjs"])
 
-            const postcss = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
-            expect(postcss).toContain("@mochi-css/postcss")
-
             const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
             expect(mochi).toContain(".mochi")
             expect(mochi).toContain("@mochi-css/vanilla-react/config")
 
             const next = await fs.readFile(path.join(tmpDir, "next.config.mjs"), "utf-8")
             expect(next).toContain("withMochi")
+
+            // postcss plugin must NOT be added to existing postcss config — withMochi() handles all CSS
+            const postcss = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
+            expect(postcss).not.toContain("@mochi-css/postcss")
 
             await applyOverlay("nextjs", tmpDir)
             await runCommand("npm", ["install"], tmpDir)
