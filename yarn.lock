@@ -1243,7 +1243,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/next@npm:^4.0.0, @mochi-css/next@workspace:packages/next":
+"@mochi-css/next@npm:^4.0.1, @mochi-css/next@workspace:packages/next":
   version: 0.0.0-use.local
   resolution: "@mochi-css/next@workspace:packages/next"
   dependencies:
@@ -1271,8 +1271,8 @@ __metadata:
     "@eslint/eslintrc": "npm:^3"
     "@mochi-css/builder": "npm:^4.0.0"
     "@mochi-css/config": "npm:^4.0.0"
-    "@mochi-css/next": "npm:^4.0.0"
-    "@mochi-css/postcss": "npm:^4.0.0"
+    "@mochi-css/next": "npm:^4.0.1"
+    "@mochi-css/postcss": "npm:^4.0.1"
     "@mochi-css/vanilla": "npm:^4.0.2"
     "@mochi-css/vanilla-react": "npm:^4.0.0"
     "@types/node": "npm:^20"
@@ -1307,7 +1307,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/postcss@npm:^4.0.0, @mochi-css/postcss@workspace:packages/postcss":
+"@mochi-css/postcss@npm:^4.0.1, @mochi-css/postcss@workspace:packages/postcss":
   version: 0.0.0-use.local
   resolution: "@mochi-css/postcss@workspace:packages/postcss"
   dependencies:
