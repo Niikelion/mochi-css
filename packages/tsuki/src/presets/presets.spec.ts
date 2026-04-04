@@ -26,9 +26,14 @@ vi.mock("@/modules/uiFramework", () => ({
     createUiFrameworkModule: vi.fn().mockReturnValue({ id: "ui-framework", name: "UI Framework", run: vi.fn() }),
 }))
 
+vi.mock("@/modules/gitignore", () => ({
+    createGitignoreModule: vi.fn().mockReturnValue({ id: "gitignore", name: "Gitignore", run: vi.fn() }),
+}))
+
 import { createPostcssModule } from "@/modules/postcss"
 import { createMochiConfigModule } from "@/modules/mochiConfig"
 import { createUiFrameworkModule } from "@/modules/uiFramework"
+import { createGitignoreModule } from "@/modules/gitignore"
 import { libPreset, vitePreset, nextjsPreset } from "./index"
 
 afterEach(() => {
@@ -62,14 +67,15 @@ describe("libPreset", () => {
 })
 
 describe("vitePreset", () => {
-    it("registers mochi-config, postcss, vite, and ui-framework modules", () => {
+    it("registers mochi-config, postcss, vite, ui-framework, and gitignore modules", () => {
         const { runner, modules } = makeRunner()
         vitePreset.setup(runner)
-        expect(modules).toHaveLength(4)
+        expect(modules).toHaveLength(5)
         expect(modules.at(0)?.id).toBe("mochi-config")
         expect(modules.at(1)?.id).toBe("postcss")
         expect(modules.at(2)?.id).toBe("vite")
         expect(modules.at(3)?.id).toBe("ui-framework")
+        expect(modules.at(4)?.id).toBe("gitignore")
     })
 
     it("calls createMochiConfigModule with tmpDir: .mochi", () => {
@@ -89,23 +95,30 @@ describe("vitePreset", () => {
         vitePreset.setup(runner)
         expect(createUiFrameworkModule).toHaveBeenCalledWith()
     })
+
+    it("calls createGitignoreModule with .mochi", () => {
+        const { runner } = makeRunner()
+        vitePreset.setup(runner)
+        expect(createGitignoreModule).toHaveBeenCalledWith(".mochi")
+    })
 })
 
 describe("nextjsPreset", () => {
-    it("registers mochi-config, postcss, next, and ui-framework modules", () => {
+    it("registers mochi-config, postcss, next, ui-framework, and gitignore modules", () => {
         const { runner, modules } = makeRunner()
         nextjsPreset.setup(runner)
-        expect(modules).toHaveLength(4)
+        expect(modules).toHaveLength(5)
         expect(modules.at(0)?.id).toBe("mochi-config")
         expect(modules.at(1)?.id).toBe("postcss")
         expect(modules.at(2)?.id).toBe("next")
         expect(modules.at(3)?.id).toBe("ui-framework")
+        expect(modules.at(4)?.id).toBe("gitignore")
     })
 
-    it("calls createMochiConfigModule with styledId: true and tmpDir: .mochi", () => {
+    it("calls createMochiConfigModule with styledId: true, tmpDir: .mochi, and splitCss: true", () => {
         const { runner } = makeRunner()
         nextjsPreset.setup(runner)
-        expect(createMochiConfigModule).toHaveBeenCalledWith({ styledId: true, tmpDir: ".mochi" })
+        expect(createMochiConfigModule).toHaveBeenCalledWith({ styledId: true, tmpDir: ".mochi", splitCss: true })
     })
 
     it("calls createPostcssModule with auto: true", () => {
@@ -118,5 +131,11 @@ describe("nextjsPreset", () => {
         const { runner } = makeRunner()
         nextjsPreset.setup(runner)
         expect(createUiFrameworkModule).toHaveBeenCalledWith({ auto: true })
+    })
+
+    it("calls createGitignoreModule with .mochi", () => {
+        const { runner } = makeRunner()
+        nextjsPreset.setup(runner)
+        expect(createGitignoreModule).toHaveBeenCalledWith(".mochi")
     })
 })

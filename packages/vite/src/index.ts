@@ -195,15 +195,22 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             // Apply registered source transforms (e.g. styledIdPlugin for runtime s- id injection)
             const transformed = await context.filePreProcess.transform(code, { filePath: normalizedId })
 
-            // If this file has no CSS in the manifest, return transform result only
-            if (!manifest || manifest.files[normalizedId] === undefined) {
-                return transformed !== code ? { code: transformed as string, map: null } : undefined
+            const imports: string[] = []
+
+            // Inject per-file CSS import (splitCss: true)
+            if (manifest && manifest.files[normalizedId] !== undefined) {
+                const hash = fileHash(normalizedId)
+                imports.push(`import "${VIRTUAL_PREFIX}${hash}.css";`)
             }
 
-            // Inject CSS import statements
-            const hash = fileHash(normalizedId)
-            const imports: string[] = [`import "${VIRTUAL_PREFIX}${hash}.css";`]
-            if (manifest.global) imports.push(`import "${GLOBAL_ID}";`)
+            // Inject global CSS import (keyframes, globalCss, and all CSS when splitCss: false)
+            if (manifest?.global) {
+                imports.push(`import "${GLOBAL_ID}";`)
+            }
+
+            if (imports.length === 0) {
+                return transformed !== code ? { code: transformed as string, map: null } : undefined
+            }
 
             return {
                 code: imports.join("\n") + "\n" + (transformed as string),
