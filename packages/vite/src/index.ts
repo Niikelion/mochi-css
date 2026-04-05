@@ -88,12 +88,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
 
             builder = new Builder(options)
             const result = await builder.collectMochiCss()
-            // Normalize keys to forward slashes so Vite's id values (always forward-slash) match on Windows
-            const normalizedFiles: Record<string, string> = {}
-            for (const [source, css] of Object.entries(result.files ?? {})) {
-                normalizedFiles[source.replaceAll("\\", "/")] = css
-            }
-            manifest = { global: result.global, files: normalizedFiles }
+            manifest = { global: result.global, files: result.files ?? {} }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -137,11 +132,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             const oldManifest = manifest
 
             const result = await builder.collectMochiCss()
-            const normalizedFiles: Record<string, string> = {}
-            for (const [source, css] of Object.entries(result.files ?? {})) {
-                normalizedFiles[source.replaceAll("\\", "/")] = css
-            }
-            manifest = { global: result.global, files: normalizedFiles }
+            manifest = { global: result.global, files: result.files ?? {} }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {

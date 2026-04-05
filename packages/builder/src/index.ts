@@ -1,4 +1,5 @@
 export * from "./parse"
+export * from "./utils"
 export * from "./Bundler"
 export * from "./Runner"
 export * from "./ProjectIndex"

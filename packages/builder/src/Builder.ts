@@ -1,4 +1,4 @@
-import path from "path"
+import { path } from "@/utils"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
 import { createPatch } from "diff"
@@ -175,19 +175,20 @@ export class Builder {
 
     private async bundleFiles(files: Record<string, string | null>) {
         // Prepare extracted project
-        const tmp = path.resolve(process.cwd(), ".mochi")
-        const rootPath = path.join(tmp, "__mochi-css__.ts")
+        const cwd = path.fromSystemPath(process.cwd())
+        const tmp = path.resolve(cwd, ".mochi")
+        const rootPath = path.toSystemPath(path.join(tmp, "__mochi-css__.ts"))
 
         const paths: string[] = []
         const fileLookup: FileLookup = {}
 
         for (const [filename, source] of Object.entries(files)) {
             if (source === null) continue
-            const relativePath = path.relative(process.cwd(), filename)
-            paths.push(relativePath.replaceAll(path.win32.sep, path.posix.sep))
+            const relativePath = path.relative(cwd, filename)
+            paths.push(relativePath)
 
             const filePath = path.join(tmp, relativePath)
-            fileLookup[filePath] = source
+            fileLookup[path.toSystemPath(filePath)] = source
         }
         const rootImports = paths.map((f) => `import "./${f}"`).join("\n")
 
@@ -282,12 +283,12 @@ export class Builder {
     }
 
     private async syncEmittedFiles(emitDir: string, files: Record<string, string | null>): Promise<void> {
-        await fs.mkdir(emitDir, { recursive: true })
+        await fs.mkdir(path.toSystemPath(emitDir), { recursive: true })
 
         const manifestPath = path.join(emitDir, ".mochi-emit.json")
         let previousPaths: string[] = []
         try {
-            const manifestContent = await fs.readFile(manifestPath, "utf8")
+            const manifestContent = await fs.readFile(path.toSystemPath(manifestPath), "utf8")
             previousPaths = JSON.parse(manifestContent) as string[]
         } catch {
             // No manifest yet — first run
@@ -297,22 +298,23 @@ export class Builder {
 
         for (const [relPath, content] of Object.entries(files)) {
             const absPath = path.resolve(emitDir, relPath)
+            const sysPath = path.toSystemPath(absPath)
             if (content === null) {
                 try {
-                    await fs.unlink(absPath)
+                    await fs.unlink(sysPath)
                 } catch {
                     // already gone
                 }
             } else {
-                await fs.mkdir(path.dirname(absPath), { recursive: true })
+                await fs.mkdir(path.toSystemPath(path.dirname(absPath)), { recursive: true })
                 let existing: string | undefined
                 try {
-                    existing = await fs.readFile(absPath, "utf8")
+                    existing = await fs.readFile(sysPath, "utf8")
                 } catch {
                     // doesn't exist yet
                 }
                 if (existing !== content) {
-                    await fs.writeFile(absPath, content, "utf8")
+                    await fs.writeFile(sysPath, content, "utf8")
                 }
                 newPaths.push(relPath)
             }
@@ -321,16 +323,15 @@ export class Builder {
         // Delete files from previous run that are no longer present
         for (const prevPath of previousPaths) {
             if (!(prevPath in files)) {
-                const absPath = path.resolve(emitDir, prevPath)
                 try {
-                    await fs.unlink(absPath)
+                    await fs.unlink(path.toSystemPath(path.resolve(emitDir, prevPath)))
                 } catch {
                     // already gone
                 }
             }
         }
 
-        await fs.writeFile(manifestPath, JSON.stringify(newPaths), "utf8")
+        await fs.writeFile(path.toSystemPath(manifestPath), JSON.stringify(newPaths), "utf8")
     }
 
     public async collectMochiCss(
@@ -347,7 +348,7 @@ export class Builder {
         const sourcemods: Record<string, string> = {}
         const modules = await Promise.all(
             allFiles.map(async (filePath) => {
-                const source = await fs.readFile(filePath, "utf8")
+                const source = await fs.readFile(path.toSystemPath(filePath), "utf8")
                 const transformed = await this.preTransformFile(source, filePath)
                 if (transformed !== source) {
                     sourcemods[filePath] = createPatch(filePath, source, transformed)

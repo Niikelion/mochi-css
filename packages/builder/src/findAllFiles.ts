@@ -1,15 +1,16 @@
 import fs from "fs/promises"
 import { Dirent } from "fs"
-import path from "path"
+import { path } from "@/utils"
 import { MochiError } from "@/diagnostics"
 
 /**
  * Recursively finds all TypeScript/TSX files in a directory.
+ * Accepts and returns posix paths.
  */
 export async function findAllFiles(dir: string): Promise<string[]> {
     let entries: Dirent[] = []
     try {
-        entries = await fs.readdir(dir, { withFileTypes: true })
+        entries = await fs.readdir(path.toSystemPath(dir), { withFileTypes: true })
     } catch (err) {
         throw new MochiError("MOCHI_FILE_READ", `Cannot read directory`, dir, err)
     }
