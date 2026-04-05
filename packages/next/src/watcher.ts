@@ -1,7 +1,7 @@
 import fs from "fs"
-import path from "path"
+import systemPath from "path"
 import { loadConfig, resolveConfig, FullContext } from "@mochi-css/config"
-import { Builder, RolldownBundler, VmRunner, fileHash, type RootEntry } from "@mochi-css/builder"
+import { Builder, RolldownBundler, VmRunner, fileHash, path, type RootEntry } from "@mochi-css/builder"
 
 type DiskManifest = {
     global?: string
@@ -28,30 +28,23 @@ async function writeCssFiles(
     const existingCssFiles = new Set(
         (await fs.promises.readdir(tmpDir))
             .filter(f => f.endsWith(".css") && f !== "global.css")
-            .map(f => path.resolve(tmpDir, f)),
+            .map(f => systemPath.resolve(tmpDir, f)),
     )
 
-    const normalizedSourcemods: Record<string, string> = {}
-    for (const [source, mod] of Object.entries(css.sourcemods ?? {})) {
-        normalizedSourcemods[source.replaceAll("\\", "/")] = mod
-    }
-    const diskManifest: DiskManifest = {
-        files: {},
-        sourcemods: Object.keys(normalizedSourcemods).length > 0 ? normalizedSourcemods : undefined,
-    }
+    const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
     const writtenCssPaths = new Set<string>()
 
     if (css.global) {
-        const globalPath = path.resolve(tmpDir, "global.css")
+        const globalPath = systemPath.resolve(tmpDir, "global.css")
         await writeIfChanged(globalPath, css.global)
         diskManifest.global = globalPath
     }
 
     for (const [source, fileCss] of Object.entries(css.files ?? {})) {
         const hash = fileHash(source)
-        const cssPath = path.resolve(tmpDir, `${hash}.css`)
+        const cssPath = systemPath.resolve(tmpDir, `${hash}.css`)
         await writeIfChanged(cssPath, fileCss)
-        diskManifest.files[source.replaceAll("\\", "/")] = cssPath
+        diskManifest.files[source] = cssPath
         writtenCssPaths.add(cssPath)
     }
 
@@ -61,7 +54,35 @@ async function writeCssFiles(
         }
     }
 
-    await writeIfChanged(path.resolve(tmpDir, "manifest.json"), JSON.stringify(diskManifest))
+    await writeIfChanged(systemPath.resolve(tmpDir, "manifest.json"), JSON.stringify(diskManifest))
+}
+
+function resolveAbsoluteRoots(cwd: string, roots: RootEntry[]): RootEntry[] {
+    const posixCwd = path.fromSystemPath(cwd)
+    return roots.map(root =>
+        typeof root === "string"
+            ? path.resolve(posixCwd, root)
+            : { ...root, path: path.resolve(posixCwd, root.path) },
+    )
+}
+
+function createBuilder(resolved: Awaited<ReturnType<typeof resolveConfig>>, roots: RootEntry[]): Builder {
+    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
+    for (const plugin of resolved.plugins) {
+        plugin.onLoad?.(context)
+    }
+    return new Builder({
+        roots,
+        stages: [...context.stages.getAll()],
+        bundler: new RolldownBundler(),
+        runner: new VmRunner(),
+        splitCss: resolved.splitCss,
+        filePreProcess: ({ content, filePath }) =>
+            context.filePreProcess.transform(content, { filePath }),
+        sourceTransforms: [...context.sourceTransforms.getAll()],
+        emitHooks: [...context.emitHooks.getAll()],
+        cleanup: () => { context.cleanup.runAll() },
+    })
 }
 
 let watcherStarted = false
@@ -83,17 +104,12 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
     const resolved = await resolveConfig(fileConfig, undefined, {})
 
     const effectiveTmpDir = resolved.tmpDir
-        ? path.resolve(cwd, resolved.tmpDir)
+        ? systemPath.resolve(cwd, resolved.tmpDir)
         : tmpDir
 
     const debug = resolved.debug ?? false
 
-    // Resolve roots to absolute paths now so every later rebuild uses the right dir
-    const absoluteRoots: RootEntry[] = resolved.roots.map(root =>
-        typeof root === "string"
-            ? path.resolve(cwd, root)
-            : { ...root, path: path.resolve(cwd, root.path) },
-    )
+    const absoluteRoots = resolveAbsoluteRoots(cwd, resolved.roots)
 
     if (debug) {
         console.log(
@@ -106,23 +122,7 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
         return
     }
 
-    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
-    for (const plugin of resolved.plugins) {
-        plugin.onLoad?.(context)
-    }
-
-    const builder = new Builder({
-        roots: absoluteRoots,
-        stages: [...context.stages.getAll()],
-        bundler: new RolldownBundler(),
-        runner: new VmRunner(),
-        splitCss: resolved.splitCss,
-        filePreProcess: ({ content, filePath }) =>
-            context.filePreProcess.transform(content, { filePath }),
-        sourceTransforms: [...context.sourceTransforms.getAll()],
-        emitHooks: [...context.emitHooks.getAll()],
-        cleanup: () => { context.cleanup.runAll() },
-    })
+    const builder = createBuilder(resolved, absoluteRoots)
 
     let rebuildTimer: ReturnType<typeof setTimeout> | undefined
     let rebuildGuard: Promise<void> = Promise.resolve()
@@ -143,7 +143,10 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
 
     scheduleRebuild()
 
-    const rootDirs = absoluteRoots.map(root => (typeof root === "string" ? root : root.path))
+    // fs.watch needs system paths
+    const rootDirs = absoluteRoots.map(root =>
+        path.toSystemPath(typeof root === "string" ? root : root.path),
+    )
 
     for (const dir of rootDirs) {
         if (!fs.existsSync(dir)) {
@@ -171,37 +174,17 @@ export async function buildCssOnce(tmpDir: string): Promise<void> {
     const resolved = await resolveConfig(fileConfig, undefined, {})
 
     const effectiveTmpDir = resolved.tmpDir
-        ? path.resolve(cwd, resolved.tmpDir)
+        ? systemPath.resolve(cwd, resolved.tmpDir)
         : tmpDir
 
-    const absoluteRoots: RootEntry[] = resolved.roots.map(root =>
-        typeof root === "string"
-            ? path.resolve(cwd, root)
-            : { ...root, path: path.resolve(cwd, root.path) },
-    )
+    const absoluteRoots = resolveAbsoluteRoots(cwd, resolved.roots)
 
     if (absoluteRoots.length === 0) {
         console.warn("[mochi-css] buildCssOnce: no roots configured — add `roots` to mochi.config.ts")
         return
     }
 
-    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
-    for (const plugin of resolved.plugins) {
-        plugin.onLoad?.(context)
-    }
-
-    const builder = new Builder({
-        roots: absoluteRoots,
-        stages: [...context.stages.getAll()],
-        bundler: new RolldownBundler(),
-        runner: new VmRunner(),
-        splitCss: resolved.splitCss,
-        filePreProcess: ({ content, filePath }) =>
-            context.filePreProcess.transform(content, { filePath }),
-        sourceTransforms: [...context.sourceTransforms.getAll()],
-        emitHooks: [...context.emitHooks.getAll()],
-        cleanup: () => { context.cleanup.runAll() },
-    })
+    const builder = createBuilder(resolved, absoluteRoots)
 
     const css = await builder.collectMochiCss()
     await writeCssFiles(css, effectiveTmpDir)

@@ -24,14 +24,18 @@ vi.mock("@mochi-css/config", () => ({
     mergeCallbacks: vi.fn((_a: unknown, b: unknown) => b),
 }))
 
-vi.mock("@mochi-css/builder", () => ({
-    Builder: vi.fn(function MockBuilder(this: Record<string, unknown>) {
-        this["collectMochiCss"] = mockCollectMochiCss
-    }),
-    RolldownBundler: vi.fn(function MockRolldownBundler() {}),
-    VmRunner: vi.fn(function MockVmRunner() {}),
-    fileHash: vi.fn((s: string) => s),
-}))
+vi.mock("@mochi-css/builder", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@mochi-css/builder")>()
+    return {
+        ...actual,
+        Builder: vi.fn(function MockBuilder(this: Record<string, unknown>) {
+            this["collectMochiCss"] = mockCollectMochiCss
+        }),
+        RolldownBundler: vi.fn(function MockRolldownBundler() {}),
+        VmRunner: vi.fn(function MockVmRunner() {}),
+        fileHash: vi.fn((s: string) => s),
+    }
+})
 
 vi.mock("fs", () => ({
     default: {

@@ -51,14 +51,18 @@ vi.mock("@mochi-css/config", () => ({
     }),
 }))
 
-vi.mock("@mochi-css/builder", () => ({
-    Builder: vi.fn(function MockBuilder(this: Record<string, unknown>) {
-        this["collectMochiCss"] = mockCollectMochiCss
-    }),
-    RolldownBundler: vi.fn(function MockRolldownBundler() {}),
-    VmRunner: vi.fn(function MockVmRunner() {}),
-    fileHash: vi.fn((s: string) => s),
-}))
+vi.mock("@mochi-css/builder", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@mochi-css/builder")>()
+    return {
+        ...actual,
+        Builder: vi.fn(function MockBuilder(this: Record<string, unknown>) {
+            this["collectMochiCss"] = mockCollectMochiCss
+        }),
+        RolldownBundler: vi.fn(function MockRolldownBundler() {}),
+        VmRunner: vi.fn(function MockVmRunner() {}),
+        fileHash: vi.fn((s: string) => s),
+    }
+})
 
 import { buildCssOnce, startCssWatcher } from "./watcher.js"
 import { resolveConfig } from "@mochi-css/config"
@@ -103,11 +107,11 @@ describe("buildCssOnce", () => {
         warnSpy.mockRestore()
     })
 
-    it("normalizes files and sourcemods keys to forward slashes in manifest", async () => {
+    it("stores posix file and sourcemod keys from builder unchanged in manifest", async () => {
         mockCollectMochiCss.mockResolvedValueOnce({
             global: undefined,
-            files: { "C:\\src\\App.tsx": ".foo { color: red }" },
-            sourcemods: { "C:\\src\\App.tsx": "--- patch ---" },
+            files: { "C:/src/App.tsx": ".foo { color: red }" },
+            sourcemods: { "C:/src/App.tsx": "--- patch ---" },
         })
         await buildCssOnce(".mochi")
         const writeFileCalls = mockWriteFile.mock.calls

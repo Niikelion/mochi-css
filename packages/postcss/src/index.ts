@@ -1,12 +1,13 @@
 import {PluginCreator, Result, TransformCallback} from "postcss";
 import * as fs from "fs";
-import * as path from "path";
+import * as systemPath from "path";
 import {
     Builder,
     BuilderOptions,
     RolldownBundler,
     VmRunner,
     fileHash,
+    path,
 } from "@mochi-css/builder"
 import { loadConfig, resolveConfig, mergeCallbacks, FullContext, type Config } from "@mochi-css/config"
 
@@ -103,7 +104,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
 
         if (!filePath || !isValidCssFilePath(filePath)) return
 
-        const normalizedPath = filePath.replaceAll(path.win32.sep, path.posix.sep)
+        const normalizedPath = path.fromSystemPath(filePath)
 
         // Reset lastIndex to handle regexes with /g flag correctly
         globalCssRegex.lastIndex = 0
@@ -139,7 +140,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         for (const rootEntry of resolved.roots) {
             result.messages.push({
                 type: "dir-dependency",
-                dir: path.resolve(typeof rootEntry === "string" ? rootEntry : rootEntry.path),
+                dir: systemPath.resolve(typeof rootEntry === "string" ? rootEntry : rootEntry.path),
                 glob: "**/*.{ts,tsx}",
                 plugin: pluginName,
                 parent: result.opts.from
@@ -150,7 +151,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             onDep: depPath => {
                 result.messages.push({
                     type: "dependency",
-                    file: depPath,
+                    file: path.toSystemPath(depPath),
                     plugin: pluginName,
                     parent: result.opts.from
                 })
@@ -174,30 +175,23 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             const existingCssFiles = new Set(
                 (await fs.promises.readdir(tmpDir))
                     .filter(f => f.endsWith(".css") && f !== "global.css")
-                    .map(f => path.resolve(tmpDir, f))
+                    .map(f => systemPath.resolve(tmpDir, f))
             )
 
-            const normalizedSourcemods: Record<string, string> = {}
-            for (const [source, mod] of Object.entries(css.sourcemods ?? {})) {
-                normalizedSourcemods[source.replaceAll("\\", "/")] = mod
-            }
-            const diskManifest: DiskManifest = {
-                files: {},
-                sourcemods: Object.keys(normalizedSourcemods).length > 0 ? normalizedSourcemods : undefined,
-            }
+            const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
             const writtenCssPaths = new Set<string>()
 
             if (css.global) {
-                const globalPath = path.resolve(tmpDir, "global.css")
+                const globalPath = systemPath.resolve(tmpDir, "global.css")
                 await writeIfChanged(globalPath, css.global)
                 diskManifest.global = globalPath
             }
 
             for (const [source, fileCss] of Object.entries(css.files ?? {})) {
                 const hash = fileHash(source)
-                const cssPath = path.resolve(tmpDir, `${hash}.css`)
+                const cssPath = systemPath.resolve(tmpDir, `${hash}.css`)
                 await writeIfChanged(cssPath, fileCss)
-                diskManifest.files[source.replaceAll("\\", "/")] = cssPath
+                diskManifest.files[source] = cssPath
                 writtenCssPaths.add(cssPath)
             }
 
@@ -207,7 +201,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                 }
             }
 
-            const manifestPath = path.resolve(tmpDir, "manifest.json")
+            const manifestPath = systemPath.resolve(tmpDir, "manifest.json")
             await writeIfChanged(manifestPath, JSON.stringify(diskManifest))
         }
     }
