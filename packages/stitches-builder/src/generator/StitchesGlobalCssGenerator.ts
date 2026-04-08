@@ -1,6 +1,7 @@
 import { GlobalCssObject, GlobalCssStyles } from "@mochi-css/vanilla";
-import { StyleGenerator } from "@mochi-css/builder";
-import { OnDiagnostic, getErrorMessage } from "@mochi-css/builder";
+import type { StyleGenerator } from "@mochi-css/plugins";
+import type { OnDiagnostic } from "@mochi-css/builder";
+import { getErrorMessage } from "@mochi-css/builder";
 import { StitchesConfig, preprocess } from "@mochi-css/stitches";
 
 export class StitchesGlobalCssGenerator implements StyleGenerator {

@@ -1,4 +1,5 @@
-import type { StyleExtractor, StyleGenerator, OnDiagnostic } from "@mochi-css/builder"
+import type { StyleExtractor, StyleGenerator } from "@mochi-css/plugins"
+import type { OnDiagnostic } from "@mochi-css/builder"
 import type { CallExpression, Expression } from "@swc/core"
 import { VanillaCssGenerator } from "./VanillaCssGenerator"
 

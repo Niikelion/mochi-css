@@ -5,6 +5,7 @@
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "workspaces": [
         "packages/*",
+        "tools/*",
         "examples/*",
         "!**/dist"
     ],

@@ -24,6 +24,12 @@ vi.mock("@mochi-css/config", () => ({
         emitHooks = { getAll: () => [] }
         cleanup = { runAll: () => {} }
         onDiagnostic = () => {}
+        initializeStages = { merged: () => undefined }
+        prepareAnalysis = { merged: () => undefined }
+        getFileData = { merged: () => undefined }
+        invalidateFiles = { merged: () => undefined }
+        resetCrossFileState = { merged: () => undefined }
+        getFilesToBundle = { merged: () => undefined }
     },
 }))
 
@@ -61,8 +67,8 @@ type PluginHooks = {
     configureServer: (server: MockServer) => void
     handleHotUpdate: (ctx: HotUpdateContext) => Promise<MockModule[] | undefined>
     watchChange: (id: string, change: { event: string }) => Promise<void>
-    transform: (code: string, id: string) => Promise<{ code: string; map: null } | undefined>
-    resolveId: (id: string) => string | undefined
+    transform: (code: string, id: string) => Promise<{ code: string } | undefined>
+    resolveId: (id: string) => { id: string } | undefined
     load: (id: string) => string | undefined
 }
 
@@ -154,7 +160,8 @@ describe("mochiCss vite plugin transform", () => {
 
         const result = await hooks.transform("const x = 1", "/src/App.tsx")
         expect(result).not.toBeUndefined()
-        expect(result?.code).toContain("virtual:mochi-css/global.css")
+        // GLOBAL_ID = "virtual:mochi-css/global.css" — imported without extra .css suffix
+        expect(result?.code).toContain(`import "virtual:mochi-css/global.css"`)
     })
 
     it("injects global CSS import even when file has no per-file CSS (splitCss: false)", async () => {
@@ -165,29 +172,30 @@ describe("mochiCss vite plugin transform", () => {
 
         const result = await hooks.transform("const x = 1", "/src/App.tsx")
         expect(result).not.toBeUndefined()
-        expect(result?.code).toContain("virtual:mochi-css/global.css")
+        expect(result?.code).toContain(`import "virtual:mochi-css/global.css"`)
         expect(result?.code).not.toContain("virtual:mochi-css/App.css")
     })
 
     it("resolveId returns resolved id for virtual modules", async () => {
         const hooks = await setupPlugin()
 
-        expect(hooks.resolveId("virtual:mochi-css/global.css")).toBe("\0virtual:mochi-css/global.css")
-        expect(hooks.resolveId("virtual:mochi-css/abc123.css")).toBe("\0virtual:mochi-css/abc123.css")
+        expect(hooks.resolveId("virtual:mochi-css/global.css")?.id).toBe("\0virtual:mochi-css/global.css")
+        expect(hooks.resolveId("virtual:mochi-css/abc123.css")?.id).toBe("\0virtual:mochi-css/abc123.css")
         expect(hooks.resolveId("some-other-module")).toBeUndefined()
     })
 
-    it("load returns global CSS for global virtual module", async () => {
+    it("load returns raw CSS for global virtual module", async () => {
         const hooks = await setupPlugin({
             files: {},
             global: ".global { color: blue; }",
         })
 
+        // RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
         const result = hooks.load("\0virtual:mochi-css/global.css")
         expect(result).toBe(".global { color: blue; }")
     })
 
-    it("load returns per-file CSS for hashed virtual module", async () => {
+    it("load returns raw per-file CSS for hashed virtual module", async () => {
         mockCollectMochiCss.mockResolvedValue({
             files: { "/src/App.tsx": ".s-abc { color: red; }" },
             global: undefined,
@@ -195,36 +203,35 @@ describe("mochiCss vite plugin transform", () => {
         const hooks = await setupPlugin()
 
         // The hash is computed by fileHash — mocked as basename without extension
+        // load strips ".css" suffix before hashToSource lookup
         const result = hooks.load("\0virtual:mochi-css/App.css")
         expect(result).toBe(".s-abc { color: red; }")
+    })
+
+    it("load returns empty string for global when no global CSS", async () => {
+        const hooks = await setupPlugin({ files: {}, global: undefined })
+
+        const result = hooks.load("\0virtual:mochi-css/global.css")
+        expect(result).toBe("")
     })
 
     it("load returns undefined when manifest is not ready", async () => {
         const plugin = mochiCss()
         const hooks = getHooks(plugin)
-        // configResolved but NOT buildStart — manifest stays undefined
+        // configResolved not called — manifest stays undefined
 
         const result = hooks.load("\0virtual:mochi-css/global.css")
         expect(result).toBeUndefined()
     })
 
     it("skips transform when context not yet initialized", async () => {
-        // Don't call buildStart — context stays undefined
-        mockCollectMochiCss.mockResolvedValue({
-            files: { "/src/App.tsx": ".s-abc { color: red; }" },
-            global: undefined,
-        })
-
+        // Don't call configResolved — context stays undefined
         const plugin = mochiCss()
         const hooks = getHooks(plugin)
-        await hooks.configResolved({ root: "/project" })
-        // buildStart NOT called — context is undefined
 
         mockTransform.mockImplementation(async (source: string) => source + "\n//transformed")
 
-        // File has CSS in manifest but manifest is also not set since buildStart wasn't called
         const result = await hooks.transform("const x = 1", "/src/App.tsx")
-        // No manifest, no context → undefined (passthrough, code unchanged)
         expect(result).toBeUndefined()
     })
 })
@@ -251,6 +258,7 @@ describe("mochiCss vite plugin HMR", () => {
     it("handleHotUpdate invalidates per-file virtual module when CSS changes", async () => {
         const hooks = await setupPlugin({ files: { "/src/App.tsx": ".old { color: red; }" } })
 
+        // module ID uses hash + ".css" — fileHash mock returns basename without ext → "App.css"
         const cssModule: MockModule = { id: "\0virtual:mochi-css/App.css" }
         const invalidateModule = vi.fn()
         const mockServer = makeMockServer({ "\0virtual:mochi-css/App.css": cssModule }, invalidateModule)
@@ -279,6 +287,7 @@ describe("mochiCss vite plugin HMR", () => {
     it("handleHotUpdate invalidates global virtual module when global CSS changes", async () => {
         const hooks = await setupPlugin({ files: {}, global: ".old { margin: 0; }" })
 
+        // RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
         const globalModule: MockModule = { id: "\0virtual:mochi-css/global.css" }
         const invalidateModule = vi.fn()
         const mockServer = makeMockServer({ "\0virtual:mochi-css/global.css": globalModule }, invalidateModule)
@@ -297,7 +306,7 @@ describe("mochiCss vite plugin HMR", () => {
         const mockServer = makeMockServer()
         await hooks.handleHotUpdate({ file: "/src/styles.css", server: mockServer, modules: [] })
 
-        expect(mockCollectMochiCss).toHaveBeenCalledTimes(1) // only from buildStart
+        expect(mockCollectMochiCss).toHaveBeenCalledTimes(1) // only from configResolved
     })
 
     it("handleHotUpdate preserves ctx.modules in return value", async () => {

@@ -48,6 +48,12 @@ vi.mock("@mochi-css/config", () => ({
         this["sourceTransforms"] = { getAll: vi.fn(() => []) }
         this["emitHooks"] = { getAll: vi.fn(() => []) }
         this["cleanup"] = { runAll: vi.fn() }
+        this["initializeStages"] = { merged: vi.fn(() => undefined) }
+        this["prepareAnalysis"] = { merged: vi.fn(() => undefined) }
+        this["getFileData"] = { merged: vi.fn(() => undefined) }
+        this["invalidateFiles"] = { merged: vi.fn(() => undefined) }
+        this["resetCrossFileState"] = { merged: vi.fn(() => undefined) }
+        this["getFilesToBundle"] = { merged: vi.fn(() => undefined) }
     }),
 }))
 

@@ -1,4 +1,4 @@
-import { Module } from "@/ProjectIndex"
+import type { Module } from "@/analysis/types"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
 import { MochiError, getErrorMessage } from "@/diagnostics"

@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import { FileInfo } from "@/ProjectIndex"
+import { FileView } from "@/analysis/types"
 
 /**
  * Checks if a pattern (destructuring) contains a specific identifier.
@@ -38,7 +38,7 @@ export function patternContainsIdentifier(pattern: SWC.Pattern, identifier: SWC.
 export function isPatternPropertyUsed(
     prop: SWC.ObjectPatternProperty,
     declarator: SWC.VariableDeclarator,
-    info: FileInfo,
+    info: FileView,
 ): boolean {
     for (const binding of info.usedBindings) {
         if (binding.declarator.type !== "variable") continue
@@ -56,7 +56,7 @@ export function isPatternPropertyUsed(
 /**
  * Checks if an array pattern element is used by any binding in the file.
  */
-export function isPatternElementUsed(elem: SWC.Pattern, declarator: SWC.VariableDeclarator, info: FileInfo): boolean {
+export function isPatternElementUsed(elem: SWC.Pattern, declarator: SWC.VariableDeclarator, info: FileView): boolean {
     for (const binding of info.usedBindings) {
         if (binding.declarator.type !== "variable") continue
         if (binding.declarator.declarator !== declarator) continue
@@ -71,7 +71,7 @@ export function isPatternElementUsed(elem: SWC.Pattern, declarator: SWC.Variable
  */
 export function pruneUnusedPatternParts(
     declarator: SWC.VariableDeclarator,
-    info: FileInfo,
+    info: FileView,
 ): SWC.VariableDeclarator | null {
     // Check if any binding from this declarator is used
     const hasUsedBinding = [...info.usedBindings].some(
@@ -133,7 +133,7 @@ export function pruneUnusedPatternParts(
 /**
  * Generates a minimal version of a module item, keeping only used bindings.
  */
-export function generateMinimalModuleItem(item: SWC.ModuleItem, info: FileInfo): SWC.ModuleItem | null {
+export function generateMinimalModuleItem(item: SWC.ModuleItem, info: FileView): SWC.ModuleItem | null {
     // For imports, generate minimal import declaration
     if (item.type === "ImportDeclaration") {
         const usedSpecifiers = item.specifiers.filter((spec) => {

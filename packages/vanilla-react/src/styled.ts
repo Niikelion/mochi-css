@@ -4,7 +4,7 @@
  * @module styled
  */
 
-import { ComponentProps, ComponentType, createElement, FC, HTMLElementType } from "react"
+import { ComponentPropsWithRef, ComponentType, createElement, ElementType, FC } from "react"
 import { css, MochiCSS, AllVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@mochi-css/vanilla"
 import clsx from "clsx"
 
@@ -13,12 +13,9 @@ type MochiProps<V extends AllVariants[]> = {
     className?: string
 } & Partial<RefineVariants<MergeCSSVariants<V>>>
 
-/** Minimal interface for components that accept className */
-type Cls = { className?: string }
-
 /** A styled component FC augmented with a CSS selector for component targeting */
-export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]> = FC<
-    Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>
+export type MochiStyledComponent<T extends ElementType, V extends AllVariants[]> = FC<
+    Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> & MochiProps<V>
 > & {
     toString(): string
     selector: string
@@ -58,7 +55,7 @@ export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>,
  *
  * // Usage: <Button size="large" variant="primary">Click me</Button>
  */
-export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
+export function styled<T extends ElementType, V extends AllVariants[]>(
     target: T,
     ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS<V[K]> | string }
 ): MochiStyledComponent<T, V> {
@@ -66,14 +63,14 @@ export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends
     const selector = styles.selector
     const variantKeys = new Set(Object.keys(styles.variantClassNames))
     return Object.assign(
-        ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) => {
+        ({ className, ...p }: Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> & MochiProps<V>) => {
             const variantProps: Record<string, unknown> = {}
             const restProps: Record<string, unknown> = {}
             for (const [k, v] of Object.entries(p)) {
                 if (variantKeys.has(k)) variantProps[k] = v
                 else restProps[k] = v
             }
-            return createElement(target, {
+            return createElement(target as ComponentType<Record<string, unknown>>, {
                 className: clsx(styles.variant(variantProps as Parameters<typeof styles.variant>[0]), className),
                 ...restProps,
             })

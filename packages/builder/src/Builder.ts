@@ -2,7 +2,7 @@ import { path } from "@/utils"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
 import { createPatch } from "diff"
-import { ProjectIndex, ResolveImport, Module } from "@/ProjectIndex"
+import { StageRunner, Module, ResolveImport } from "@/StageRunner"
 import type { StageDefinition } from "@/analysis/Stage"
 import { parseFile, parseSource } from "@/parse"
 import { Bundler, FileLookup } from "@/Bundler"
@@ -10,8 +10,7 @@ import { Runner } from "@/Runner"
 import dedent from "dedent"
 import { MochiError, OnDiagnostic, getErrorMessage } from "@/diagnostics"
 import { findAllFiles } from "@/findAllFiles"
-import { extractRelevantSymbols } from "@/extractRelevantSymbols"
-import { wrapIndexWithProxies } from "@/AstProxy"
+import { wrapFilesWithProxies, MutableFileEntry } from "@/AstProxy"
 import { Evaluator } from "@/Evaluator"
 
 export type AnalysisContext = {
@@ -21,9 +20,9 @@ export type AnalysisContext = {
     markForEval(filePath: string, expression: SWC.Expression): void
 }
 
-export type AstPostProcessor = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
+export type AstPostProcessor = (runner: StageRunner, context: AnalysisContext) => void | Promise<void>
 
-export type EmitHook = (index: ProjectIndex, context: AnalysisContext) => void | Promise<void>
+export type EmitHook = (runner: StageRunner, context: AnalysisContext) => void | Promise<void>
 
 const rootFileSuffix = dedent`
     declare global {
@@ -78,6 +77,34 @@ export type BuilderOptions = {
     /** Analysis stages to run. Pass stages from createExtractorsPlugin() here — they carry the extractor configuration. */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     stages?: readonly StageDefinition<any[], any>[]
+
+    // --- Plugin-registered hooks ---
+
+    /** Called after the StageRunner is created — feeds module data into the root stage. */
+    initializeStages?: (
+        runner: StageRunner,
+        modules: Module[],
+        resolveImport: ResolveImport,
+        onDiagnostic?: OnDiagnostic,
+    ) => void
+
+    /** Called before each analysis pass. Should run discovery + usage propagation. */
+    prepareAnalysis?: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => void
+
+    /** Returns mutable file entries (with live AST references) for proxy-based dirty detection. */
+    getFileData?: (runner: StageRunner) => MutableFileEntry[]
+
+    /** Called when files are dirtied after a transform pass — should invalidate stage caches. */
+    invalidateFiles?: (runner: StageRunner, dirtyFiles: Set<string>) => void
+
+    /** Called to reset cross-file state (e.g. after invalidation). */
+    resetCrossFileState?: (runner: StageRunner) => void
+
+    /** Called to produce the minimal source files to bundle. Returns null for files to skip. */
+    getFilesToBundle?: (
+        runner: StageRunner,
+        markedForEval: Map<string, Set<SWC.Expression>>,
+    ) => Record<string, string | null>
 }
 
 /**
@@ -141,36 +168,43 @@ export class Builder {
         }
     }
 
-    private async buildEvalIndex(
+    private createRunner(modules: Module[], resolveImport: ResolveImport): StageRunner {
+        const runner = new StageRunner(
+            modules.map((m) => m.filePath),
+            this.options.stages ?? [],
+        )
+        this.options.initializeStages?.(runner, modules, resolveImport, this.options.onDiagnostic)
+        return runner
+    }
+
+    private runAnalysisPass(runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>): void {
+        this.options.prepareAnalysis?.(runner, markedForEval)
+    }
+
+    private async buildEvalRunner(
         modules: Module[],
-        index: ProjectIndex,
+        runner: StageRunner,
         resolveImport: ResolveImport,
         context: AnalysisContext,
         markedForEval: Map<string, Set<SWC.Expression>>,
-    ): Promise<ProjectIndex> {
-        if ((this.options.preEvalTransforms ?? []).length === 0) return index
+    ): Promise<StageRunner> {
+        if ((this.options.preEvalTransforms ?? []).length === 0) return runner
 
         const evalModules = modules.map((m) => ({ ...m, ast: structuredClone(m.ast) }))
-        const evalIndex = new ProjectIndex(
-            evalModules,
-            this.options.stages ?? [],
-            resolveImport,
-            this.options.onDiagnostic,
-        )
+        const evalRunner = this.createRunner(evalModules, resolveImport)
 
         for (const handler of this.options.preEvalTransforms ?? []) {
-            evalIndex.discoverCrossFileDerivedExtractors()
-            evalIndex.propagateUsages(markedForEval)
-            const proxied = wrapIndexWithProxies(evalIndex)
-            await handler(evalIndex, context)
+            this.runAnalysisPass(evalRunner, markedForEval)
+            const fileData = this.options.getFileData?.(evalRunner) ?? []
+            const proxied = wrapFilesWithProxies(fileData)
+            await handler(evalRunner, context)
             const dirtyFiles = proxied.getDirtyFiles()
             if (dirtyFiles.size === 0) continue
-            evalIndex.reanalyzeFiles(dirtyFiles)
-            evalIndex.resetCrossFileState()
+            this.options.invalidateFiles?.(evalRunner, dirtyFiles)
+            this.options.resetCrossFileState?.(evalRunner)
         }
-        evalIndex.discoverCrossFileDerivedExtractors()
-        evalIndex.propagateUsages(markedForEval)
-        return evalIndex
+        this.runAnalysisPass(evalRunner, markedForEval)
+        return evalRunner
     }
 
     private async bundleFiles(files: Record<string, string | null>) {
@@ -215,8 +249,9 @@ export class Builder {
     public async collectStylesFromModules(modules: Module[]): Promise<Map<string, Set<string>>> {
         const resolveImport = this.buildResolveImport(modules)
         const onDiagnostic = this.options.onDiagnostic
-        const index = new ProjectIndex(modules, this.options.stages ?? [], resolveImport, onDiagnostic)
+        const runner = this.createRunner(modules, resolveImport)
         const evaluator = new Evaluator(this.options.runner)
+        evaluator.setGlobal("__global_mochi_diagnostics", onDiagnostic)
         const chunks = new Map<string, Set<string>>()
         const markedForEval = new Map<string, Set<SWC.Expression>>()
 
@@ -242,31 +277,30 @@ export class Builder {
         }
 
         for (const handler of this.options.sourceTransforms ?? []) {
-            index.discoverCrossFileDerivedExtractors()
-            index.propagateUsages(markedForEval)
-            const proxied = wrapIndexWithProxies(index)
-            await handler(index, context)
+            this.runAnalysisPass(runner, markedForEval)
+            const fileData = this.options.getFileData?.(runner) ?? []
+            const proxied = wrapFilesWithProxies(fileData)
+            await handler(runner, context)
             const dirtyFiles = proxied.getDirtyFiles()
             if (dirtyFiles.size === 0) continue
-            index.reanalyzeFiles(dirtyFiles)
-            index.resetCrossFileState()
+            this.options.invalidateFiles?.(runner, dirtyFiles)
+            this.options.resetCrossFileState?.(runner)
         }
-        index.discoverCrossFileDerivedExtractors()
-        index.propagateUsages(markedForEval)
+        this.runAnalysisPass(runner, markedForEval)
 
-        const indexForEval = await this.buildEvalIndex(modules, index, resolveImport, context, markedForEval)
+        const evalRunner = await this.buildEvalRunner(modules, runner, resolveImport, context, markedForEval)
 
-        const resultingFiles = extractRelevantSymbols(indexForEval, markedForEval)
+        const resultingFiles = this.options.getFilesToBundle?.(evalRunner, markedForEval) ?? {}
 
         const code = await this.bundleFiles(resultingFiles)
         await this.executeCode(code, evaluator)
 
         for (const handler of this.options.postEvalTransforms ?? []) {
-            await handler(index, context)
+            await handler(runner, context)
         }
 
         for (const hook of this.options.emitHooks ?? []) {
-            await hook(index, context)
+            await hook(runner, context)
         }
 
         if (this.options.emitDir) {

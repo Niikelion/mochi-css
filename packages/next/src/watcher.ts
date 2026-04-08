@@ -82,6 +82,12 @@ function createBuilder(resolved: Awaited<ReturnType<typeof resolveConfig>>, root
         sourceTransforms: [...context.sourceTransforms.getAll()],
         emitHooks: [...context.emitHooks.getAll()],
         cleanup: () => { context.cleanup.runAll() },
+        initializeStages: context.initializeStages.merged(),
+        prepareAnalysis: context.prepareAnalysis.merged(),
+        getFileData: context.getFileData.merged(),
+        invalidateFiles: context.invalidateFiles.merged(),
+        resetCrossFileState: context.resetCrossFileState.merged(),
+        getFilesToBundle: context.getFilesToBundle.merged(),
     })
 }
 

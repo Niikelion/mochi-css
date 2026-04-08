@@ -1,11 +1,11 @@
 import { createExtractorsPlugin } from "@mochi-css/plugins"
-import type { StyleExtractor } from "@mochi-css/builder"
+import type { StyleExtractor } from "@mochi-css/plugins"
 import type { Config } from "@mochi-css/config"
 import { mochiCssFunctionExtractor } from "./VanillaCssExtractor"
 import { mochiKeyframesFunctionExtractor } from "./VanillaKeyframesExtractor"
 import { mochiGlobalCssFunctionExtractor } from "./VanillaGlobalCssExtractor"
 
-export { styledIdPlugin } from "@mochi-css/config"
+export { styledIdPlugin } from "@mochi-css/plugins"
 export * from "./VanillaCssExtractor"
 export * from "./VanillaKeyframesExtractor"
 export * from "./VanillaGlobalCssExtractor"

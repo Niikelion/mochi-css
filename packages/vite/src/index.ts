@@ -6,6 +6,7 @@ import {
     VmRunner,
     fileHash,
     type MochiManifest,
+    path
 } from "@mochi-css/builder"
 import { loadConfig, resolveConfig, FullContext, type Config } from "@mochi-css/config"
 
@@ -24,7 +25,9 @@ const RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
  *
  * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
  */
-export type MochiViteOptions = Partial<BuilderOptions> & Pick<Config, "plugins">
+export type MochiViteOptions = Partial<BuilderOptions> & Pick<Config, "plugins"> & {
+    entries?: string[]
+}
 
 /**
  * Vite plugin that statically extracts Mochi CSS styles from TypeScript/TSX source files
@@ -54,6 +57,10 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
     // Map from hash to source path for resolving virtual modules
     const hashToSource = new Map<string, string>()
 
+    const entries = opts?.entries ?? ["src/main.tsx"]
+
+    const resolvedEntries = new Set(entries.map(entry => path.resolve(path.fromSystemPath(process.cwd()), entry)))
+
     return {
         name: "mochi-css",
         enforce: "pre",
@@ -64,10 +71,6 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 roots: ["src"],
                 splitCss: true,
             })
-        },
-
-        async buildStart() {
-            if (!resolved) return
 
             const ctx = new FullContext(resolved.onDiagnostic ?? (() => {}))
             context = ctx
@@ -84,6 +87,12 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 sourceTransforms: [...ctx.sourceTransforms.getAll()],
                 emitHooks: [...ctx.emitHooks.getAll()],
                 cleanup: () => { ctx.cleanup.runAll() },
+                initializeStages: ctx.initializeStages.merged(),
+                prepareAnalysis: ctx.prepareAnalysis.merged(),
+                getFileData: ctx.getFileData.merged(),
+                invalidateFiles: ctx.invalidateFiles.merged(),
+                resetCrossFileState: ctx.resetCrossFileState.merged(),
+                getFilesToBundle: ctx.getFilesToBundle.merged(),
             }
 
             builder = new Builder(options)
@@ -97,9 +106,11 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             }
         },
 
+        buildStart() { /* CSS already collected in configResolved */ },
+
         resolveId(id) {
-            if (id === GLOBAL_ID) return RESOLVED_GLOBAL_ID
-            if (id.startsWith(VIRTUAL_PREFIX)) return "\0" + id
+            if (id === GLOBAL_ID) return { id: RESOLVED_GLOBAL_ID }
+            if (id.startsWith(VIRTUAL_PREFIX)) return { id: "\0" + id }
             return undefined
         },
 
@@ -172,7 +183,8 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             delete manifest.files[id]
             hashToSource.delete(fileHash(id))
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ;(server?.hot ?? (server as any)?.ws)?.send({ type: "full-reload" })
+            const ws = server?.hot ?? server?.ws
+            ws?.send({ type: "full-reload" })
         },
 
         async transform(code, id) {
@@ -180,33 +192,30 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             if (!/\.(ts|tsx|js|jsx)$/.test(id)) return undefined
             if (!context) return undefined
 
-            // Vite normalizes ids to forward slashes; manifest keys are also normalized in buildStart
-            const normalizedId = id.replaceAll("\\", "/")
-
-            // Apply registered source transforms (e.g. styledIdPlugin for runtime s- id injection)
-            const transformed = await context.filePreProcess.transform(code, { filePath: normalizedId })
+            // Apply registered source transforms (e.g. styledIdPlugin for runtime "s-*" id injection)
+            const transformed = await context.filePreProcess.transform(code, { filePath: id })
 
             const imports: string[] = []
 
-            // Inject per-file CSS import (splitCss: true)
-            if (manifest && manifest.files[normalizedId] !== undefined) {
-                const hash = fileHash(normalizedId)
-                imports.push(`import "${VIRTUAL_PREFIX}${hash}.css";`)
-            }
-
             // Inject global CSS import (keyframes, globalCss, and all CSS when splitCss: false)
-            if (manifest?.global) {
+            if (resolvedEntries.has(id) && manifest?.global) {
                 imports.push(`import "${GLOBAL_ID}";`)
             }
 
+            // Inject per-file CSS import (splitCss: true)
+            if (manifest?.files?.[id] !== undefined) {
+                const hash = fileHash(id)
+                imports.push(`import "${VIRTUAL_PREFIX}${hash}.css";`)
+            }
+
             if (imports.length === 0) {
-                return transformed !== code ? { code: transformed as string, map: null } : undefined
+                return transformed !== code ? { code: transformed } : undefined
             }
 
             return {
-                code: imports.join("\n") + "\n" + (transformed as string),
-                map: null,
+                code: imports.join("\n") + "\n" + transformed,
             }
         },
     }
+
 }

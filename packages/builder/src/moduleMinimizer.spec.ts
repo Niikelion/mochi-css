@@ -8,7 +8,8 @@ import {
     pruneUnusedPatternParts,
     generateMinimalModuleItem,
 } from "@/moduleMinimizer"
-import { FileInfo, BindingInfo, RefMap } from "@/ProjectIndex"
+import type { FileView, BindingInfo } from "@/analysis/types"
+import { RefMap } from "@/analysis/types"
 
 // Helper to parse code and extract the first variable declarator's pattern
 async function getPattern(code: string): Promise<SWC.Pattern> {
@@ -68,7 +69,7 @@ function createMockFileInfo(
     declaration: SWC.VariableDeclaration,
     moduleItem: SWC.ModuleItem,
     usedIdentifiers: SWC.Identifier[],
-): FileInfo {
+): FileView {
     const usedBindings = new Set<BindingInfo>()
 
     for (const identifier of usedIdentifiers) {
@@ -84,32 +85,24 @@ function createMockFileInfo(
         filePath: "test.ts",
         ast: { type: "Module", span: { start: 0, end: 0, ctxt: 0 }, body: [], interpreter: "" },
         styleExpressions: new Set(),
-        extractedExpressions: new Map(),
-        extractedCallExpressions: new Map(),
         references: new Set(),
         moduleBindings: new RefMap(),
         localImports: new RefMap(),
         usedBindings,
         exports: new Map(),
-        derivedExtractorBindings: new RefMap(),
-        exportedDerivedExtractors: new Map(),
     }
 }
 
-function createEmptyFileInfo(ast: SWC.Module): FileInfo {
+function createEmptyFileInfo(ast: SWC.Module): FileView {
     return {
         filePath: "test.ts",
         ast,
         styleExpressions: new Set(),
-        extractedExpressions: new Map(),
-        extractedCallExpressions: new Map(),
         references: new Set(),
         moduleBindings: new RefMap(),
         localImports: new RefMap(),
         usedBindings: new Set(),
         exports: new Map(),
-        derivedExtractorBindings: new RefMap(),
-        exportedDerivedExtractors: new Map(),
     }
 }
 
@@ -370,7 +363,7 @@ describe("isPatternPropertyUsed", () => {
                 moduleItem: importDecl,
             },
         ])
-        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+        const fileInfo: FileView = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternPropertyUsed(aProp, declarator, fileInfo)).toBe(false)
     })
@@ -397,7 +390,7 @@ describe("isPatternPropertyUsed", () => {
                 moduleItem: declaration2,
             },
         ])
-        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+        const fileInfo: FileView = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternPropertyUsed(aProp, declarator1, fileInfo)).toBe(false)
     })
@@ -470,7 +463,7 @@ describe("isPatternElementUsed", () => {
                 moduleItem: importDecl,
             },
         ])
-        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+        const fileInfo: FileView = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternElementUsed(aElem, declarator, fileInfo)).toBe(false)
     })
@@ -497,7 +490,7 @@ describe("isPatternElementUsed", () => {
                 moduleItem: declaration2,
             },
         ])
-        const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+        const fileInfo: FileView = { ...createEmptyFileInfo(module.ast), usedBindings }
 
         expect(isPatternElementUsed(aElem, declarator1, fileInfo)).toBe(false)
     })
@@ -619,7 +612,7 @@ describe("pruneUnusedPatternParts", () => {
                     moduleItem: declaration,
                 },
             ])
-            const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+            const fileInfo: FileView = { ...createEmptyFileInfo(module.ast), usedBindings }
 
             expect(pruneUnusedPatternParts(declarator, fileInfo)).toBeNull()
         })
@@ -759,7 +752,7 @@ describe("pruneUnusedPatternParts", () => {
                     moduleItem: declaration,
                 },
             ])
-            const fileInfo: FileInfo = { ...createEmptyFileInfo(module.ast), usedBindings }
+            const fileInfo: FileView = { ...createEmptyFileInfo(module.ast), usedBindings }
 
             expect(pruneUnusedPatternParts(declarator, fileInfo)).toBeNull()
         })
@@ -784,7 +777,7 @@ describe("pruneUnusedPatternParts", () => {
                     moduleItem: {} as SWC.ModuleItem,
                 },
             ])
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo({
                     type: "Module",
                     span: { start: 0, end: 0, ctxt: 0 },
@@ -821,7 +814,7 @@ describe("generateMinimalModuleItem", () => {
                 },
             ])
 
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo(module.ast),
                 usedBindings,
             }
@@ -867,7 +860,7 @@ describe("generateMinimalModuleItem", () => {
                 },
             ])
 
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo(module.ast),
                 usedBindings,
             }
@@ -899,7 +892,7 @@ describe("generateMinimalModuleItem", () => {
                 },
             ])
 
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo(module.ast),
                 usedBindings,
             }
@@ -932,7 +925,7 @@ describe("generateMinimalModuleItem", () => {
                 },
             ])
 
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo(module.ast),
                 usedBindings,
             }
@@ -964,7 +957,7 @@ describe("generateMinimalModuleItem", () => {
                 },
             ])
 
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo(module.ast),
                 usedBindings,
             }
@@ -1038,7 +1031,7 @@ describe("generateMinimalModuleItem", () => {
                 },
             ])
 
-            const fileInfo: FileInfo = {
+            const fileInfo: FileView = {
                 ...createEmptyFileInfo(module.ast),
                 usedBindings,
             }

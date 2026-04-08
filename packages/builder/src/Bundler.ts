@@ -60,8 +60,11 @@ export class RolldownBundler implements Bundler {
             plugins: [createVirtualFsPlugin(rootFilePath, files)],
         })
 
-        const { output } = await build.generate({ format: "cjs" })
-
-        return output[0].code
+        try {
+            const { output } = await build.generate({ format: "cjs" })
+            return output[0].code
+        } finally {
+            await build.close()
+        }
     }
 }

@@ -1,5 +1,4 @@
 import * as SWC from "@swc/core"
-import { StyleExtractor } from "@/extractors/StyleExtractor"
 import type { Ref } from "./helpers"
 
 export type { Ref }
@@ -40,30 +39,22 @@ export interface LocalImport {
     exportName: string // original export name
 }
 
-export interface DerivedExtractorBinding {
-    extractor: StyleExtractor
-    parentExtractor: StyleExtractor
-    parentCallExpression: SWC.CallExpression
-    propertyName: string
-    localIdentifier: SWC.Identifier
-}
+export type ResolveImport = (fromFile: string, importSource: string) => string | null
 
-export interface FileInfo {
+/**
+ * Minimal view of per-file data needed for propagation and AST minimization.
+ * The full FileInfo (with extractor-specific maps) lives in @mochi-css/plugins.
+ */
+export interface FileView {
     filePath: string
     ast: SWC.Module
     styleExpressions: Set<SWC.Expression>
-    extractedExpressions: Map<StyleExtractor, SWC.Expression[]>
-    extractedCallExpressions: Map<StyleExtractor, SWC.CallExpression[]>
     references: Set<SWC.Identifier>
     moduleBindings: RefMap<BindingInfo>
     localImports: RefMap<LocalImport>
     usedBindings: Set<BindingInfo>
     exports: Map<string, Ref>
-    derivedExtractorBindings: RefMap<DerivedExtractorBinding>
-    exportedDerivedExtractors: Map<string, DerivedExtractorBinding>
 }
-
-export type ResolveImport = (fromFile: string, importSource: string) => string | null
 
 export class RefMap<T> {
     private readonly data = new Map<string, Map<number, T>>()

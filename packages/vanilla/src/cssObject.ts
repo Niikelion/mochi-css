@@ -19,6 +19,7 @@ import { shortHash } from "@/hash"
 import { MochiSelector } from "@/selector"
 import { compareStringKey, stringPropComparator } from "@/compare"
 import { CssLike } from "@/values"
+import { reportGlobalDiagnostic } from "@mochi-css/core"
 
 /**
  * Represents a single CSS rule block with properties and a selector.
@@ -122,9 +123,14 @@ export class CssObjectSubBlock {
                 continue
             }
 
-            if (process.env["NODE_ENV"] !== "production") {
-                console.warn(`[mochi-css] Unknown style property "${key}" will be ignored`)
-            }
+            reportGlobalDiagnostic({
+                severity: "warning",
+                message: `Unknown style property "${key}" will be ignored`,
+                file: "cssObject.ts",
+                line: 126,
+                column: 12,
+                code: "",
+            })
         }
 
         return [
