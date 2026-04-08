@@ -33,19 +33,24 @@ vi.mock("@mochi-css/config", () => ({
     },
 }))
 
-vi.mock("@mochi-css/builder", () => ({
-    Builder: class {
-        collectMochiCss() {
-            return mockCollectMochiCss()
-        }
-    },
-    RolldownBundler: class {},
-    VmRunner: class {},
-    fileHash: (id: string) => id.split("/").pop()?.replace(/\.[^.]+$/, "") ?? id,
-}))
+vi.mock("@mochi-css/builder", async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+        ...(actual as object),
+        Builder: class {
+            collectMochiCss() {
+                return mockCollectMochiCss()
+            }
+        },
+        RolldownBundler: class {},
+        VmRunner: class {},
+        fileHash: (id: string) => id.split("/").pop()?.replace(/\.[^.]+$/, "") ?? id,
+    }
+})
 
 import { mochiCss } from "./index.js"
 import type { Plugin } from "vite"
+import { path } from "@mochi-css/builder"
 
 type MockModule = { id: string }
 type MockServer = {
@@ -98,8 +103,8 @@ describe("mochiCss vite plugin transform", () => {
         mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source)
     })
 
-    async function setupPlugin(manifestOverride?: { files: Record<string, string>; global: string | undefined }) {
-        const plugin = mochiCss()
+    async function setupPlugin(manifestOverride?: { files: Record<string, string>; global: string | undefined }, entries?: string[]) {
+        const plugin = mochiCss(entries ? { entries } : undefined)
         const hooks = getHooks(plugin)
 
         if (manifestOverride) {
@@ -151,26 +156,31 @@ describe("mochiCss vite plugin transform", () => {
         expect(result).toBeUndefined()
     })
 
-    it("injects global CSS import when manifest has global styles", async () => {
+    it("injects global CSS import into entry file, even when manifest has styles for that file", async () => {
         mockTransform.mockImplementation(async (source: string) => source + "\n//transformed")
-        const hooks = await setupPlugin({
-            files: { "/src/App.tsx": ".s-abc { color: red; }" },
-            global: ".global { box-sizing: border-box; }",
-        })
 
-        const result = await hooks.transform("const x = 1", "/src/App.tsx")
+        const appPath = path.resolve(process.cwd(), "src/App.tsx").replaceAll("\\", "/")
+
+        const hooks = await setupPlugin({
+            files: { [appPath]: ".s-abc { color: red; }" },
+            global: ".global { box-sizing: border-box; }",
+        }, ["src/App.tsx"])
+
+        const result = await hooks.transform("const x = 1", appPath)
         expect(result).not.toBeUndefined()
         // GLOBAL_ID = "virtual:mochi-css/global.css" — imported without extra .css suffix
         expect(result?.code).toContain(`import "virtual:mochi-css/global.css"`)
     })
 
-    it("injects global CSS import even when file has no per-file CSS (splitCss: false)", async () => {
+    it("injects global CSS import into entry file even when file has no per-file CSS (splitCss: false)", async () => {
+        const appPath = path.resolve(process.cwd(), "src/App.tsx").replaceAll("\\", "/")
+
         const hooks = await setupPlugin({
             files: {},
             global: ".global { box-sizing: border-box; }",
-        })
+        }, ["src/App.tsx"])
 
-        const result = await hooks.transform("const x = 1", "/src/App.tsx")
+        const result = await hooks.transform("const x = 1", appPath)
         expect(result).not.toBeUndefined()
         expect(result?.code).toContain(`import "virtual:mochi-css/global.css"`)
         expect(result?.code).not.toContain("virtual:mochi-css/App.css")

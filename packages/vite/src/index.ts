@@ -25,9 +25,9 @@ const RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
  *
  * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
  */
-export type MochiViteOptions = Partial<BuilderOptions> & Pick<Config, "plugins"> & {
-    entries?: string[]
-}
+export type MochiViteOptions = Partial<BuilderOptions & Pick<Config, "plugins"> & {
+    entries: string[]
+}>
 
 /**
  * Vite plugin that statically extracts Mochi CSS styles from TypeScript/TSX source files
