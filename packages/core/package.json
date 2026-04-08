@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/core",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",

@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vite",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "4.0.2",
+    "version": "5.0.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -34,8 +34,8 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/builder": "^4.0.1",
-        "@mochi-css/config": "^4.0.0",
+        "@mochi-css/builder": "^5.0.0",
+        "@mochi-css/config": "^5.0.0",
         "diff": "^8.0.3"
     },
     "peerDependencies": {

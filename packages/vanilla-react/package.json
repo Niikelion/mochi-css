@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vanilla-react",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "license": "MIT",
     "keywords": [
         "css-in-js",
@@ -53,7 +53,7 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
-        "@mochi-css/builder": "^4.0.0",
+        "@mochi-css/builder": "^5.0.0",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
         "@testing-library/dom": "^10.4.1",
@@ -74,9 +74,9 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/config": "^4.0.0",
-        "@mochi-css/plugins": "^4.0.0",
-        "@mochi-css/vanilla": "^4.0.1",
+        "@mochi-css/config": "^5.0.0",
+        "@mochi-css/plugins": "^5.0.0",
+        "@mochi-css/vanilla": "^5.0.0",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
