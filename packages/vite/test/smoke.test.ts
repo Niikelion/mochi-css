@@ -152,10 +152,11 @@ describe("vite smoke", () => {
                 await dev.waitFor(/ready in/i, 15_000)
 
                 const stylesPath = path.join(tmpDir, "src", "styles.ts")
-                const hash = fileHash(stylesPath)
+                const stylesPathNorm = stylesPath.replaceAll("\\", "/")
+                const hash = fileHash(stylesPathNorm)
                 const cssUrl = `http://localhost:${port}/@id/__x00__virtual:mochi-css/${hash}.css`
 
-                // Fetch initial CSS
+                // Fetch initial CSS module
                 const initialRes = await fetch(cssUrl)
                 expect(initialRes.ok, `Failed to fetch ${cssUrl}`).toBe(true)
                 const initialCss = await initialRes.text()

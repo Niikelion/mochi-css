@@ -1,28 +1,6 @@
 import { describe, it, expect } from "vitest"
 import * as SWC from "@swc/core"
-import { createAstProxy, wrapIndexWithProxies } from "@/AstProxy"
-import { ProjectIndex } from "@/ProjectIndex"
-import { parseSource } from "@/parse"
-import { createDefaultStages } from "@/analysis/stages"
-import type { StyleExtractor } from "@/extractors/StyleExtractor"
-import type { CallExpression, Expression } from "@swc/core"
-
-const testCssExtractor: StyleExtractor = {
-    importPath: "@mochi-css/vanilla",
-    symbolName: "css",
-    extractStaticArgs(call: CallExpression): Expression[] {
-        return call.arguments.slice(0, 1).map((a) => a.expression)
-    },
-    startGeneration() {
-        return {
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            collectArgs() {},
-            async generateStyles() {
-                return {}
-            },
-        }
-    },
-}
+import { createAstProxy, wrapFilesWithProxies, type MutableFileEntry } from "@/AstProxy"
 
 function makeMinimalAst(body: SWC.ModuleItem[] = []): SWC.Module {
     return { type: "Module", body, interpreter: "", span: { start: 0, end: 0, ctxt: 0 } }
@@ -106,53 +84,39 @@ describe("createAstProxy", () => {
     })
 })
 
-describe("wrapIndexWithProxies", () => {
-    it("replaces fileInfo.ast with a proxy and restores originals after getDirtyFiles", async () => {
-        const module = await parseSource(
-            `import { css } from "@mochi-css/vanilla"
-export const s = css({ color: "red" })`,
-            "test.ts",
-        )
-        const index = new ProjectIndex([module], createDefaultStages([testCssExtractor]), () => null)
+describe("wrapFilesWithProxies", () => {
+    it("replaces entry.ast with a proxy and restores original after getDirtyFiles", () => {
+        const ast = makeMinimalAst([makeExprStatement("hello")])
+        const entry: MutableFileEntry = { filePath: "test.ts", ast }
 
-        const originalAst = index.files[0]?.[1]?.ast
-        expect.assert(originalAst !== undefined)
-
-        const proxied = wrapIndexWithProxies(index)
-        const proxiedAst = index.files[0]?.[1]?.ast
-        // The proxy is a different object than the original
-        expect(proxiedAst).not.toBe(originalAst)
+        const proxied = wrapFilesWithProxies([entry])
+        const proxiedAst = entry.ast
+        expect(proxiedAst).not.toBe(ast)
 
         proxied.getDirtyFiles()
-        // Original ast is restored
-        expect(index.files[0]?.[1]?.ast).toBe(originalAst)
+        expect(entry.ast).toBe(ast)
     })
 
-    it("getDirtyFiles returns paths for mutated files and not others", async () => {
-        const moduleA = await parseSource(`export const x = 1`, "a.ts")
-        const moduleB = await parseSource(`export const y = 2`, "b.ts")
-        const index = new ProjectIndex([moduleA, moduleB], createDefaultStages([]), () => null)
+    it("getDirtyFiles returns paths for mutated files and not others", () => {
+        const astA = makeMinimalAst([makeExprStatement("x")])
+        const astB = makeMinimalAst([makeExprStatement("y")])
+        const entryA: MutableFileEntry = { filePath: "a.ts", ast: astA }
+        const entryB: MutableFileEntry = { filePath: "b.ts", ast: astB }
 
-        const proxied = wrapIndexWithProxies(index)
-        // Mutate a.ts by accessing body[0] through the proxy then setting a property
-        const fileA = index.files.find(([p]) => p === "a.ts")?.[1]
-        expect.assert(fileA !== undefined)
-        const item = fileA.ast.body[0]
+        const proxied = wrapFilesWithProxies([entryA, entryB])
+
+        const item = entryA.ast.body[0]
         expect.assert(item !== undefined)
-        ;(item as { span: { start: number; end: number; ctxt: number } }).span = { start: 99, end: 99, ctxt: 0 }
+        ;(item as SWC.ExpressionStatement).span = { start: 99, end: 99, ctxt: 0 }
 
         const dirty = proxied.getDirtyFiles()
         expect(dirty.has("a.ts")).toBe(true)
         expect(dirty.has("b.ts")).toBe(false)
     })
 
-    it("getDirtyFiles returns empty set when no mutations were made", async () => {
-        const module = await parseSource(`export const x = 1`, "a.ts")
-        const index = new ProjectIndex([module], createDefaultStages([]), () => null)
-
-        const proxied = wrapIndexWithProxies(index)
-        // No mutations
-        const dirty = proxied.getDirtyFiles()
-        expect(dirty.size).toBe(0)
+    it("getDirtyFiles returns empty set when no mutations were made", () => {
+        const entry: MutableFileEntry = { filePath: "a.ts", ast: makeMinimalAst([makeExprStatement("x")]) }
+        const proxied = wrapFilesWithProxies([entry])
+        expect(proxied.getDirtyFiles().size).toBe(0)
     })
 })

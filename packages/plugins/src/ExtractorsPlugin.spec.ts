@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import path from "path";
+import { path } from "@mochi-css/builder";
 import fs from "fs/promises";
 import os from "os";
 import { parseSource } from "@mochi-css/builder";
@@ -8,10 +8,9 @@ import { Builder, RolldownBundler, VmRunner } from "@mochi-css/builder";
 import type {
     BuilderOptions,
     AstPostProcessor,
-    StyleExtractor,
-    StyleGenerator,
     Module,
 } from "@mochi-css/builder";
+import type { StyleExtractor, StyleGenerator } from "./types";
 import { createExtractorsPlugin } from "./ExtractorsPlugin";
 import { PluginContextCollector } from "./PluginContextCollector";
 import type { CallExpression, Expression } from "@swc/types";
@@ -158,6 +157,12 @@ async function runPlugin(
             ctx.runCleanup();
             await extraOptions.cleanup?.();
         },
+        initializeStages: ctx.getInitializeStages(),
+        prepareAnalysis: ctx.getPrepareAnalysis(),
+        getFileData: ctx.getGetFileData(),
+        invalidateFiles: ctx.getInvalidateFiles(),
+        resetCrossFileState: ctx.getResetCrossFileState(),
+        getFilesToBundle: ctx.getGetFilesToBundle(),
     }).collectStylesFromModules(modules);
 }
 
@@ -314,6 +319,51 @@ describe("Builder", () => {
         const chunks = await runPlugin([simpleKeyframesExtractor], [module]);
         expect(getCss(chunks, "anim.ts")).toContain("@keyframes");
         expect(chunks.has("global.css")).toBe(false);
+    });
+
+    it("local plain-object variable spread into css args is included in bundle", async () => {
+        const module = await parseSource(
+            /* language=typescript */ dedent`
+            import { css } from "@mochi-css/vanilla"
+            const base = { fontSize: 16 }
+            export const s = css({ ...base, color: "red" })
+        `,
+            "spread.ts",
+        );
+
+        const chunks = await runPlugin([simpleCssExtractor], [module]);
+        const fileCss = getAllCss(chunks);
+        expect(fileCss).toContain("font-size: 16");
+        expect(fileCss).toContain("color: red");
+    });
+
+    it("local plain-object variable spread into extractor args (styled pattern) is included in bundle", async () => {
+        // Simulates: const base = {...}; styled('div', { ...base, width: 100 })
+        // extractStaticArgs slices off the first arg ('div'), leaving [{ ...base, width: 100 }]
+        const styledLikeExtractor: StyleExtractor = {
+            importPath: "@mochi-css/vanilla",
+            symbolName: "css",
+            extractStaticArgs(call: CallExpression): Expression[] {
+                return call.arguments.slice(1).map((a) => a.expression);
+            },
+            startGeneration(): StyleGenerator {
+                return new SimpleCssGenerator();
+            },
+        };
+
+        const module = await parseSource(
+            /* language=typescript */ dedent`
+            import { css } from "@mochi-css/vanilla"
+            const base = { background: "black" }
+            export const s = css("div", { ...base, width: 100 })
+        `,
+            "styled-spread.ts",
+        );
+
+        const chunks = await runPlugin([styledLikeExtractor], [module]);
+        const fileCss = getAllCss(chunks);
+        expect(fileCss).toContain("background: black");
+        expect(fileCss).toContain("width: 100");
     });
 
     it("dependent css call args are not evaluated twice (issue #12)", async () => {
@@ -599,6 +649,12 @@ describe("Builder", () => {
                     cleanup: () => {
                         ctx.runCleanup();
                     },
+                    initializeStages: ctx.getInitializeStages(),
+                    prepareAnalysis: ctx.getPrepareAnalysis(),
+                    getFileData: ctx.getGetFileData(),
+                    invalidateFiles: ctx.getInvalidateFiles(),
+                    resetCrossFileState: ctx.getResetCrossFileState(),
+                    getFilesToBundle: ctx.getGetFilesToBundle(),
                 });
 
                 await builder.collectStylesFromModules([module]);
@@ -649,23 +705,21 @@ describe("Builder", () => {
                 "test.ts",
             );
 
-            const handler: AstPostProcessor = (index) => {
-                for (const [, fileInfo] of index.files) {
-                    for (const item of fileInfo.ast.body) {
-                        if (item.type !== "ExportDeclaration") continue;
-                        if (item.declaration.type !== "VariableDeclaration")
-                            continue;
-                        const init = item.declaration.declarations[0]?.init;
-                        if (init?.type !== "CallExpression") continue;
-                        const arg = init.arguments[0]?.expression;
-                        if (arg?.type !== "ObjectExpression") continue;
-                        const prop = arg.properties[0];
-                        if (prop?.type !== "KeyValueProperty") continue;
-                        const val = prop.value;
-                        if (val.type === "StringLiteral") {
-                            val.value = "blue";
-                            val.raw = '"blue"';
-                        }
+            const handler: AstPostProcessor = () => {
+                for (const item of module.ast.body) {
+                    if (item.type !== "ExportDeclaration") continue;
+                    if (item.declaration.type !== "VariableDeclaration")
+                        continue;
+                    const init = item.declaration.declarations[0]?.init;
+                    if (init?.type !== "CallExpression") continue;
+                    const arg = init.arguments[0]?.expression;
+                    if (arg?.type !== "ObjectExpression") continue;
+                    const prop = arg.properties[0];
+                    if (prop?.type !== "KeyValueProperty") continue;
+                    const val = prop.value;
+                    if (val.type === "StringLiteral") {
+                        val.value = "blue";
+                        val.raw = '"blue"';
                     }
                 }
             };
@@ -680,43 +734,28 @@ describe("Builder", () => {
     });
 
     describe("preEvalTransforms", () => {
-        it("mutations in preEvalTransforms affect CSS output via the eval copy", async () => {
+        it("setGlobal in preEvalTransform makes value available in execution context", async () => {
             const module = await parseSource(
                 dedent`
                 import { css } from "@mochi-css/vanilla"
-                export const s = css({ color: "red" })
+                const config = __preEvalGlobal
+                export const s = css(config)
             `,
                 "test.ts",
             );
 
-            const preEvalHandler: AstPostProcessor = (index) => {
-                for (const [, fileInfo] of index.files) {
-                    for (const item of fileInfo.ast.body) {
-                        if (item.type !== "ExportDeclaration") continue;
-                        if (item.declaration.type !== "VariableDeclaration")
-                            continue;
-                        const init = item.declaration.declarations[0]?.init;
-                        if (init?.type !== "CallExpression") continue;
-                        const arg = init.arguments[0]?.expression;
-                        if (arg?.type !== "ObjectExpression") continue;
-                        const prop = arg.properties[0];
-                        if (prop?.type !== "KeyValueProperty") continue;
-                        const val = prop.value;
-                        if (val.type === "StringLiteral") {
-                            val.value = "blue";
-                            val.raw = '"blue"';
-                        }
-                    }
-                }
+            const preEvalHandler: AstPostProcessor = (
+                _runner,
+                { evaluator },
+            ) => {
+                evaluator.setGlobal("__preEvalGlobal", { color: "blue" });
             };
 
             const chunks = await runPlugin([simpleCssExtractor], [module], {
                 preEvalTransforms: [preEvalHandler],
             });
 
-            const css = getAllCss(chunks);
-            expect(css).toContain("color: blue");
-            expect(css).not.toContain("color: red");
+            expect(getAllCss(chunks)).toContain("color: blue");
         });
 
         it("pipeline is unaffected when preEvalTransforms array is empty", async () => {
@@ -769,6 +808,12 @@ describe("Builder", () => {
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
                 splitCss: true,
+                initializeStages: ctx.getInitializeStages(),
+                prepareAnalysis: ctx.getPrepareAnalysis(),
+                getFileData: ctx.getGetFileData(),
+                invalidateFiles: ctx.getInvalidateFiles(),
+                resetCrossFileState: ctx.getResetCrossFileState(),
+                getFilesToBundle: ctx.getGetFilesToBundle(),
             });
 
             const result = await builder.collectMochiCss();
@@ -808,6 +853,12 @@ describe("Builder", () => {
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
                 splitCss: true,
+                initializeStages: ctx.getInitializeStages(),
+                prepareAnalysis: ctx.getPrepareAnalysis(),
+                getFileData: ctx.getGetFileData(),
+                invalidateFiles: ctx.getInvalidateFiles(),
+                resetCrossFileState: ctx.getResetCrossFileState(),
+                getFilesToBundle: ctx.getGetFilesToBundle(),
             });
 
             const result = await builder.collectMochiCss();
@@ -850,6 +901,12 @@ describe("Builder", () => {
                         "// REPLACE_ME",
                         `export const x = css({ color: "purple" })`,
                     ),
+                initializeStages: ctx.getInitializeStages(),
+                prepareAnalysis: ctx.getPrepareAnalysis(),
+                getFileData: ctx.getGetFileData(),
+                invalidateFiles: ctx.getInvalidateFiles(),
+                resetCrossFileState: ctx.getResetCrossFileState(),
+                getFilesToBundle: ctx.getGetFilesToBundle(),
             });
 
             const result = await builder.collectMochiCss();
@@ -871,7 +928,7 @@ describe("Builder", () => {
             "test.ts",
         );
 
-        const sourceTransform: AstPostProcessor = (_index, { evaluator }) => {
+        const sourceTransform: AstPostProcessor = (_runner, { evaluator }) => {
             evaluator.setGlobal("__myGlobal", { color: "blue" });
         };
 

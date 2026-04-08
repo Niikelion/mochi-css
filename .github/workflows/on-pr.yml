@@ -82,3 +82,24 @@ jobs:
                         echo "No changeset found. Please add a changeset with 'yarn changeset'."
                         exit 1
                     fi
+            -   name: Check tsuki is bumped when suite packages are bumped
+                run: |
+                    suite_bumped=false
+                    tsuki_bumped=false
+                    for file in $(find .changeset -maxdepth 1 -name "*.md" ! -name "README.md"); do
+                        # Extract content between the first and second --- delimiters (frontmatter)
+                        frontmatter=$(awk '/^---$/{if(++n==2) exit} n==1' "$file")
+                        if echo "$frontmatter" | grep -q '"@mochi-css/' && ! echo "$frontmatter" | grep -qE '"@mochi-css/tsuki"'; then
+                            suite_bumped=true
+                        fi
+                        if echo "$frontmatter" | grep -q '"@mochi-css/tsuki"'; then
+                            tsuki_bumped=true
+                        fi
+                    done
+                    if [ "$suite_bumped" = true ] && [ "$tsuki_bumped" = false ]; then
+                        echo "ERROR: mochi-css suite packages are bumped but @mochi-css/tsuki is not included in any changeset."
+                        echo "tsuki's mochiPackage() uses its own version to determine which major version to install."
+                        echo "Please add a changeset for @mochi-css/tsuki."
+                        exit 1
+                    fi
+                    echo "OK: tsuki bump check passed."

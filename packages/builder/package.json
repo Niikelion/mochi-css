@@ -39,6 +39,7 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
+        "@mochi-css/core": "^4.0.0",
         "@swc/core": "^1.15.13",
         "dedent": "^1.7.1",
         "diff": "^8.0.3",

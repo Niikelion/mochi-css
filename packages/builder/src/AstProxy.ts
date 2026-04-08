@@ -1,5 +1,4 @@
 import * as SWC from "@swc/core"
-import { FileInfo, ProjectIndex } from "@/ProjectIndex"
 
 export type DirtySet = Set<SWC.ModuleItem>
 
@@ -57,31 +56,40 @@ export function createAstProxy(ast: SWC.Module): {
     return { proxy, dirtyItems }
 }
 
-type ProxiedFile = {
-    filePath: string
-    fileInfo: FileInfo
-    originalAst: SWC.Module
-    dirtyItems: DirtySet
-}
+export type MutableFileEntry = { filePath: string; ast: SWC.Module }
 
-export function wrapIndexWithProxies(index: ProjectIndex): {
+/**
+ * Wraps file ASTs in mutation-tracking proxies so that dirty files can be
+ * detected after a source-transform pass.
+ *
+ * The caller supplies an array of mutable file entries (e.g. from a stage's
+ * FileInput cache).  Each entry's `.ast` field is temporarily replaced with a
+ * proxy and restored when `getDirtyFiles()` is called.
+ */
+export function wrapFilesWithProxies(files: MutableFileEntry[]): {
     getDirtyFiles(): Set<string>
 } {
+    type ProxiedFile = {
+        entry: MutableFileEntry
+        originalAst: SWC.Module
+        dirtyItems: DirtySet
+    }
+
     const proxiedFiles: ProxiedFile[] = []
 
-    for (const [filePath, fileInfo] of index.files) {
-        const originalAst = fileInfo.ast
+    for (const entry of files) {
+        const originalAst = entry.ast
         const { proxy, dirtyItems } = createAstProxy(originalAst)
-        fileInfo.ast = proxy
-        proxiedFiles.push({ filePath, fileInfo, originalAst, dirtyItems })
+        entry.ast = proxy
+        proxiedFiles.push({ entry, originalAst, dirtyItems })
     }
 
     return {
         getDirtyFiles(): Set<string> {
             const dirty = new Set<string>()
-            for (const { filePath, fileInfo, originalAst, dirtyItems } of proxiedFiles) {
-                fileInfo.ast = originalAst
-                if (dirtyItems.size > 0) dirty.add(filePath)
+            for (const { entry, originalAst, dirtyItems } of proxiedFiles) {
+                entry.ast = originalAst
+                if (dirtyItems.size > 0) dirty.add(entry.filePath)
             }
             return dirty
         },

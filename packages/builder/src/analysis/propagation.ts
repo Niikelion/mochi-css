@@ -2,7 +2,7 @@ import * as SWC from "@swc/core"
 import { visit } from "@/Visitor"
 import type { Ref } from "./helpers"
 import { idToRef } from "./helpers"
-import type { BindingInfo, FileInfo } from "./types"
+import type { BindingInfo, FileView } from "./types"
 
 function bindingKey(filePath: string, ref: Ref): string {
     return `${filePath}:${ref.name}:${ref.id}`
@@ -10,8 +10,8 @@ function bindingKey(filePath: string, ref: Ref): string {
 
 export function propagateUsagesFromRef(
     analyzedBindings: Set<string>,
-    filesInfo: Map<string, FileInfo>,
-    fileInfo: FileInfo,
+    filesInfo: Map<string, FileView>,
+    fileInfo: FileView,
     ref: Ref,
 ): void {
     if (ref.id === undefined) return
@@ -22,10 +22,10 @@ export function propagateUsagesFromRef(
 
     const localImport = fileInfo.localImports.get(ref)
     if (localImport) {
-        const importedFileInfo = filesInfo.get(localImport.sourcePath)
-        const exportedRef = importedFileInfo?.exports.get(localImport.exportName)
-        if (importedFileInfo && exportedRef) {
-            propagateUsagesFromRef(analyzedBindings, filesInfo, importedFileInfo, exportedRef)
+        const importedFileView = filesInfo.get(localImport.sourcePath)
+        const exportedRef = importedFileView?.exports.get(localImport.exportName)
+        if (importedFileView && exportedRef) {
+            propagateUsagesFromRef(analyzedBindings, filesInfo, importedFileView, exportedRef)
         }
         const importBinding = fileInfo.moduleBindings.get(ref)
         if (importBinding) fileInfo.usedBindings.add(importBinding)
@@ -40,8 +40,8 @@ export function propagateUsagesFromRef(
 
 function propagateUsagesFromBinding(
     analyzedBindings: Set<string>,
-    filesInfo: Map<string, FileInfo>,
-    fileInfo: FileInfo,
+    filesInfo: Map<string, FileView>,
+    fileInfo: FileView,
     binding: BindingInfo,
 ): void {
     if (fileInfo.usedBindings.has(binding)) return
@@ -62,8 +62,8 @@ function propagateUsagesFromBinding(
 
 export function propagateUsagesFromExpr(
     analyzedBindings: Set<string>,
-    filesInfo: Map<string, FileInfo>,
-    fileInfo: FileInfo,
+    filesInfo: Map<string, FileView>,
+    fileInfo: FileView,
     expr: SWC.Expression,
 ): void {
     visit.expression(

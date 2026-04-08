@@ -1,1 +1,1 @@
-export type { StyleGenerator } from "@mochi-css/builder"
+export type { StyleGenerator } from "@mochi-css/plugins"

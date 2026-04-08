@@ -4,7 +4,17 @@ import {
     TransformationHookProvider,
 } from "./TransformationPipeline"
 import { globExToRegex } from "./globEx"
-import type { AstPostProcessor, EmitHook, OnDiagnostic, StageDefinition } from "@mochi-css/builder"
+import type {
+    AstPostProcessor,
+    EmitHook,
+    StageDefinition,
+    StageRunner,
+    MutableFileEntry,
+    Module,
+    ResolveImport,
+} from "@mochi-css/builder"
+import type { OnDiagnostic } from "@mochi-css/core"
+import type * as SWC from "@swc/core"
 
 type FileTransformOptions = {
     filePath: string
@@ -48,6 +58,34 @@ export interface EmitHookProvider {
 
 export interface CleanupHookProvider {
     register(fn: () => void): void
+}
+
+export interface InitializeStagesHookProvider {
+    register(
+        fn: (runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void,
+    ): void
+}
+
+export interface PrepareAnalysisHookProvider {
+    register(fn: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => void): void
+}
+
+export interface GetFileDataHookProvider {
+    register(fn: (runner: StageRunner) => MutableFileEntry[]): void
+}
+
+export interface InvalidateFilesHookProvider {
+    register(fn: (runner: StageRunner, dirtyFiles: Set<string>) => void): void
+}
+
+export interface ResetCrossFileStateHookProvider {
+    register(fn: (runner: StageRunner) => void): void
+}
+
+export interface GetFilesToBundleHookProvider {
+    register(
+        fn: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>,
+    ): void
 }
 
 class SourceTransformCollector implements SourceTransformHookProvider {
@@ -101,6 +139,118 @@ class CleanupCollector implements CleanupHookProvider {
     }
 }
 
+class InitializeStagesCollector implements InitializeStagesHookProvider {
+    private readonly fns: ((
+        runner: StageRunner,
+        modules: Module[],
+        resolveImport: ResolveImport,
+        onDiagnostic?: OnDiagnostic,
+    ) => void)[] = []
+
+    register(
+        fn: (runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void,
+    ): void {
+        this.fns.push(fn)
+    }
+
+    merged():
+        | ((runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void)
+        | undefined {
+        if (this.fns.length === 0) return undefined
+        const fns = [...this.fns]
+        return (runner, modules, resolveImport, onDiagnostic) => {
+            for (const fn of fns) fn(runner, modules, resolveImport, onDiagnostic)
+        }
+    }
+}
+
+class PrepareAnalysisCollector implements PrepareAnalysisHookProvider {
+    private readonly fns: ((runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => void)[] = []
+
+    register(fn: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => void): void {
+        this.fns.push(fn)
+    }
+
+    merged(): ((runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => void) | undefined {
+        if (this.fns.length === 0) return undefined
+        const fns = [...this.fns]
+        return (runner, markedForEval) => {
+            for (const fn of fns) fn(runner, markedForEval)
+        }
+    }
+}
+
+class GetFileDataCollector implements GetFileDataHookProvider {
+    private readonly fns: ((runner: StageRunner) => MutableFileEntry[])[] = []
+
+    register(fn: (runner: StageRunner) => MutableFileEntry[]): void {
+        this.fns.push(fn)
+    }
+
+    merged(): ((runner: StageRunner) => MutableFileEntry[]) | undefined {
+        if (this.fns.length === 0) return undefined
+        const fns = [...this.fns]
+        return (runner) => fns.flatMap((fn) => fn(runner))
+    }
+}
+
+class InvalidateFilesCollector implements InvalidateFilesHookProvider {
+    private readonly fns: ((runner: StageRunner, dirtyFiles: Set<string>) => void)[] = []
+
+    register(fn: (runner: StageRunner, dirtyFiles: Set<string>) => void): void {
+        this.fns.push(fn)
+    }
+
+    merged(): ((runner: StageRunner, dirtyFiles: Set<string>) => void) | undefined {
+        if (this.fns.length === 0) return undefined
+        const fns = [...this.fns]
+        return (runner, dirtyFiles) => {
+            for (const fn of fns) fn(runner, dirtyFiles)
+        }
+    }
+}
+
+class ResetCrossFileStateCollector implements ResetCrossFileStateHookProvider {
+    private readonly fns: ((runner: StageRunner) => void)[] = []
+
+    register(fn: (runner: StageRunner) => void): void {
+        this.fns.push(fn)
+    }
+
+    merged(): ((runner: StageRunner) => void) | undefined {
+        if (this.fns.length === 0) return undefined
+        const fns = [...this.fns]
+        return (runner) => {
+            for (const fn of fns) fn(runner)
+        }
+    }
+}
+
+class GetFilesToBundleCollector implements GetFilesToBundleHookProvider {
+    private readonly fns: ((
+        runner: StageRunner,
+        markedForEval: Map<string, Set<SWC.Expression>>,
+    ) => Record<string, string | null>)[] = []
+
+    register(
+        fn: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>,
+    ): void {
+        this.fns.push(fn)
+    }
+
+    merged():
+        | ((runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>)
+        | undefined {
+        if (this.fns.length === 0) return undefined
+        const fns = [...this.fns]
+        return (runner, markedForEval) => {
+            const result: Record<string, string | null> = {}
+            for (const fn of fns) Object.assign(result, fn(runner, markedForEval))
+            return result
+        }
+    }
+}
+
 export interface PluginContext {
     readonly filePreProcess: FileTransformationHookProvider
     readonly sourceTransforms: SourceTransformHookProvider
@@ -108,6 +258,12 @@ export interface PluginContext {
     readonly emitHooks: EmitHookProvider
     readonly cleanup: CleanupHookProvider
     readonly onDiagnostic: OnDiagnostic
+    readonly initializeStages: InitializeStagesHookProvider
+    readonly prepareAnalysis: PrepareAnalysisHookProvider
+    readonly getFileData: GetFileDataHookProvider
+    readonly invalidateFiles: InvalidateFilesHookProvider
+    readonly resetCrossFileState: ResetCrossFileStateHookProvider
+    readonly getFilesToBundle: GetFilesToBundleHookProvider
 }
 
 export class FullContext implements PluginContext {
@@ -117,6 +273,12 @@ export class FullContext implements PluginContext {
     readonly emitHooks = new EmitHookCollector()
     readonly cleanup = new CleanupCollector()
     readonly onDiagnostic: OnDiagnostic
+    readonly initializeStages = new InitializeStagesCollector()
+    readonly prepareAnalysis = new PrepareAnalysisCollector()
+    readonly getFileData = new GetFileDataCollector()
+    readonly invalidateFiles = new InvalidateFilesCollector()
+    readonly resetCrossFileState = new ResetCrossFileStateCollector()
+    readonly getFilesToBundle = new GetFilesToBundleCollector()
 
     constructor(onDiagnostic: OnDiagnostic) {
         this.onDiagnostic = onDiagnostic

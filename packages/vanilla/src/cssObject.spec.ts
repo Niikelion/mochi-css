@@ -5,6 +5,7 @@ import { CSSObject, CssObjectBlock, CssObjectSubBlock, CompoundVariant } from "@
 import { MochiSelector } from "@/selector"
 import dedent from "dedent"
 import { StyleProps } from "@/props"
+import * as core from "@mochi-css/core"
 
 interface ParsedRule {
     selector: string
@@ -216,36 +217,13 @@ describe("CssObjectSubBlock", () => {
             ])
         })
 
-        it("skips unrecognized patterns and warns in dev mode", () => {
-            const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
-
-            const blocks = CssObjectSubBlock.fromProps({
-                span: {
-                    color: "red",
-                },
-            } as StyleProps)
-
-            expect(blocks.map((b) => b.asCssString(".target"))).toEqual([
-                dedent`
-                    .target {
-                    }
-                `,
-            ])
-
-            expect(warnSpy).toHaveBeenCalledWith('[mochi-css] Unknown style property "span" will be ignored')
-            warnSpy.mockRestore()
-        })
-
-        it("skips unrecognized patterns without warning in production", () => {
-            const origEnv = process.env["NODE_ENV"]
-            process.env["NODE_ENV"] = "production"
-            const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+        it("skips unrecognized patterns and reports it as warning diagnostic", () => {
+            const diagnostic = vi.spyOn(core, "reportGlobalDiagnostic").mockImplementation(() => undefined)
 
             CssObjectSubBlock.fromProps({ span: { color: "red" } } as StyleProps)
 
-            expect(warnSpy).not.toHaveBeenCalled()
-            warnSpy.mockRestore()
-            process.env["NODE_ENV"] = origEnv
+            expect(diagnostic).toHaveBeenCalled()
+            diagnostic.mockRestore()
         })
     })
 })

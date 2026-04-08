@@ -180,7 +180,7 @@ export function css<V extends AllVariants[]>(
             continue
         }
         if (typeof p !== "object") continue
-        if (p instanceof MochiCSS) {
+        if (isMochiCSS(p)) {
             cssToMerge.push(p)
         } else {
             cssToMerge.push(MochiCSS.from(new CSSObject<AllVariants>(p)))

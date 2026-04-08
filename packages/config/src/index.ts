@@ -1,4 +1,5 @@
-export type { RootEntry, OnDiagnostic } from "@mochi-css/builder"
+export type { RootEntry } from "@mochi-css/builder"
+export type { OnDiagnostic } from "@mochi-css/core"
 export * from "./merge"
 export * from "./config"
 export { TransformationPipeline, FullContext } from "./plugin"
@@ -8,7 +9,12 @@ export type {
     StageHookProvider,
     EmitHookProvider,
     CleanupHookProvider,
+    InitializeStagesHookProvider,
+    PrepareAnalysisHookProvider,
+    GetFileDataHookProvider,
+    InvalidateFilesHookProvider,
+    ResetCrossFileStateHookProvider,
+    GetFilesToBundleHookProvider,
     TransformationUser,
     TransformationHookProvider,
 } from "./plugin"
-export * from "./styledIdPlugin"

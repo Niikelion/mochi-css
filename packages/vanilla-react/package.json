@@ -80,6 +80,6 @@
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
-        "react": "^18 || ^19"
+        "react": "^19"
     }
 }
