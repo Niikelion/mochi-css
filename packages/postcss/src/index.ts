@@ -129,6 +129,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                 bundler: opts?.bundler ?? defaultBundler,
                 runner: opts?.runner ?? defaultRunner,
                 splitCss: resolved.splitCss,
+                debug: resolved.debug,
                 filePreProcess: ({ content, filePath }) => context.filePreProcess.transform(content, { filePath }),
                 sourceTransforms: [...context.sourceTransforms.getAll()],
                 emitHooks: [...context.emitHooks.getAll()],

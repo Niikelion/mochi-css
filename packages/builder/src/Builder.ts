@@ -105,6 +105,8 @@ export type BuilderOptions = {
         runner: StageRunner,
         markedForEval: Map<string, Set<SWC.Expression>>,
     ) => Record<string, string | null>
+    /** When `true`, logs extra information (e.g. bundled code on execution failure) to help diagnose issues. */
+    debug?: boolean
 }
 
 /**
@@ -242,7 +244,14 @@ export class Builder {
             await evaluator.evaluate(code)
         } catch (err) {
             const message = getErrorMessage(err)
-            throw new MochiError("MOCHI_EXEC", message, undefined, err)
+            if (this.options.debug) {
+                this.options.onDiagnostic?.({
+                    code: "MOCHI_DEBUG",
+                    message: `bundled code that failed to execute:\n${code}`,
+                    severity: "debug",
+                })
+            }
+            throw new MochiError("MOCHI_EXEC", message, "internal:/tmp", err)
         }
     }
 
