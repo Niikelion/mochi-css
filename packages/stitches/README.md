@@ -16,12 +16,12 @@ Add the builder plugin to your `mochi.config.ts`:
 
 ```typescript
 // mochi.config.ts
-import { defineConfig } from "@mochi-css/config"
-import { stitchesPlugin } from "@mochi-css/stitches-builder"
+import { defineConfig } from "@mochi-css/config";
+import { stitchesPlugin } from "@mochi-css/stitches-builder";
 
 export default defineConfig({
     plugins: [stitchesPlugin()],
-})
+});
 ```
 
 ---
@@ -31,44 +31,48 @@ export default defineConfig({
 Creates a bound set of styling functions configured with your design tokens, media queries, and utilities.
 
 ```typescript
-import { createStitches } from "@mochi-css/stitches"
+import { createStitches } from "@mochi-css/stitches";
 
-const { css, styled, keyframes, globalCss, createTheme, theme, config } = createStitches({
-    prefix: "app",
-    media: {
-        sm: "(min-width: 640px)",
-        md: "(min-width: 768px)",
-        lg: "(min-width: 1024px)",
-    },
-    theme: {
-        colors: {
-            primary: "#3b82f6",
-            danger:  "#ef4444",
+const { css, styled, keyframes, globalCss, createTheme, theme, config } =
+    createStitches({
+        prefix: "app",
+        media: {
+            sm: "(min-width: 640px)",
+            md: "(min-width: 768px)",
+            lg: "(min-width: 1024px)",
         },
-        space: {
-            1: "4px",
-            2: "8px",
-            4: "16px",
+        theme: {
+            colors: {
+                primary: "#3b82f6",
+                danger: "#ef4444",
+            },
+            space: {
+                1: "4px",
+                2: "8px",
+                4: "16px",
+            },
         },
-    },
-    utils: {
-        mx: (value: unknown) => ({ marginLeft: value, marginRight: value }),
-        px: (value: unknown) => ({ paddingLeft: value, paddingRight: value }),
-    },
-})
+        utils: {
+            mx: (value: unknown) => ({ marginLeft: value, marginRight: value }),
+            px: (value: unknown) => ({
+                paddingLeft: value,
+                paddingRight: value,
+            }),
+        },
+    });
 ```
 
 ### Returned functions
 
-| Property | Description |
-|----------|-------------|
-| `css(...styles)` | Creates a `MochiCSS` class, same as `@mochi-css/vanilla` `css()` |
+| Property                    | Description                                                            |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `css(...styles)`            | Creates a `MochiCSS` class, same as `@mochi-css/vanilla` `css()`       |
 | `styled(target, ...styles)` | Creates a typed React component, same as `@mochi-css/react` `styled()` |
-| `keyframes(stops)` | Defines a CSS animation |
-| `globalCss(styles)` | Injects global CSS (returns a no-op function) |
-| `createTheme(tokens)` | Creates an additional theme class overriding design tokens |
-| `theme` | Token reference object — use `theme.colors.primary` in style values |
-| `config` | The resolved config object passed to `createStitches` |
+| `keyframes(stops)`          | Defines a CSS animation                                                |
+| `globalCss(styles)`         | Injects global CSS (returns a no-op function)                          |
+| `createTheme(tokens)`       | Creates an additional theme class overriding design tokens             |
+| `theme`                     | Token reference object — use `theme.colors.primary` in style values    |
+| `config`                    | The resolved config object passed to `createStitches`                  |
 
 ---
 
@@ -80,14 +84,14 @@ Token values are referenced in styles using the `$` prefix:
 const { css, theme } = createStitches({
     theme: {
         colors: { blue: "#3b82f6" },
-        space:  { 4: "16px" },
+        space: { 4: "16px" },
     },
-})
+});
 
 const button = css({
-    color: "$blue",        // → var(--colors-blue)
-    padding: "$4",         // → var(--space-4)
-})
+    color: "$blue", // → var(--colors-blue)
+    padding: "$4", // → var(--space-4)
+});
 ```
 
 Token references are automatically mapped to CSS custom properties at build time.
@@ -102,7 +106,7 @@ Use `$$name` to define a component-local CSS variable:
 const button = css({
     $$shadowColor: "rgba(0,0,0,0.2)",
     boxShadow: "0 2px 4px $$shadowColor",
-})
+});
 ```
 
 ---
@@ -114,7 +118,7 @@ Use the keys from `media` as responsive variant keys:
 ```typescript
 const { css } = createStitches({
     media: { sm: "(min-width: 640px)" },
-})
+});
 
 const box = css({
     variants: {
@@ -123,7 +127,7 @@ const box = css({
             large: { padding: 16 },
         },
     },
-})
+});
 
 // <Box size={{ "@sm": "large" }} />
 ```
@@ -137,11 +141,11 @@ Creates an additional theme by overriding token values. Returns a class name to 
 ```typescript
 const { createTheme, theme } = createStitches({
     theme: { colors: { primary: "blue" } },
-})
+});
 
 const darkTheme = createTheme({
     colors: { primary: "navy" },
-})
+});
 
 // <div className={darkTheme.className}>...</div>
 ```
@@ -150,10 +154,10 @@ const darkTheme = createTheme({
 
 ## `StitchesConfig`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `prefix` | `string` | Optional prefix for generated class names and CSS variables |
-| `media` | `Record<string, string>` | Named media query breakpoints |
-| `theme` | `StitchesTheme` | Design token scales (colors, space, sizes, etc.) |
+| Field      | Type                     | Description                                                        |
+| ---------- | ------------------------ | ------------------------------------------------------------------ |
+| `prefix`   | `string`                 | Optional prefix for generated class names and CSS variables        |
+| `media`    | `Record<string, string>` | Named media query breakpoints                                      |
+| `theme`    | `StitchesTheme`          | Design token scales (colors, space, sizes, etc.)                   |
 | `themeMap` | `Record<string, string>` | Maps CSS properties to token scales. Defaults to `defaultThemeMap` |
-| `utils` | `StitchesUtils` | Custom CSS property shorthands |
+| `utils`    | `StitchesUtils`          | Custom CSS property shorthands                                     |

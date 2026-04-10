@@ -2,11 +2,28 @@ import { defineConfig as vanillaDefineConfig, VanillaCssExtractor } from "@mochi
 import type { StyleExtractor } from "@mochi-css/plugins"
 import { styledIdPlugin } from "@mochi-css/plugins"
 import type { Config } from "@mochi-css/config"
+import { css } from "@mochi-css/vanilla"
 
 export { styledIdPlugin } from "@mochi-css/plugins"
 
-const mochiStyledFunctionExtractor = new VanillaCssExtractor("@mochi-css/vanilla-react", "styled", (call) =>
-    call.arguments.map((a) => a.expression).slice(1),
+class ComponentMock {
+    constructor(public readonly selector: string) {
+        /* empty */
+    }
+
+    toString() {
+        return this.selector
+    }
+}
+
+const mochiStyledFunctionExtractor = new VanillaCssExtractor(
+    "@mochi-css/vanilla-react",
+    "styled",
+    (call) => call.arguments.map((a) => a.expression).slice(1),
+    (...args: unknown[]) => {
+        const res = (css as (...args: unknown[]) => { get selector(): string })(...args)
+        return new ComponentMock(res.selector)
+    },
 )
 
 export function defineConfig(config: Partial<Config> & { extractors?: StyleExtractor[] }): Partial<Config> {

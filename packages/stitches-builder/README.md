@@ -19,12 +19,12 @@ Add `stitchesPlugin()` to your `mochi.config.ts`:
 
 ```typescript
 // mochi.config.ts
-import { defineConfig } from "@mochi-css/config"
-import { stitchesPlugin } from "@mochi-css/stitches-builder"
+import { defineConfig } from "@mochi-css/config";
+import { stitchesPlugin } from "@mochi-css/stitches-builder";
 
 export default defineConfig({
     plugins: [stitchesPlugin()],
-})
+});
 ```
 
 This is the only setup required. The plugin registers all the extractors and generators needed to process `createStitches` calls at build time.
@@ -44,7 +44,7 @@ This is the only setup required. The plugin registers all the extractors and gen
 Returns a `MochiPlugin` that registers `createStitchesExtractor` via `createExtractorsPlugin`.
 
 ```typescript
-import { stitchesPlugin } from "@mochi-css/stitches-builder"
+import { stitchesPlugin } from "@mochi-css/stitches-builder";
 ```
 
 ### `createStitchesExtractor`
@@ -52,20 +52,20 @@ import { stitchesPlugin } from "@mochi-css/stitches-builder"
 The root `StyleExtractor` for `createStitches`. Pass to `createExtractorsPlugin` if you need to compose it manually:
 
 ```typescript
-import { createExtractorsPlugin } from "@mochi-css/plugins"
-import { createStitchesExtractor } from "@mochi-css/stitches-builder"
+import { createExtractorsPlugin } from "@mochi-css/plugins";
+import { createStitchesExtractor } from "@mochi-css/stitches-builder";
 
-const plugin = createExtractorsPlugin([createStitchesExtractor])
+const plugin = createExtractorsPlugin([createStitchesExtractor]);
 ```
 
 ### Individual generators
 
 Exported for advanced use cases:
 
-| Export | Description |
-|--------|-------------|
-| `StitchesGenerator` | Root generator for `createStitches(config)` |
-| `StitchesCssGenerator` | Generator for `css()` / `styled()` — runs the full preprocess pipeline |
-| `StitchesGlobalCssGenerator` | Generator for `globalCss()` |
-| `StitchesKeyframesGenerator` | Generator for `keyframes()` |
-| `StitchesCreateThemeGenerator` | Generator for `createTheme()` — emits `.th-xxx { --token: value; }` |
+| Export                         | Description                                                            |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `StitchesGenerator`            | Root generator for `createStitches(config)`                            |
+| `StitchesCssGenerator`         | Generator for `css()` / `styled()` — runs the full preprocess pipeline |
+| `StitchesGlobalCssGenerator`   | Generator for `globalCss()`                                            |
+| `StitchesKeyframesGenerator`   | Generator for `keyframes()`                                            |
+| `StitchesCreateThemeGenerator` | Generator for `createTheme()` — emits `.th-xxx { --token: value; }`    |

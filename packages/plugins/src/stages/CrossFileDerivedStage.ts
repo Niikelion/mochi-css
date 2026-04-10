@@ -1,103 +1,75 @@
-import * as SWC from "@swc/core";
-import type { StyleExtractor, DerivedExtractorBinding } from "../types";
-import { visit } from "@mochi-css/builder";
-import { defineStage } from "@mochi-css/builder";
-import type { CacheRegistry } from "@mochi-css/builder";
-import { RefMap } from "@mochi-css/builder";
-import { idToRef, type Ref } from "@mochi-css/builder";
-import type { StageDefinition } from "@mochi-css/builder";
-import {
-    makeDerivedExtractorStage,
-    type DerivedExtractorStageOut,
-} from "./DerivedExtractorStage";
-import { makeBindingStage, type BindingStageOut } from "./BindingStage";
+import * as SWC from "@swc/core"
+import type { StyleExtractor, DerivedExtractorBinding } from "../types"
+import { visit } from "@mochi-css/builder"
+import { defineStage } from "@mochi-css/builder"
+import type { CacheRegistry } from "@mochi-css/builder"
+import { RefMap } from "@mochi-css/builder"
+import { idToRef, type Ref } from "@mochi-css/builder"
+import type { StageDefinition } from "@mochi-css/builder"
+import { makeDerivedExtractorStage, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
+import { makeBindingStage, type BindingStageOut } from "./BindingStage"
 
 export type CrossFileExtra = {
-    additionalDerivedBindings: RefMap<DerivedExtractorBinding>;
-    additionalStyleExprs: Set<SWC.Expression>;
-    additionalExtractedExprs: Map<StyleExtractor, SWC.Expression[]>;
-    additionalExtractedCallExprs: Map<StyleExtractor, SWC.CallExpression[]>;
-    usedImportRefs: Set<Ref>;
-};
+    additionalDerivedBindings: RefMap<DerivedExtractorBinding>
+    additionalStyleExprs: Set<SWC.Expression>
+    additionalExtractedExprs: Map<StyleExtractor, SWC.Expression[]>
+    additionalExtractedCallExprs: Map<StyleExtractor, SWC.CallExpression[]>
+    usedImportRefs: Set<Ref>
+}
 
-function scanForDerivedCalls(
-    ast: SWC.Module,
-    ref: Ref,
-    binding: DerivedExtractorBinding,
-    extra: CrossFileExtra,
-): void {
-    let found = false;
+function scanForDerivedCalls(ast: SWC.Module, ref: Ref, binding: DerivedExtractorBinding, extra: CrossFileExtra): void {
+    let found = false
     visit.module(
         ast,
         {
             callExpression(node, { descend }) {
                 if (node.callee.type === "Identifier") {
-                    const calleeRef = idToRef(node.callee);
-                    if (
-                        calleeRef.name === ref.name &&
-                        calleeRef.id === ref.id
-                    ) {
+                    const calleeRef = idToRef(node.callee)
+                    if (calleeRef.name === ref.name && calleeRef.id === ref.id) {
                         if (!found) {
-                            found = true;
-                            extra.usedImportRefs.add(ref);
+                            found = true
+                            extra.usedImportRefs.add(ref)
                         }
-                        const staticArgs =
-                            binding.extractor.extractStaticArgs(node);
-                        staticArgs.forEach((style) =>
-                            extra.additionalStyleExprs.add(style),
-                        );
+                        const staticArgs = binding.extractor.extractStaticArgs(node)
+                        staticArgs.forEach((style) => extra.additionalStyleExprs.add(style))
 
-                        const existing = extra.additionalExtractedExprs.get(
-                            binding.extractor,
-                        );
+                        const existing = extra.additionalExtractedExprs.get(binding.extractor)
                         if (existing) {
-                            existing.push(...staticArgs);
+                            existing.push(...staticArgs)
                         } else {
-                            extra.additionalExtractedExprs.set(
-                                binding.extractor,
-                                [...staticArgs],
-                            );
+                            extra.additionalExtractedExprs.set(binding.extractor, [...staticArgs])
                         }
                         if (staticArgs.length > 0) {
-                            const existingCalls =
-                                extra.additionalExtractedCallExprs.get(
-                                    binding.extractor,
-                                );
+                            const existingCalls = extra.additionalExtractedCallExprs.get(binding.extractor)
                             if (existingCalls) {
-                                existingCalls.push(node);
+                                existingCalls.push(node)
                             } else {
-                                extra.additionalExtractedCallExprs.set(
-                                    binding.extractor,
-                                    [node],
-                                );
+                                extra.additionalExtractedCallExprs.set(binding.extractor, [node])
                             }
                         }
                     }
                 }
-                descend(null);
+                descend(null)
             },
         },
         null,
-    );
+    )
 }
 
-export type CrossFileResult = Map<string, CrossFileExtra>;
+export type CrossFileResult = Map<string, CrossFileExtra>
 
 export type CrossFileDerivedStageOut = {
-    crossFileResult: import("@mochi-css/builder").ProjectCache<CrossFileResult>;
-    fileData: DerivedExtractorStageOut["fileData"];
-};
+    crossFileResult: import("@mochi-css/builder").ProjectCache<CrossFileResult>
+    fileData: DerivedExtractorStageOut["fileData"]
+}
 
-export const CROSS_FILE_DERIVED_STAGE = Symbol.for("CrossFileDerivedStage");
+export const CROSS_FILE_DERIVED_STAGE = Symbol.for("CrossFileDerivedStage")
 
 export function makeCrossFileDerivedStage(
     derivedStage: ReturnType<typeof makeDerivedExtractorStage>,
     bindingStage: ReturnType<typeof makeBindingStage>,
 ): StageDefinition<
-    [
-        ReturnType<typeof makeDerivedExtractorStage>,
-        ReturnType<typeof makeBindingStage>,
-    ],
+    [ReturnType<typeof makeDerivedExtractorStage>, ReturnType<typeof makeBindingStage>],
     CrossFileDerivedStageOut
 > {
     const stage = defineStage({
@@ -107,116 +79,72 @@ export function makeCrossFileDerivedStage(
             derivedInst: DerivedExtractorStageOut,
             bindingInst: BindingStageOut,
         ): CrossFileDerivedStageOut {
-            const filePaths = registry.getFilePaths();
+            const filePaths = registry.getFilePaths()
 
             const crossFileResult = registry.projectCache(
-                () =>
-                    filePaths.flatMap((f) => [
-                        derivedInst.derived.for(f),
-                        bindingInst.fileBindings.for(f),
-                    ]),
+                () => filePaths.flatMap((f) => [derivedInst.derived.for(f), bindingInst.fileBindings.for(f)]),
                 (): CrossFileResult => {
-                    const result = new Map<string, CrossFileExtra>();
+                    const result = new Map<string, CrossFileExtra>()
 
                     const getExtra = (filePath: string): CrossFileExtra => {
-                        const existing = result.get(filePath);
-                        if (existing) return existing;
+                        const existing = result.get(filePath)
+                        if (existing) return existing
                         const extra: CrossFileExtra = {
-                            additionalDerivedBindings:
-                                new RefMap<DerivedExtractorBinding>(),
+                            additionalDerivedBindings: new RefMap<DerivedExtractorBinding>(),
                             additionalStyleExprs: new Set<SWC.Expression>(),
-                            additionalExtractedExprs: new Map<
-                                StyleExtractor,
-                                SWC.Expression[]
-                            >(),
-                            additionalExtractedCallExprs: new Map<
-                                StyleExtractor,
-                                SWC.CallExpression[]
-                            >(),
+                            additionalExtractedExprs: new Map<StyleExtractor, SWC.Expression[]>(),
+                            additionalExtractedCallExprs: new Map<StyleExtractor, SWC.CallExpression[]>(),
                             usedImportRefs: new Set<Ref>(),
-                        };
-                        result.set(filePath, extra);
-                        return extra;
-                    };
+                        }
+                        result.set(filePath, extra)
+                        return extra
+                    }
 
-                    let changed = true;
+                    let changed = true
                     while (changed) {
-                        changed = false;
+                        changed = false
                         for (const filePath of filePaths) {
-                            const { localImports } = bindingInst.fileBindings
-                                .for(filePath)
-                                .get();
-                            const { derivedBindings } = derivedInst.derived
-                                .for(filePath)
-                                .get();
-                            const extra = getExtra(filePath);
+                            const { localImports } = bindingInst.fileBindings.for(filePath).get()
+                            const { derivedBindings } = derivedInst.derived.for(filePath).get()
+                            const extra = getExtra(filePath)
 
                             for (const localImport of localImports.values()) {
-                                const { exportedDerivedExtractors } =
-                                    bindingInst.fileBindings
-                                        .for(localImport.sourcePath)
-                                        .get();
+                                const { exportedDerivedExtractors } = bindingInst.fileBindings
+                                    .for(localImport.sourcePath)
+                                    .get()
 
-                                const derivedBinding =
-                                    exportedDerivedExtractors.get(
-                                        localImport.exportName,
-                                    );
-                                if (!derivedBinding) continue;
-                                if (derivedBindings.has(localImport.localRef))
-                                    continue;
-                                if (
-                                    extra.additionalDerivedBindings.has(
-                                        localImport.localRef,
-                                    )
-                                )
-                                    continue;
+                                const derivedBinding = exportedDerivedExtractors.get(localImport.exportName)
+                                if (!derivedBinding) continue
+                                if (derivedBindings.has(localImport.localRef)) continue
+                                if (extra.additionalDerivedBindings.has(localImport.localRef)) continue
 
-                                const data = derivedInst.fileData.cache
-                                    .for(filePath)
-                                    .get();
-                                const { moduleBindings } =
-                                    bindingInst.fileBindings
-                                        .for(filePath)
-                                        .get();
+                                const data = derivedInst.fileData.cache.for(filePath).get()
+                                const { moduleBindings } = bindingInst.fileBindings.for(filePath).get()
 
-                                const importedBinding: DerivedExtractorBinding =
-                                    {
-                                        extractor: derivedBinding.extractor,
-                                        parentExtractor:
-                                            derivedBinding.parentExtractor,
-                                        parentCallExpression:
-                                            derivedBinding.parentCallExpression,
-                                        propertyName:
-                                            derivedBinding.propertyName,
-                                        localIdentifier:
-                                            moduleBindings.get(
-                                                localImport.localRef,
-                                            )?.identifier ??
-                                            derivedBinding.localIdentifier,
-                                    };
+                                const importedBinding: DerivedExtractorBinding = {
+                                    extractor: derivedBinding.extractor,
+                                    parentExtractor: derivedBinding.parentExtractor,
+                                    parentCallExpression: derivedBinding.parentCallExpression,
+                                    propertyName: derivedBinding.propertyName,
+                                    localIdentifier:
+                                        moduleBindings.get(localImport.localRef)?.identifier ??
+                                        derivedBinding.localIdentifier,
+                                }
 
-                                extra.additionalDerivedBindings.set(
-                                    localImport.localRef,
-                                    importedBinding,
-                                );
-                                scanForDerivedCalls(
-                                    data.ast,
-                                    localImport.localRef,
-                                    importedBinding,
-                                    extra,
-                                );
-                                changed = true;
+                                extra.additionalDerivedBindings.set(localImport.localRef, importedBinding)
+                                scanForDerivedCalls(data.ast, localImport.localRef, importedBinding, extra)
+                                changed = true
                             }
                         }
                     }
 
-                    return result;
+                    return result
                 },
-            );
+            )
 
-            return { crossFileResult, fileData: derivedInst.fileData };
+            return { crossFileResult, fileData: derivedInst.fileData }
         },
-    });
+    })
 
-    return Object.assign(stage, { [CROSS_FILE_DERIVED_STAGE]: true as const });
+    return Object.assign(stage, { [CROSS_FILE_DERIVED_STAGE]: true as const })
 }

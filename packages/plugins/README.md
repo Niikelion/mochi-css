@@ -67,12 +67,12 @@ const builder = new Builder({
 })
 ```
 
-| Method | Returns |
-|--------|---------|
-| `getStages()` | `readonly StageDefinition[]` |
-| `getSourceTransforms()` | `AstPostProcessor[]` |
-| `getEmitHooks()` | `EmitHook[]` |
-| `runCleanup()` | calls all registered cleanup functions |
+| Method                  | Returns                                |
+| ----------------------- | -------------------------------------- |
+| `getStages()`           | `readonly StageDefinition[]`           |
+| `getSourceTransforms()` | `AstPostProcessor[]`                   |
+| `getEmitHooks()`        | `EmitHook[]`                           |
+| `runCleanup()`          | calls all registered cleanup functions |
 
 ---
 

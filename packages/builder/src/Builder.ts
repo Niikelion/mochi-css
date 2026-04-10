@@ -105,8 +105,12 @@ export type BuilderOptions = {
         runner: StageRunner,
         markedForEval: Map<string, Set<SWC.Expression>>,
     ) => Record<string, string | null>
+
     /** When `true`, logs extra information (e.g. bundled code on execution failure) to help diagnose issues. */
     debug?: boolean
+
+    /** Specifies path to the ts config for the project */
+    tsConfigPath?: string
 }
 
 /**
@@ -230,12 +234,22 @@ export class Builder {
 
         fileLookup[rootPath] = [rootImports, rootFileSuffix].join("\n\n")
 
-        // Bundle into single file
         try {
-            return await this.options.bundler.bundle(rootPath, fileLookup)
+            // Bundle into single file
+            return await this.options.bundler.bundle(rootPath, fileLookup, this.options.tsConfigPath)
         } catch (err) {
+            if (this.options.debug) {
+                for (const [path, code] of Object.entries(fileLookup)) {
+                    this.options.onDiagnostic?.({
+                        severity: "debug",
+                        file: path,
+                        code: "MOCHI_BUNDLE_INPUT",
+                        message: `\n${code}`,
+                    })
+                }
+            }
             const message = getErrorMessage(err)
-            throw new MochiError("MOCHI_BUNDLE", message, undefined, err)
+            throw new MochiError("MOCHI_BUNDLE", message, rootPath, err)
         }
     }
 

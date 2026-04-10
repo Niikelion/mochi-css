@@ -1,12 +1,18 @@
-import type { StyleGenerator } from "@mochi-css/plugins"
+import { StyleGenerator } from "@mochi-css/plugins"
 import type { OnDiagnostic } from "@mochi-css/builder"
 import { getErrorMessage } from "@mochi-css/builder"
-import { GlobalCssObject, GlobalCssStyles } from "../index"
+import { globalCss, GlobalCssObject, GlobalCssStyles } from "../index"
 
-export class VanillaGlobalCssGenerator implements StyleGenerator {
+export class VanillaGlobalCssGenerator extends StyleGenerator {
     private readonly collectedStyles: { source: string; styles: GlobalCssStyles }[] = []
 
-    constructor(private readonly onDiagnostic?: OnDiagnostic) {}
+    constructor(private readonly onDiagnostic?: OnDiagnostic) {
+        super()
+    }
+
+    override mockFunction(...args: unknown[]): unknown {
+        return (globalCss as (...args: unknown[]) => unknown)(...args)
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         if (args.length === 0 || args[0] == null || typeof args[0] !== "object") {

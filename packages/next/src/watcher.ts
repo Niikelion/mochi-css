@@ -71,6 +71,9 @@ function createBuilder(resolved: Awaited<ReturnType<typeof resolveConfig>>, root
     for (const plugin of resolved.plugins) {
         plugin.onLoad?.(context)
     }
+
+    //TODO: this looks messy and we probably missed some props
+    //TODO: make a helper that constructs builder from config and move it to config to avoid confusion
     return new Builder({
         roots,
         stages: [...context.stages.getAll()],
@@ -88,6 +91,10 @@ function createBuilder(resolved: Awaited<ReturnType<typeof resolveConfig>>, root
         invalidateFiles: context.invalidateFiles.merged(),
         resetCrossFileState: context.resetCrossFileState.merged(),
         getFilesToBundle: context.getFilesToBundle.merged(),
+        debug: resolved.debug,
+        onDiagnostic: context.onDiagnostic,
+        emitDir: resolved.tmpDir,
+        tsConfigPath: resolved.tsConfigPath,
     })
 }
 

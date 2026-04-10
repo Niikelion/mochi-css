@@ -89,21 +89,21 @@ class Builder {
 
 #### `BuilderOptions`
 
-| Option               | Type                         | Description                                                                                                                                                     |
-| -------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roots`              | `RootEntry[]`                | Directories (or named root entries) scanned recursively for source files.                                                                                       |
-| `stages`             | `StageDefinition[]`          | Analysis pipeline stages. Populated by calling `plugin.onLoad(ctx)` and passing `ctx.stages.getAll()`. |
-| `bundler`            | `Bundler`                    | Bundler implementation. Use `RolldownBundler`.                                                          |
-| `runner`             | `Runner`                     | Code runner implementation. Use `VmRunner`.                                                             |
-| `splitCss`           | `boolean`                    | When `true`, CSS is split per source file instead of merged. Default: `false`.                          |
-| `onDiagnostic`       | `function`                   | Callback for structured warnings and non-fatal errors.                                                  |
-| `filePreProcess`     | `function`                   | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string.           |
-| `sourceTransforms`   | `AstPostProcessor[]`         | Hooks that run after analysis. May mutate AST nodes. Mutations persist in the canonical index.          |
-| `preEvalTransforms`  | `AstPostProcessor[]`         | Hooks that run on a deep copy of the ASTs before evaluation. Mutations do NOT persist in the canonical index. |
-| `postEvalTransforms` | `AstPostProcessor[]`         | Hooks that run after execution. The evaluator is populated — use `context.evaluator.getTrackedValue()` to read runtime values. |
-| `emitHooks`          | `EmitHook[]`                 | Hooks that run after postEvalTransforms. Call `context.emitChunk(path, content)` to emit files.         |
-| `emitDir`            | `string`                     | Base directory for files produced via `context.emitChunk()`.                                            |
-| `cleanup`            | `function`                   | Called once at the end of the pipeline. Use to release caches built during transforms.                  |
+| Option               | Type                 | Description                                                                                                                                           |
+| -------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roots`              | `RootEntry[]`        | Directories (or named root entries) scanned recursively for source files.                                                                             |
+| `stages`             | `StageDefinition[]`  | Analysis pipeline stages. Populated by calling `plugin.onLoad(ctx)` and passing `ctx.stages.getAll()`.                                                |
+| `bundler`            | `Bundler`            | Bundler implementation. Use `RolldownBundler`.                                                                                                        |
+| `runner`             | `Runner`             | Code runner implementation. Use `VmRunner`.                                                                                                           |
+| `splitCss`           | `boolean`            | When `true`, CSS is split per source file instead of merged. Default: `false`.                                                                        |
+| `onDiagnostic`       | `function`           | Callback for structured warnings and non-fatal errors.                                                                                                |
+| `filePreProcess`     | `function`           | Optional callback invoked on every source file before parsing. Receives `{ content, filePath }` and returns the (possibly transformed) source string. |
+| `sourceTransforms`   | `AstPostProcessor[]` | Hooks that run after analysis. May mutate AST nodes. Mutations persist in the canonical index.                                                        |
+| `preEvalTransforms`  | `AstPostProcessor[]` | Hooks that run on a deep copy of the ASTs before evaluation. Mutations do NOT persist in the canonical index.                                         |
+| `postEvalTransforms` | `AstPostProcessor[]` | Hooks that run after execution. The evaluator is populated — use `context.evaluator.getTrackedValue()` to read runtime values.                        |
+| `emitHooks`          | `EmitHook[]`         | Hooks that run after postEvalTransforms. Call `context.emitChunk(path, content)` to emit files.                                                       |
+| `emitDir`            | `string`             | Base directory for files produced via `context.emitChunk()`.                                                                                          |
+| `cleanup`            | `function`           | Called once at the end of the pipeline. Use to release caches built during transforms.                                                                |
 
 #### CSS output
 

@@ -112,6 +112,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 invalidateFiles: ctx.invalidateFiles.merged(),
                 resetCrossFileState: ctx.resetCrossFileState.merged(),
                 getFilesToBundle: ctx.getFilesToBundle.merged(),
+                tsConfigPath: resolved.tsConfigPath,
             }
 
             builder = new Builder(options)

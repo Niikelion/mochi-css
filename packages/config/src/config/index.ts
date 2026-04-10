@@ -12,6 +12,7 @@ export interface Config {
     plugins: Plugin<Config>[]
     tmpDir?: string
     debug?: boolean
+    tsConfigPath?: string
 }
 
 export type MochiPlugin = Plugin<Config>
@@ -34,6 +35,7 @@ export async function resolveConfig(
         plugins,
         tmpDir: inlineConfig?.tmpDir ?? fileConfig.tmpDir ?? defaults?.tmpDir,
         debug: inlineConfig?.debug ?? fileConfig.debug ?? defaults?.debug,
+        tsConfigPath: inlineConfig?.tsConfigPath ?? defaults?.tsConfigPath,
     }
 
     return await makePipeline(

@@ -1,4 +1,4 @@
-import { defineConfig } from "tsdown";
+import { defineConfig } from "tsdown"
 
 export default defineConfig([
     {
@@ -11,4 +11,4 @@ export default defineConfig([
         external: (id: string) => id.startsWith("@mochi-css/"),
     },
     { attw: true },
-]);
+])

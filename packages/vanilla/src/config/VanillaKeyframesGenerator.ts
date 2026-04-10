@@ -1,12 +1,18 @@
-import type { StyleGenerator } from "@mochi-css/plugins"
+import { StyleGenerator } from "@mochi-css/plugins"
 import type { OnDiagnostic } from "@mochi-css/builder"
 import { getErrorMessage } from "@mochi-css/builder"
-import { KeyframesObject, KeyframeStops } from "../index"
+import { keyframes, KeyframesObject, KeyframeStops } from "../index"
 
-export class VanillaKeyframesGenerator implements StyleGenerator {
+export class VanillaKeyframesGenerator extends StyleGenerator {
     private readonly collectedStyles: { source: string; stops: KeyframeStops }[] = []
 
-    constructor(private readonly onDiagnostic?: OnDiagnostic) {}
+    constructor(private readonly onDiagnostic?: OnDiagnostic) {
+        super()
+    }
+
+    override mockFunction(...args: unknown[]): unknown {
+        return (keyframes as (...args: unknown[]) => unknown)(...args)
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         if (args.length === 0 || args[0] == null || typeof args[0] !== "object") {

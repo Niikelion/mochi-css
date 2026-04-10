@@ -82,14 +82,14 @@ async function resolveConfig(
 
 The config shape. All fields are optional in `defineConfig`; `resolveConfig` fills required fields from defaults.
 
-| Field          | Type            | Description                                                   |
-| -------------- | --------------- | ------------------------------------------------------------- |
-| `roots`        | `RootEntry[]`   | Directories scanned for source files (default: `["src"]`)     |
-| `splitCss`     | `boolean`       | Emit per-source-file CSS instead of one global file           |
-| `onDiagnostic` | `OnDiagnostic`  | Callback for warnings and non-fatal errors                    |
-| `plugins`      | `MochiPlugin[]` | Mochi plugins — register stages, transforms, and emit hooks   |
-| `tmpDir`       | `string`        | Manifest/styles output directory                              |
-| `debug`        | `boolean`       | Enable debug output                                           |
+| Field          | Type            | Description                                                 |
+| -------------- | --------------- | ----------------------------------------------------------- |
+| `roots`        | `RootEntry[]`   | Directories scanned for source files (default: `["src"]`)   |
+| `splitCss`     | `boolean`       | Emit per-source-file CSS instead of one global file         |
+| `onDiagnostic` | `OnDiagnostic`  | Callback for warnings and non-fatal errors                  |
+| `plugins`      | `MochiPlugin[]` | Mochi plugins — register stages, transforms, and emit hooks |
+| `tmpDir`       | `string`        | Manifest/styles output directory                            |
+| `debug`        | `boolean`       | Enable debug output                                         |
 
 ### `MochiPlugin`
 
@@ -109,14 +109,14 @@ interface MochiPlugin {
 
 Passed to `onLoad`. Each field is a collector that plugins call `register()` on.
 
-| Field              | Purpose                                                           |
-|--------------------|-------------------------------------------------------------------|
-| `stages`           | Register analysis pipeline stages                                 |
-| `sourceTransforms` | Register `AstPostProcessor` hooks (run after analysis)            |
-| `emitHooks`        | Register `EmitHook` hooks (run after evaluation)                  |
-| `cleanup`          | Register cleanup functions called at the end of each build        |
-| `filePreProcess`   | Register source-level text transformations (used by Vite/Next)    |
-| `onDiagnostic`     | Diagnostics callback from the resolved config                     |
+| Field              | Purpose                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `stages`           | Register analysis pipeline stages                              |
+| `sourceTransforms` | Register `AstPostProcessor` hooks (run after analysis)         |
+| `emitHooks`        | Register `EmitHook` hooks (run after evaluation)               |
+| `cleanup`          | Register cleanup functions called at the end of each build     |
+| `filePreProcess`   | Register source-level text transformations (used by Vite/Next) |
+| `onDiagnostic`     | Diagnostics callback from the resolved config                  |
 
 ---
 
@@ -162,6 +162,7 @@ export default defineConfig({
 ```
 
 The plugin registers two hooks:
+
 - A `filePreProcess` transformation that inserts stable IDs into the raw source (used by Vite/Next `transform` hooks).
 - A `sourceTransforms` hook that injects the same IDs directly into the AST (used during CSS extraction).
 

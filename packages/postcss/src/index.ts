@@ -140,6 +140,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                 invalidateFiles: context.invalidateFiles.merged(),
                 resetCrossFileState: context.resetCrossFileState.merged(),
                 getFilesToBundle: context.getFilesToBundle.merged(),
+                tsConfigPath: resolved.tsConfigPath
             })
         }
 

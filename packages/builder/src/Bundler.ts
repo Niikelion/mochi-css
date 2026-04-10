@@ -4,7 +4,7 @@ import { rolldown, Plugin } from "rolldown"
 export type FileLookup = Partial<Record<string, string>>
 
 export interface Bundler {
-    bundle(rootFilePath: string, files: FileLookup): Promise<string>
+    bundle(rootFilePath: string, files: FileLookup, tsConfigPath?: string): Promise<string>
 }
 
 function normalizeFilePath(filePath: string): string {
@@ -52,12 +52,13 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
 }
 
 export class RolldownBundler implements Bundler {
-    async bundle(rootFilePath: string, files: FileLookup): Promise<string> {
+    async bundle(rootFilePath: string, files: FileLookup, tsConfigPath?: string): Promise<string> {
         const build = await rolldown({
             input: rootFilePath,
             platform: "node",
             treeshake: false,
             plugins: [createVirtualFsPlugin(rootFilePath, files)],
+            tsconfig: tsConfigPath,
         })
 
         try {

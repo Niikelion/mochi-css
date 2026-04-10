@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import type { StyleGenerator } from "@mochi-css/plugins"
+import { StyleGenerator } from "@mochi-css/plugins"
 import type { OnDiagnostic } from "@mochi-css/builder"
 import { getErrorMessage } from "@mochi-css/builder"
 import { CSSObject, MochiCSS, StyleProps, isMochiCSS, mergeMochiCss, AllVariants } from "../index"
@@ -52,11 +52,22 @@ function mochiCssNode(instance: MochiCSS<AllVariants>): SWC.NewExpression & { ct
     }
 }
 
-export class VanillaCssGenerator implements StyleGenerator {
+export class VanillaCssGenerator extends StyleGenerator {
     private readonly collectedStyles: { source: string; args: StyleProps[]; stableId?: string }[] = []
     private generatedMochiCss: { source: string; instance: MochiCSS<AllVariants> }[] = []
+    private readonly mock: (...args: unknown[]) => unknown
 
-    constructor(private readonly onDiagnostic?: OnDiagnostic) {}
+    constructor(
+        mock: (...args: unknown[]) => unknown,
+        private readonly onDiagnostic?: OnDiagnostic,
+    ) {
+        super()
+        this.mock = mock
+    }
+
+    override mockFunction(...args: unknown[]): unknown {
+        return this.mock(...args)
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: StyleProps[] = []
@@ -122,7 +133,7 @@ export class VanillaCssGenerator implements StyleGenerator {
         return { files }
     }
 
-    getArgReplacements(): { source: string; expression: SWC.Expression }[] {
+    override getArgReplacements(): { source: string; expression: SWC.Expression }[] {
         return this.generatedMochiCss.map(({ source, instance }) => ({
             source,
             expression: mochiCssNode(instance),
