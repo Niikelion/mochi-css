@@ -1,14 +1,10 @@
 import type { Plugin, ViteDevServer } from "vite"
 import {
-    Builder,
-    BuilderOptions,
-    RolldownBundler,
-    VmRunner,
     fileHash,
     type MochiManifest,
     path
 } from "@mochi-css/builder"
-import { loadConfig, resolveConfig, FullContext, type Config, OnDiagnostic } from "@mochi-css/config"
+import { loadConfig, resolveConfig, FullContext, createBuilder, type Config, OnDiagnostic } from "@mochi-css/config"
 import { diagnosticToString } from "@mochi-css/core"
 
 const VIRTUAL_PREFIX = "virtual:mochi-css/"
@@ -26,7 +22,7 @@ const RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
  *
  * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
  */
-export type MochiViteOptions = Partial<BuilderOptions & Pick<Config, "plugins"> & {
+export type MochiViteOptions = Partial<Pick<Config, "plugins"> & {
     entries: string[]
 }>
 
@@ -51,7 +47,7 @@ export type MochiViteOptions = Partial<BuilderOptions & Pick<Config, "plugins"> 
 export function mochiCss(opts?: MochiViteOptions): Plugin {
     let resolved: Config | undefined
     let context: FullContext | undefined
-    let builder: Builder | undefined
+    let builder: ReturnType<typeof createBuilder> | undefined
     let server: ViteDevServer | undefined
 
     let manifest: MochiManifest | undefined
@@ -95,27 +91,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             for (const plugin of resolved.plugins) {
                 plugin.onLoad?.(ctx)
             }
-            const options: BuilderOptions = {
-                roots: resolved.roots,
-                stages: [...ctx.stages.getAll()],
-                bundler: opts?.bundler ?? new RolldownBundler(),
-                runner: opts?.runner ?? new VmRunner(),
-                splitCss: resolved.splitCss,
-                debug: resolved.debug,
-                onDiagnostic,
-                sourceTransforms: [...ctx.sourceTransforms.getAll()],
-                emitHooks: [...ctx.emitHooks.getAll()],
-                cleanup: () => { ctx.cleanup.runAll() },
-                initializeStages: ctx.initializeStages.merged(),
-                prepareAnalysis: ctx.prepareAnalysis.merged(),
-                getFileData: ctx.getFileData.merged(),
-                invalidateFiles: ctx.invalidateFiles.merged(),
-                resetCrossFileState: ctx.resetCrossFileState.merged(),
-                getFilesToBundle: ctx.getFilesToBundle.merged(),
-                tsConfigPath: resolved.tsConfigPath,
-            }
-
-            builder = new Builder(options)
+            builder = createBuilder(resolved, ctx)
             const result = await builder.collectMochiCss()
             manifest = { global: result.global, files: result.files ?? {} }
 
@@ -171,10 +147,12 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             }
 
             const ctxModuleSet = new Set(ctx.modules)
+            const invalidatedModules = new Set<NonNullable<ReturnType<typeof ctx.server.moduleGraph.getModuleById>>>()
             const extraModules = new Set<NonNullable<ReturnType<typeof ctx.server.moduleGraph.getModuleById>>>()
 
             const invalidateAndCollectImporters = (mod: NonNullable<ReturnType<typeof ctx.server.moduleGraph.getModuleById>>) => {
                 ctx.server.moduleGraph.invalidateModule(mod)
+                invalidatedModules.add(mod)
                 for (const importer of mod.importers) {
                     if (!ctxModuleSet.has(importer)) {
                         extraModules.add(importer)
@@ -196,7 +174,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 }
             }
 
-            return [...ctx.modules, ...extraModules]
+            return [...ctx.modules, ...invalidatedModules, ...extraModules]
         },
 
         async watchChange(id, change) {

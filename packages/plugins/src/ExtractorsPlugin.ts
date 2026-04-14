@@ -1,6 +1,13 @@
-import type { EmitHook, MutableFileEntry } from "@mochi-css/builder"
-import { propagateUsagesFromExpr } from "@mochi-css/builder"
-import { type StyleExtractor, StyleGenerator, type FileInfo, type DerivedExtractorBinding } from "./types"
+import type { EmitHook, MutableFileEntry, Ref } from "@mochi-css/builder"
+import { propagateUsagesFromExpr, type ReexportResolver } from "./propagation"
+import { getOrInsert } from "./utils"
+import {
+    type StyleExtractor,
+    StyleGenerator,
+    type FileInfo,
+    type DerivedExtractorBinding,
+    type ReexportInfo,
+} from "./types"
 import { getErrorMessage } from "@mochi-css/core"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type { MochiPlugin } from "@mochi-css/config"
@@ -8,20 +15,31 @@ import * as SWC from "@swc/core"
 import { RefMap } from "@mochi-css/builder"
 import type { BindingInfo } from "@mochi-css/builder"
 import {
-    makeImportSpecStage,
-    makeDerivedExtractorStage,
-    makeStyleExprStage,
-    makeBindingStage,
-    makeCrossFileDerivedStage,
+    importStageDef,
+    exportsStage,
+    derivedStageDef,
+    styleExprStageDef,
+    bindingStageDef,
+    crossFileDerivedStageDef,
+    type ExtractorLookup,
     type DerivedExtractorStageOut,
     type StyleExprStageOut,
     type BindingStageOut,
+    type ExportsStageOut,
     type CrossFileResult,
 } from "./stages"
 import { extractRelevantSymbols } from "./extractRelevantSymbols"
 
 export function getExtractorId(extractor: StyleExtractor): string {
     return `${extractor.importPath}:${extractor.symbolName}`
+}
+
+function buildExtractorLookup(extractors: StyleExtractor[]): ExtractorLookup {
+    const lookup: ExtractorLookup = new Map()
+    for (const extractor of extractors) {
+        getOrInsert(lookup, extractor.importPath, () => new Map()).set(extractor.symbolName, extractor)
+    }
+    return lookup
 }
 
 function wrapGenerator(
@@ -61,11 +79,54 @@ function wrapGenerator(
     }
 }
 
+function buildReexportResolver(filesInfo: Map<string, FileInfo>): ReexportResolver {
+    const resolveFrom = (
+        filePath: string,
+        exportName: string,
+        visited: Set<string>,
+    ): { fileView: FileInfo; ref: Ref } | null => {
+        if (visited.has(filePath)) return null
+        visited.add(filePath)
+        const fileInfo = filesInfo.get(filePath)
+        if (!fileInfo) return null
+
+        const directRef = fileInfo.exports.get(exportName)
+        if (directRef) return { fileView: fileInfo, ref: directRef }
+
+        const ri = fileInfo.reexports.get(exportName)
+        if (ri) return resolveFrom(ri.sourcePath, ri.originalName, visited)
+
+        for (const sourcePath of fileInfo.namespaceReexports) {
+            const result = resolveFrom(sourcePath, exportName, visited)
+            if (result) return result
+        }
+
+        return null
+    }
+
+    return (importedFileView, exportName) => {
+        const fileInfo = filesInfo.get(importedFileView.filePath)
+        if (!fileInfo) return null
+
+        const ri = fileInfo.reexports.get(exportName)
+        if (ri) return resolveFrom(ri.sourcePath, ri.originalName, new Set([importedFileView.filePath]))
+
+        for (const sourcePath of fileInfo.namespaceReexports) {
+            const result = resolveFrom(sourcePath, exportName, new Set([importedFileView.filePath]))
+            if (result) return result
+        }
+
+        return null
+    }
+}
+
 function assembleFileInfo(
     filePath: string,
+    getAst: (fp: string) => SWC.Module,
     bindingOut: BindingStageOut,
     styleExprOut: StyleExprStageOut,
     derivedOut: DerivedExtractorStageOut,
+    exportsOut: ExportsStageOut,
     crossFileMap: CrossFileResult,
 ): FileInfo {
     const { moduleBindings, localImports, references, exports, exportedDerivedExtractors } = bindingOut.fileBindings
@@ -75,6 +136,7 @@ function assembleFileInfo(
     const { styleExpressions, extractedExpressions, extractedCallExpressions } = styleExprOut.styleExprs
         .for(filePath)
         .get()
+    const { reexports: rawReexports, namespaceReexports } = exportsOut.fileExports.for(filePath).get()
     const extra = crossFileMap.get(filePath)
 
     const usedBindings = new Set<BindingInfo>()
@@ -91,12 +153,16 @@ function assembleFileInfo(
         for (const [ref, b] of extra.additionalDerivedBindings.entries()) allDerivedBindings.set(ref, b)
     }
 
-    // Get ast from fileData
-    const fileData = derivedOut.fileData.cache.for(filePath).get()
+    const reexports = new Map<string, ReexportInfo>()
+    for (const [sourcePath, entries] of rawReexports) {
+        for (const { originalName, exportedName } of entries) {
+            reexports.set(exportedName, { sourcePath, originalName })
+        }
+    }
 
     return {
         filePath,
-        ast: fileData.ast,
+        ast: getAst(filePath),
         styleExpressions: extra ? new Set([...styleExpressions, ...extra.additionalStyleExprs]) : styleExpressions,
         extractedExpressions: extra
             ? mergeMap(extractedExpressions, extra.additionalExtractedExprs)
@@ -111,6 +177,8 @@ function assembleFileInfo(
         exports,
         derivedExtractorBindings: allDerivedBindings,
         exportedDerivedExtractors,
+        reexports,
+        namespaceReexports,
     }
 }
 
@@ -126,21 +194,17 @@ function mergeMap<K, V extends unknown[]>(base: Map<K, V>, extra: Map<K, V>): Ma
 }
 
 export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugin {
+    const extractorLookup = buildExtractorLookup(extractors)
+
     return {
         name: "mochi-extractor-plugin",
         onLoad(ctx) {
             let capturedGenerators: Map<string, StyleGenerator> | null = null
 
-            // Create stage instances
-            const importStageDef = makeImportSpecStage(extractors)
-            const derivedStageDef = makeDerivedExtractorStage(importStageDef)
-            const styleExprStageDef = makeStyleExprStage(derivedStageDef)
-            const bindingStageDef = makeBindingStage(styleExprStageDef)
-            const crossFileDerivedStageDef = makeCrossFileDerivedStage(derivedStageDef, bindingStageDef)
-
             // Register all analysis stages
             for (const stage of [
                 importStageDef,
+                exportsStage,
                 derivedStageDef,
                 styleExprStageDef,
                 bindingStageDef,
@@ -149,19 +213,12 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 ctx.stages.register(stage)
             }
 
-            // Register pipeline hooks via the sourceTransform mechanism:
-            // We register a sourceTransform that sets up generators and extractors global.
-            // The pipeline hooks (initializeStages, prepareAnalysis, etc.) are registered on ctx.
-
             ctx.initializeStages.register((runner, modules, resolveImport, onDiagnostic) => {
                 const importOut = runner.getInstance(importStageDef)
+                importOut.extractors.set(extractorLookup)
                 for (const m of modules) {
-                    importOut.fileData.set(m.filePath, {
-                        ast: m.ast,
-                        filePath: m.filePath,
-                        resolveImport,
-                        onDiagnostic,
-                    })
+                    runner.engine.fileData.set(m.filePath, { filePath: m.filePath, ast: m.ast })
+                    importOut.fileCallbacks.set(m.filePath, { resolveImport, onDiagnostic })
                 }
             })
 
@@ -170,6 +227,7 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 const bindingOut = runner.getInstance(bindingStageDef)
                 const styleExprOut = runner.getInstance(styleExprStageDef)
                 const derivedOut = runner.getInstance(derivedStageDef)
+                const exportsOut = runner.getInstance(exportsStage)
 
                 const crossFileMap = crossFileOut.crossFileResult.get()
 
@@ -177,39 +235,50 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 for (const fp of crossFileMap.keys()) allFilePaths.add(fp)
                 for (const fp of markedForEval.keys()) allFilePaths.add(fp)
 
+                const getAst = (fp: string) => runner.engine.fileData.for(fp).get().ast
+
                 const analyzedBindings = new Set<string>()
                 const filesInfo = new Map<string, FileInfo>()
                 for (const fp of allFilePaths) {
                     try {
-                        const fileInfo = assembleFileInfo(fp, bindingOut, styleExprOut, derivedOut, crossFileMap)
+                        const fileInfo = assembleFileInfo(
+                            fp,
+                            getAst,
+                            bindingOut,
+                            styleExprOut,
+                            derivedOut,
+                            exportsOut,
+                            crossFileMap,
+                        )
                         filesInfo.set(fp, fileInfo)
                     } catch {
                         // file might not be registered
                     }
                 }
 
+                const reexportResolver = buildReexportResolver(filesInfo)
                 for (const [, fileInfo] of filesInfo) {
                     for (const expr of fileInfo.styleExpressions) {
-                        propagateUsagesFromExpr(analyzedBindings, filesInfo, fileInfo, expr)
+                        propagateUsagesFromExpr(analyzedBindings, filesInfo, fileInfo, expr, reexportResolver)
                     }
                     for (const expr of markedForEval.get(fileInfo.filePath) ?? []) {
-                        propagateUsagesFromExpr(analyzedBindings, filesInfo, fileInfo, expr)
+                        propagateUsagesFromExpr(analyzedBindings, filesInfo, fileInfo, expr, reexportResolver)
                     }
                 }
             })
 
             ctx.getFileData.register((runner): MutableFileEntry[] => {
-                const importOut = runner.getInstance(importStageDef)
                 return runner.getFilePaths().map((fp) => {
-                    const data = importOut.fileData.cache.for(fp).get()
-                    return { filePath: data.filePath, ast: data.ast }
+                    const { filePath, ast } = runner.engine.fileData.for(fp).get()
+                    return { filePath, ast }
                 })
             })
 
             ctx.invalidateFiles.register((runner, dirtyFiles) => {
                 const importOut = runner.getInstance(importStageDef)
                 for (const fp of dirtyFiles) {
-                    importOut.fileData.invalidate(fp)
+                    runner.engine.fileData.invalidate(fp)
+                    importOut.fileCallbacks.invalidate(fp)
                 }
             })
 
@@ -223,6 +292,7 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 const bindingOut = runner.getInstance(bindingStageDef)
                 const styleExprOut = runner.getInstance(styleExprStageDef)
                 const derivedOut = runner.getInstance(derivedStageDef)
+                const exportsOut = runner.getInstance(exportsStage)
 
                 const crossFileMap = crossFileOut.crossFileResult.get()
 
@@ -230,23 +300,34 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 for (const fp of crossFileMap.keys()) allFilePaths.add(fp)
                 for (const fp of markedForEval.keys()) allFilePaths.add(fp)
 
+                const getAst = (fp: string) => runner.engine.fileData.for(fp).get().ast
+
                 const filesInfoMap = new Map<string, FileInfo>()
                 for (const fp of allFilePaths) {
                     try {
-                        const fileInfo = assembleFileInfo(fp, bindingOut, styleExprOut, derivedOut, crossFileMap)
+                        const fileInfo = assembleFileInfo(
+                            fp,
+                            getAst,
+                            bindingOut,
+                            styleExprOut,
+                            derivedOut,
+                            exportsOut,
+                            crossFileMap,
+                        )
                         filesInfoMap.set(fp, fileInfo)
                     } catch {
                         // file not registered
                     }
                 }
 
+                const reexportResolver = buildReexportResolver(filesInfoMap)
                 const analyzedBindings = new Set<string>()
                 for (const [, fileInfo] of filesInfoMap) {
                     for (const expr of fileInfo.styleExpressions) {
-                        propagateUsagesFromExpr(analyzedBindings, filesInfoMap, fileInfo, expr)
+                        propagateUsagesFromExpr(analyzedBindings, filesInfoMap, fileInfo, expr, reexportResolver)
                     }
                     for (const expr of markedForEval.get(fileInfo.filePath) ?? []) {
-                        propagateUsagesFromExpr(analyzedBindings, filesInfoMap, fileInfo, expr)
+                        propagateUsagesFromExpr(analyzedBindings, filesInfoMap, fileInfo, expr, reexportResolver)
                     }
                 }
 

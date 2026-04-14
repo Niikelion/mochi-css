@@ -148,22 +148,54 @@ export default defineConfig({
 
 ---
 
-## `styledIdPlugin`
+## `createBuilder`
 
-A built-in plugin that injects stable `s-` class IDs into every `styled()` call matched by the given extractors. This keeps class names stable across incremental builds.
+Constructs a fully wired `Builder` from a resolved `Config` and a `FullContext`. Use this instead of manually mapping `BuilderOptions` when writing a custom integration.
 
 ```typescript
-import { styledIdPlugin } from "@mochi-css/config"
-import { myExtractor } from "./myExtractor"
-
-export default defineConfig({
-    plugins: [styledIdPlugin([myExtractor])],
-})
+function createBuilder(config: Config, context: FullContext): Builder
 ```
 
-The plugin registers two hooks:
+**Parameters:**
 
-- A `filePreProcess` transformation that inserts stable IDs into the raw source (used by Vite/Next `transform` hooks).
-- A `sourceTransforms` hook that injects the same IDs directly into the AST (used during CSS extraction).
+- `config` — a resolved config (output of `resolveConfig`)
+- `context` — a `FullContext` with plugins already loaded via `plugin.onLoad(context)`
 
-It is idempotent — calls that already carry an `s-` ID are skipped.
+`context` is a separate parameter (rather than being created internally) so that the caller can retain a reference to it — e.g. to re-create the builder on config reload, or to inspect collected hooks after construction.
+
+**Example:**
+
+```typescript
+import { loadConfig, resolveConfig, FullContext, createBuilder } from "@mochi-css/config"
+
+const fileConfig = await loadConfig()
+const config = await resolveConfig(fileConfig, inlineOpts, defaults)
+
+const context = new FullContext(config.onDiagnostic ?? (() => {}))
+for (const plugin of config.plugins) plugin.onLoad?.(context)
+
+const builder = createBuilder(config, context)
+const { global, files } = await builder.collectMochiCss()
+```
+
+---
+
+## `FullContext`
+
+The standard `PluginContext` implementation. Construct one, load plugins into it, then pass it to `createBuilder`.
+
+```typescript
+class FullContext implements PluginContext {
+    constructor(onDiagnostic: OnDiagnostic)
+}
+```
+
+---
+
+## `styledIdPlugin`
+
+`styledIdPlugin` has moved to `@mochi-css/plugins`. See the `@mochi-css/plugins` README for details.
+
+```typescript
+import { styledIdPlugin } from "@mochi-css/plugins"
+```

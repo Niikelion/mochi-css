@@ -76,6 +76,22 @@ describe("RolldownBundler", () => {
         expect(result).toBeDefined()
     })
 
+    it("resolves directory imports via index files", async () => {
+        const bundler = new RolldownBundler()
+
+        const index = path.resolve(process.cwd(), "src", "index.js")
+        const barrelIndex = path.resolve(process.cwd(), "src", "components", "index.ts")
+        const component = path.resolve(process.cwd(), "src", "components", "Button.ts")
+
+        const result = await bundler.bundle(index, {
+            [index]: `import { Button } from "./components"; export default Button;`,
+            [barrelIndex]: `export { Button } from "./Button";`,
+            [component]: `export const Button = "button";`,
+        })
+
+        expect(result).toContain("button")
+    })
+
     it("correctly resolves absolute imports", async () => {
         const bundler = new RolldownBundler()
 

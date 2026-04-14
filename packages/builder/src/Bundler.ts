@@ -26,6 +26,10 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
             const withExt = resolvedPath + ext
             if (normalizedFiles.has(withExt)) return withExt
         }
+        for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+            const indexFile = resolvedPath + "/index" + ext
+            if (normalizedFiles.has(indexFile)) return indexFile
+        }
         return null
     }
 

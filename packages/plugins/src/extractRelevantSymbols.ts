@@ -425,8 +425,26 @@ export function extractRelevantSymbols(
             const hasDerived = info.derivedExtractorBindings.size > 0
             const extra = [...(extraExpressions?.get(filePath) ?? [])]
 
-            if (styles.size === 0 && info.usedBindings.size === 0 && !hasDerived && extra.length === 0)
+            if (styles.size === 0 && info.usedBindings.size === 0 && !hasDerived && extra.length === 0) {
+                // Barrel files (pure reexports) must be included in the bundle so importers can resolve them
+                if (info.namespaceReexports.size > 0 || info.reexports.size > 0) {
+                    const reexportItems = info.ast.body.filter(
+                        (item): item is SWC.ExportAllDeclaration | SWC.ExportNamedDeclaration =>
+                            item.type === "ExportAllDeclaration" ||
+                            (item.type === "ExportNamedDeclaration" && item.source != null),
+                    )
+                    if (reexportItems.length > 0) {
+                        const code = SWC.printSync({
+                            type: "Module",
+                            span: emptySpan,
+                            body: reexportItems,
+                            interpreter: "",
+                        }).code
+                        return [filePath, code]
+                    }
+                }
                 return [filePath, null]
+            }
 
             // Build derived extractor lookup
             const derivedLookup = new Map<StyleExtractor, DerivedExtractorBinding>()
@@ -468,7 +486,7 @@ export function extractRelevantSymbols(
             const handledCalls = new Set<SWC.CallExpression>()
 
             for (const item of usedItems) {
-                const minimalItem = generateMinimalModuleItem(item, info)
+                const minimalItem = generateMinimalModuleItem(item, info.usedBindings)
                 if (!minimalItem) continue
                 moduleBody.push(substituteExtractedCalls(minimalItem, replacementMap, handledCalls))
             }

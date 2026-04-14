@@ -1,13 +1,14 @@
 import * as SWC from "@swc/core"
-import type { DerivedExtractorBinding } from "../types"
+import type { DerivedExtractorBinding } from "@/types"
 import { visit } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
 import type { CacheRegistry, FileCache } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import type { BindingInfo, BindingDeclarator, LocalImport } from "@mochi-css/builder"
-import { idToRef, isLocalImport, type Ref } from "@mochi-css/builder"
-import type { StageDefinition } from "@mochi-css/builder"
-import { makeStyleExprStage, type StyleExprStageOut } from "./StyleExprStage"
+import { idToRef, type Ref } from "@mochi-css/builder"
+import { isLocalImport } from "@/utils"
+import { importStageDef, type ImportSpecStageOut } from "./ImportSpecStage"
+import { styleExprStageDef, type StyleExprStageOut } from "./StyleExprStage"
 
 function collectBindingsFromPattern(
     pattern: SWC.Pattern,
@@ -73,259 +74,275 @@ function collectBindingsFromPattern(
 }
 
 type BindingStageResult = {
+    /** All module-level variable, function, class, and import bindings in this file. */
     moduleBindings: RefMap<BindingInfo>
+    /** Import bindings that resolve to a local file (used for cross-file propagation). */
     localImports: RefMap<LocalImport>
+    /** Identifier nodes referenced in expressions (used to determine what must be bundled). */
     references: Set<SWC.Identifier>
+    /** Exported name → ref for every export in this file (excluding source-based reexports). */
     exports: Map<string, Ref>
+    /** Exported name → DerivedExtractorBinding for derived extractors re-exported from this file. */
     exportedDerivedExtractors: Map<string, DerivedExtractorBinding>
 }
 
+/**
+ * Output of {@link bindingStageDef}.
+ *
+ * - `fileBindings` — per-file cache of bindings, imports, references, and exports
+ * - `derived` — forwarded from {@link styleExprStageDef} for downstream stages
+ * - `styleExprs` — forwarded from {@link styleExprStageDef} for downstream stages
+ */
 export type BindingStageOut = {
     fileBindings: FileCache<BindingStageResult>
-    fileData: StyleExprStageOut["fileData"]
     derived: StyleExprStageOut["derived"]
     styleExprs: StyleExprStageOut["styleExprs"]
 }
 
-export const BINDING_STAGE = Symbol.for("BindingStage")
+/**
+ * Module binding collection.
+ *
+ * Makes two passes over each file's AST:
+ * 1. Collects all module-level bindings (imports, variables, functions, classes, exports)
+ *    and local imports (imports from `./` or `../` paths that resolve to a known file).
+ * 2. Walks the full AST to collect identifier references used in expressions.
+ *    References at scope depth > 0 (inside functions/classes) are excluded — only
+ *    module-scope references matter for bundling decisions.
+ *
+ * Also populates `exportedDerivedExtractors` by intersecting the exports map with
+ * derived extractor bindings, enabling {@link crossFileDerivedStageDef} to propagate
+ * derived extractors across file boundaries.
+ *
+ * Depends on {@link styleExprStageDef} and {@link importStageDef}.
+ */
+export const bindingStageDef = defineStage({
+    dependsOn: [styleExprStageDef, importStageDef] as const,
+    init(registry: CacheRegistry, styleExprInst: StyleExprStageOut, importInst: ImportSpecStageOut): BindingStageOut {
+        const fileBindings = registry.fileCache(
+            (file) => [
+                registry.fileData.for(file),
+                importInst.fileCallbacks.for(file),
+                styleExprInst.derived.for(file),
+            ],
+            (file): BindingStageResult => {
+                const { ast } = registry.fileData.for(file).get()
+                const { resolveImport, onDiagnostic } = importInst.fileCallbacks.for(file).get()
+                const { derivedBindings } = styleExprInst.derived.for(file).get()
 
-export function makeBindingStage(
-    styleExprStage: ReturnType<typeof makeStyleExprStage>,
-): StageDefinition<[ReturnType<typeof makeStyleExprStage>], BindingStageOut> {
-    const stage = defineStage({
-        dependsOn: [styleExprStage] as const,
-        init(registry: CacheRegistry, styleExprInst: StyleExprStageOut): BindingStageOut {
-            const fileBindings = registry.fileCache(
-                (file) => [styleExprInst.fileData.cache.for(file)],
-                (file): BindingStageResult => {
-                    const data = styleExprInst.fileData.cache.for(file).get()
-                    const { derivedBindings } = styleExprInst.derived.for(file).get()
+                const moduleBindings = new RefMap<BindingInfo>()
+                const localImports = new RefMap<LocalImport>()
+                const references = new Set<SWC.Identifier>()
+                const exports = new Map<string, Ref>()
 
-                    const moduleBindings = new RefMap<BindingInfo>()
-                    const localImports = new RefMap<LocalImport>()
-                    const references = new Set<SWC.Identifier>()
-                    const exports = new Map<string, Ref>()
+                // Pass 3: Collect module-level bindings, local imports, and exports
+                for (const item of ast.body) {
+                    switch (item.type) {
+                        case "ImportDeclaration": {
+                            const isLocal = isLocalImport(item.source.value)
+                            const sourcePath = isLocal ? resolveImport(file, item.source.value) : null
 
-                    // Pass 3: Collect module-level bindings, local imports, and exports
-                    for (const item of data.ast.body) {
-                        switch (item.type) {
-                            case "ImportDeclaration": {
-                                const isLocal = isLocalImport(item.source.value)
-                                const sourcePath = isLocal ? data.resolveImport(file, item.source.value) : null
-
-                                if (isLocal && sourcePath === null) {
-                                    data.onDiagnostic?.({
-                                        code: "MOCHI_UNRESOLVED_IMPORT",
-                                        message: `Cannot resolve local import "${item.source.value}"`,
-                                        severity: "warning",
-                                        file,
-                                        line: item.source.span.start,
-                                    })
-                                }
-
-                                for (const specifier of item.specifiers) {
-                                    if (specifier.type === "ImportNamespaceSpecifier") continue
-
-                                    const ref = idToRef(specifier.local)
-                                    const sourceName =
-                                        specifier.type === "ImportSpecifier"
-                                            ? (specifier.imported?.value ?? ref.name)
-                                            : ref.name
-
-                                    if (sourcePath) {
-                                        localImports.set(ref, {
-                                            localRef: ref,
-                                            sourcePath,
-                                            exportName: sourceName,
-                                        })
-                                    }
-
-                                    moduleBindings.set(ref, {
-                                        identifier: specifier.local,
-                                        ref,
-                                        declarator: {
-                                            type: "import",
-                                            specifier,
-                                            declaration: item,
-                                        },
-                                        moduleItem: item,
-                                    })
-                                }
-                                break
+                            if (isLocal && sourcePath === null) {
+                                onDiagnostic?.({
+                                    code: "MOCHI_UNRESOLVED_IMPORT",
+                                    message: `Cannot resolve local import "${item.source.value}"`,
+                                    severity: "warning",
+                                    file,
+                                    line: item.source.span.start,
+                                })
                             }
 
-                            case "VariableDeclaration":
-                                for (const declarator of item.declarations) {
-                                    collectBindingsFromPattern(declarator.id, declarator, item, item, moduleBindings)
-                                }
-                                break
+                            for (const specifier of item.specifiers) {
+                                if (specifier.type === "ImportNamespaceSpecifier") continue
 
-                            case "FunctionDeclaration": {
-                                const ref = idToRef(item.identifier)
+                                const ref = idToRef(specifier.local)
+                                const sourceName =
+                                    specifier.type === "ImportSpecifier"
+                                        ? (specifier.imported?.value ?? ref.name)
+                                        : ref.name
+
+                                if (sourcePath) {
+                                    localImports.set(ref, {
+                                        localRef: ref,
+                                        sourcePath,
+                                        exportName: sourceName,
+                                    })
+                                }
+
                                 moduleBindings.set(ref, {
-                                    identifier: item.identifier,
+                                    identifier: specifier.local,
                                     ref,
                                     declarator: {
-                                        type: "function",
+                                        type: "import",
+                                        specifier,
                                         declaration: item,
                                     },
                                     moduleItem: item,
                                 })
-                                break
                             }
-
-                            case "ClassDeclaration": {
-                                const ref = idToRef(item.identifier)
-                                moduleBindings.set(ref, {
-                                    identifier: item.identifier,
-                                    ref,
-                                    declarator: {
-                                        type: "class",
-                                        declaration: item,
-                                    },
-                                    moduleItem: item,
-                                })
-                                break
-                            }
-
-                            case "ExportDeclaration": {
-                                const decl = item.declaration
-                                if (decl.type === "VariableDeclaration") {
-                                    for (const declarator of decl.declarations) {
-                                        collectBindingsFromPattern(
-                                            declarator.id,
-                                            declarator,
-                                            decl,
-                                            item,
-                                            moduleBindings,
-                                        )
-                                        if (declarator.id.type !== "Identifier") continue
-                                        const ref = idToRef(declarator.id)
-                                        exports.set(ref.name, ref)
-                                    }
-                                    break
-                                }
-                                const identifier =
-                                    decl.type === "FunctionDeclaration" || decl.type === "ClassDeclaration"
-                                        ? decl.identifier
-                                        : null
-                                if (!identifier) break
-                                const ref = idToRef(identifier)
-                                const type = decl.type === "FunctionDeclaration" ? "function" : "class"
-                                moduleBindings.set(ref, {
-                                    identifier,
-                                    ref,
-                                    declarator: {
-                                        type,
-                                        declaration: decl,
-                                    } as BindingDeclarator,
-                                    moduleItem: item,
-                                })
-                                exports.set(ref.name, ref)
-                                break
-                            }
-
-                            case "ExportNamedDeclaration":
-                                for (const specifier of item.specifiers) {
-                                    if (specifier.type !== "ExportSpecifier") continue
-                                    const localName =
-                                        specifier.orig.type === "Identifier"
-                                            ? specifier.orig.value
-                                            : specifier.orig.value
-                                    const exportedName = specifier.exported?.value ?? localName
-                                    const binding = moduleBindings.getByName(localName)
-                                    if (binding) exports.set(exportedName, binding.ref)
-                                }
-                                break
+                            break
                         }
-                    }
 
-                    // Pass 4: Collect references (identifiers used in expressions)
-                    visit.module(
-                        data.ast,
-                        {
-                            functionDeclaration(_, { descend, context }) {
-                                descend({
-                                    ...context,
-                                    scopeDepth: context.scopeDepth + 1,
-                                })
-                            },
-                            functionExpression(_, { descend, context }) {
-                                descend({
-                                    ...context,
-                                    scopeDepth: context.scopeDepth + 1,
-                                })
-                            },
-                            arrowFunctionExpression(_, { descend, context }) {
-                                descend({
-                                    ...context,
-                                    scopeDepth: context.scopeDepth + 1,
-                                })
-                            },
-                            classMethod(_, { descend, context }) {
-                                descend({
-                                    ...context,
-                                    scopeDepth: context.scopeDepth + 1,
-                                })
-                            },
-                            variableDeclarator(node) {
-                                if (node.init) {
-                                    visit.expression(
-                                        node.init,
-                                        {
-                                            identifier(id) {
-                                                references.add(id)
-                                            },
-                                        },
-                                        null,
-                                    )
+                        case "VariableDeclaration":
+                            for (const declarator of item.declarations) {
+                                collectBindingsFromPattern(declarator.id, declarator, item, item, moduleBindings)
+                            }
+                            break
+
+                        case "FunctionDeclaration": {
+                            const ref = idToRef(item.identifier)
+                            moduleBindings.set(ref, {
+                                identifier: item.identifier,
+                                ref,
+                                declarator: {
+                                    type: "function",
+                                    declaration: item,
+                                },
+                                moduleItem: item,
+                            })
+                            break
+                        }
+
+                        case "ClassDeclaration": {
+                            const ref = idToRef(item.identifier)
+                            moduleBindings.set(ref, {
+                                identifier: item.identifier,
+                                ref,
+                                declarator: {
+                                    type: "class",
+                                    declaration: item,
+                                },
+                                moduleItem: item,
+                            })
+                            break
+                        }
+
+                        case "ExportDeclaration": {
+                            const decl = item.declaration
+                            if (decl.type === "VariableDeclaration") {
+                                for (const declarator of decl.declarations) {
+                                    collectBindingsFromPattern(declarator.id, declarator, decl, item, moduleBindings)
+                                    if (declarator.id.type !== "Identifier") continue
+                                    const ref = idToRef(declarator.id)
+                                    exports.set(ref.name, ref)
                                 }
-                            },
-                            param() {
-                                /* skip parameters */
-                            },
-                            pattern() {
-                                /* skip patterns */
-                            },
-                            identifier(node, { context }) {
-                                if (context.scopeDepth === 0) {
-                                    references.add(node)
-                                }
-                            },
-                            tsType() {
-                                /* empty */
-                            },
+                                break
+                            }
+                            const identifier =
+                                decl.type === "FunctionDeclaration" || decl.type === "ClassDeclaration"
+                                    ? decl.identifier
+                                    : null
+                            if (!identifier) break
+                            const ref = idToRef(identifier)
+                            const type = decl.type === "FunctionDeclaration" ? "function" : "class"
+                            moduleBindings.set(ref, {
+                                identifier,
+                                ref,
+                                declarator: {
+                                    type,
+                                    declaration: decl,
+                                } as BindingDeclarator,
+                                moduleItem: item,
+                            })
+                            exports.set(ref.name, ref)
+                            break
+                        }
+
+                        case "ExportNamedDeclaration":
+                            if (item.source) break // source-based reexports handled by ExportsStage
+                            for (const specifier of item.specifiers) {
+                                if (specifier.type !== "ExportSpecifier") continue
+                                const localName =
+                                    specifier.orig.type === "Identifier" ? specifier.orig.value : specifier.orig.value
+                                const exportedName = specifier.exported?.value ?? localName
+                                const binding = moduleBindings.getByName(localName)
+                                if (binding) exports.set(exportedName, binding.ref)
+                            }
+                            break
+                    }
+                }
+
+                // Pass 4: Collect references (identifiers used in expressions)
+                visit.module(
+                    ast,
+                    {
+                        functionDeclaration(_, { descend, context }) {
+                            descend({
+                                ...context,
+                                scopeDepth: context.scopeDepth + 1,
+                            })
                         },
-                        { scopeDepth: 0 },
-                    )
+                        functionExpression(_, { descend, context }) {
+                            descend({
+                                ...context,
+                                scopeDepth: context.scopeDepth + 1,
+                            })
+                        },
+                        arrowFunctionExpression(_, { descend, context }) {
+                            descend({
+                                ...context,
+                                scopeDepth: context.scopeDepth + 1,
+                            })
+                        },
+                        classMethod(_, { descend, context }) {
+                            descend({
+                                ...context,
+                                scopeDepth: context.scopeDepth + 1,
+                            })
+                        },
+                        variableDeclarator(node) {
+                            if (node.init) {
+                                visit.expression(
+                                    node.init,
+                                    {
+                                        identifier(id) {
+                                            references.add(id)
+                                        },
+                                    },
+                                    null,
+                                )
+                            }
+                        },
+                        param() {
+                            /* skip parameters */
+                        },
+                        pattern() {
+                            /* skip patterns */
+                        },
+                        identifier(node, { context }) {
+                            if (context.scopeDepth === 0) {
+                                references.add(node)
+                            }
+                        },
+                        tsType() {
+                            /* empty */
+                        },
+                    },
+                    { scopeDepth: 0 },
+                )
 
-                    // Post-pass: populate exportedDerivedExtractors
-                    const exportedDerivedExtractors = new Map<string, DerivedExtractorBinding>()
-                    for (const [exportName, ref] of exports) {
-                        const binding = derivedBindings.get(ref)
-                        if (binding) {
-                            exportedDerivedExtractors.set(exportName, binding)
-                        }
+                // Post-pass: populate exportedDerivedExtractors
+                const exportedDerivedExtractors = new Map<string, DerivedExtractorBinding>()
+                for (const [exportName, ref] of exports) {
+                    const binding = derivedBindings.get(ref)
+                    if (binding) {
+                        exportedDerivedExtractors.set(exportName, binding)
                     }
+                }
 
-                    return {
-                        moduleBindings,
-                        localImports,
-                        references,
-                        exports,
-                        exportedDerivedExtractors,
-                    }
-                },
-            )
+                return {
+                    moduleBindings,
+                    localImports,
+                    references,
+                    exports,
+                    exportedDerivedExtractors,
+                }
+            },
+        )
 
-            return {
-                fileBindings,
-                fileData: styleExprInst.fileData,
-                derived: styleExprInst.derived,
-                styleExprs: styleExprInst.styleExprs,
-            }
-        },
-    })
-
-    return Object.assign(stage, { [BINDING_STAGE]: true as const })
-}
+        return {
+            fileBindings,
+            derived: styleExprInst.derived,
+            styleExprs: styleExprInst.styleExprs,
+        }
+    },
+})

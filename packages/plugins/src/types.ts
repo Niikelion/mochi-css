@@ -37,6 +37,11 @@ export interface DerivedExtractorBinding {
     localIdentifier: SWC.Identifier
 }
 
+export type ReexportInfo = {
+    sourcePath: string
+    originalName: string
+}
+
 export interface FileInfo {
     filePath: string
     ast: SWC.Module
@@ -50,4 +55,6 @@ export interface FileInfo {
     exports: Map<string, Ref>
     derivedExtractorBindings: RefMap<DerivedExtractorBinding>
     exportedDerivedExtractors: Map<string, DerivedExtractorBinding>
+    reexports: Map<string, ReexportInfo>
+    namespaceReexports: Set<string>
 }

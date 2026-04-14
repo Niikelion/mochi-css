@@ -1,10 +1,10 @@
 import { GlobalCssObject, GlobalCssStyles } from "@mochi-css/vanilla";
-import type { StyleGenerator } from "@mochi-css/plugins";
+import { StyleGenerator } from "@mochi-css/plugins";
 import type { OnDiagnostic } from "@mochi-css/builder";
 import { getErrorMessage } from "@mochi-css/builder";
 import { StitchesConfig, preprocess } from "@mochi-css/stitches";
 
-export class StitchesGlobalCssGenerator implements StyleGenerator {
+export class StitchesGlobalCssGenerator extends StyleGenerator {
     private readonly collectedStyles: {
         source: string;
         args: GlobalCssStyles[];
@@ -13,7 +13,15 @@ export class StitchesGlobalCssGenerator implements StyleGenerator {
     constructor(
         private readonly config: StitchesConfig,
         private readonly onDiagnostic?: OnDiagnostic,
-    ) {}
+    ) {
+        super();
+    }
+
+    override mockFunction(): unknown {
+        // globalCss returns a function that applies global styles at runtime; no-op mock
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        return () => {};
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: GlobalCssStyles[] = [];

@@ -1,9 +1,9 @@
-import type { StyleGenerator } from "@mochi-css/plugins";
+import { StyleGenerator } from "@mochi-css/plugins";
 import type { OnDiagnostic } from "@mochi-css/builder";
 import { StitchesConfig, StitchesTheme } from "@mochi-css/stitches";
 import { buildThemeClassName } from "@mochi-css/stitches";
 
-export class StitchesCreateThemeGenerator implements StyleGenerator {
+export class StitchesCreateThemeGenerator extends StyleGenerator {
     private readonly collectedThemes: {
         source: string;
         tokens: StitchesTheme;
@@ -12,7 +12,34 @@ export class StitchesCreateThemeGenerator implements StyleGenerator {
     constructor(
         private readonly config: StitchesConfig,
         private readonly onDiagnostic?: OnDiagnostic,
-    ) {}
+    ) {
+        super();
+    }
+
+    override mockFunction(...args: unknown[]): unknown {
+        const tokens = args[0];
+        if (
+            tokens == null ||
+            typeof tokens !== "object" ||
+            Array.isArray(tokens)
+        ) {
+            return { className: "" };
+        }
+        const prefix = this.config.prefix ? `${this.config.prefix}-` : "";
+        const className = buildThemeClassName(tokens as StitchesTheme);
+        const tokenRefs = Object.fromEntries(
+            Object.entries(tokens as StitchesTheme).map(([scale, vals]) => [
+                scale,
+                Object.fromEntries(
+                    Object.entries(vals).map(([token]) => [
+                        token,
+                        `var(--${prefix}${scale}-${token})`,
+                    ]),
+                ),
+            ]),
+        );
+        return { className, ...tokenRefs };
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         const tokens = args[0];

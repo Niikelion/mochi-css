@@ -1,6 +1,7 @@
 import { CallExpression, Expression } from "@swc/types";
 import type { StyleExtractor, StyleGenerator } from "@mochi-css/plugins";
 import { VanillaCssExtractor } from "@mochi-css/vanilla/config";
+import { css, keyframes, globalCss } from "@mochi-css/vanilla";
 import type { OnDiagnostic } from "@mochi-css/builder";
 import { StitchesGenerator } from "@/generator/StitchesGenerator";
 
@@ -18,6 +19,7 @@ export class StitchesExtractor implements StyleExtractor {
                     "css",
                     (call: CallExpression) =>
                         call.arguments.map((a) => a.expression),
+                    css as (...args: unknown[]) => unknown,
                 ),
             ],
             [
@@ -27,6 +29,7 @@ export class StitchesExtractor implements StyleExtractor {
                     "styled",
                     (call: CallExpression) =>
                         call.arguments.map((a) => a.expression).slice(1),
+                    css as (...args: unknown[]) => unknown,
                 ),
             ],
             [
@@ -36,6 +39,7 @@ export class StitchesExtractor implements StyleExtractor {
                     "keyframes",
                     (call: CallExpression) =>
                         call.arguments.slice(0, 1).map((a) => a.expression),
+                    keyframes as (...args: unknown[]) => unknown,
                 ),
             ],
             [
@@ -45,6 +49,7 @@ export class StitchesExtractor implements StyleExtractor {
                     "globalCss",
                     (call: CallExpression) =>
                         call.arguments.slice(0, 1).map((a) => a.expression),
+                    globalCss as (...args: unknown[]) => unknown,
                 ),
             ],
             [
@@ -54,6 +59,7 @@ export class StitchesExtractor implements StyleExtractor {
                     "createTheme",
                     (call: CallExpression) =>
                         call.arguments.slice(0, 1).map((a) => a.expression),
+                    () => ({ className: "" }),
                 ),
             ],
         ]);

@@ -41,21 +41,6 @@ export interface LocalImport {
 
 export type ResolveImport = (fromFile: string, importSource: string) => string | null
 
-/**
- * Minimal view of per-file data needed for propagation and AST minimization.
- * The full FileInfo (with extractor-specific maps) lives in @mochi-css/plugins.
- */
-export interface FileView {
-    filePath: string
-    ast: SWC.Module
-    styleExpressions: Set<SWC.Expression>
-    references: Set<SWC.Identifier>
-    moduleBindings: RefMap<BindingInfo>
-    localImports: RefMap<LocalImport>
-    usedBindings: Set<BindingInfo>
-    exports: Map<string, Ref>
-}
-
 export class RefMap<T> {
     private readonly data = new Map<string, Map<number, T>>()
 

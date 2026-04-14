@@ -1,28 +1,24 @@
 import { describe, it, expect, vi } from "vitest"
 import { parseSource, StageRunner } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
-import { makeImportSpecStage } from "./ImportSpecStage"
-import { makeDerivedExtractorStage } from "./DerivedExtractorStage"
-import { makeStyleExprStage } from "./StyleExprStage"
-import { makeBindingStage } from "./BindingStage"
+import { importStageDef } from "./ImportSpecStage"
+import { derivedStageDef } from "./DerivedExtractorStage"
+import { styleExprStageDef } from "./StyleExprStage"
+import { bindingStageDef } from "./BindingStage"
 
 async function buildFileInfo(source: string, resolveImport = () => null, onDiagnostic?: OnDiagnostic) {
     const module = await parseSource(source, "test.ts")
-    const importStage = makeImportSpecStage([])
-    const derivedStage = makeDerivedExtractorStage(importStage)
-    const styleExprStage = makeStyleExprStage(derivedStage)
-    const bindingStage = makeBindingStage(styleExprStage)
-    const runner = new StageRunner([module.filePath], [importStage, derivedStage, styleExprStage, bindingStage])
+    const runner = new StageRunner(
+        [module.filePath],
+        [importStageDef, derivedStageDef, styleExprStageDef, bindingStageDef],
+    )
 
-    const importOut = runner.getInstance(importStage)
-    importOut.fileData.set(module.filePath, {
-        ast: module.ast,
-        filePath: module.filePath,
-        resolveImport,
-        onDiagnostic,
-    })
+    runner.engine.fileData.set(module.filePath, { filePath: module.filePath, ast: module.ast })
+    const importOut = runner.getInstance(importStageDef)
+    importOut.extractors.set(new Map())
+    importOut.fileCallbacks.set(module.filePath, { resolveImport, onDiagnostic })
 
-    const bindingOut = runner.getInstance(bindingStage)
+    const bindingOut = runner.getInstance(bindingStageDef)
     return bindingOut.fileBindings.for(module.filePath).get()
 }
 

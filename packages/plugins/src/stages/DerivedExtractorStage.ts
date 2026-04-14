@@ -5,18 +5,24 @@ import { defineStage } from "@mochi-css/builder"
 import type { CacheRegistry, FileCache } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import { idToRef } from "@mochi-css/builder"
-import type { StageDefinition } from "@mochi-css/builder"
-import { makeImportSpecStage, type ImportSpecStageOut } from "./ImportSpecStage"
+import { importStageDef, type ImportSpecStageOut } from "./ImportSpecStage"
 
 type DerivedStageResult = {
+    /** Refs of identifiers bound to a derived extractor (e.g. `css` in `const { css } = createStitches(...)`). */
     derivedBindings: RefMap<DerivedExtractorBinding>
+    /** Call expressions whose return value was destructured into derived extractors. */
     parentCalls: Set<SWC.CallExpression>
+    /** Union of import-spec extractors and all discovered derived extractors in this file. */
     mergedExtractorIds: RefMap<StyleExtractor>
 }
 
+/**
+ * Output of {@link derivedStageDef}.
+ *
+ * - `derived` — per-file cache with derived extractor bindings and the merged extractor map
+ */
 export type DerivedExtractorStageOut = {
     derived: FileCache<DerivedStageResult>
-    fileData: ImportSpecStageOut["fileData"]
 }
 
 function discoverDerivedFromDeclarator(
@@ -96,91 +102,96 @@ function discoverDerivedFromDeclarator(
     }
 }
 
-export const DERIVED_EXTRACTOR_STAGE = Symbol.for("DerivedExtractorStage")
+/**
+ * Derived extractor discovery.
+ *
+ * Scans top-level variable declarations for calls whose callee is a known parent extractor
+ * (one with `derivedExtractors` defined). When found, the destructured bindings are mapped
+ * to their child {@link StyleExtractor}s and merged into the extractor identifier map.
+ *
+ * Emits diagnostics when the return value is not destructured or uses rest spread.
+ *
+ * Depends on {@link importStageDef}.
+ */
+export const derivedStageDef = defineStage({
+    dependsOn: [importStageDef] as const,
+    init(registry: CacheRegistry, importInst: ImportSpecStageOut): DerivedExtractorStageOut {
+        const derived = registry.fileCache(
+            (file) => [
+                importInst.importSpecs.for(file),
+                registry.fileData.for(file),
+                importInst.fileCallbacks.for(file),
+            ],
+            (file): DerivedStageResult => {
+                const { ast } = registry.fileData.for(file).get()
+                const { onDiagnostic } = importInst.fileCallbacks.for(file).get()
 
-export function makeDerivedExtractorStage(
-    importStage: ReturnType<typeof makeImportSpecStage>,
-): StageDefinition<[ReturnType<typeof makeImportSpecStage>], DerivedExtractorStageOut> {
-    const stage = defineStage({
-        dependsOn: [importStage] as const,
-        init(registry: CacheRegistry, importInst: ImportSpecStageOut): DerivedExtractorStageOut {
-            const derived = registry.fileCache(
-                (file) => [importInst.importSpecs.for(file)],
-                (file): DerivedStageResult => {
-                    const data = importInst.fileData.cache.for(file).get()
+                // Seed styleExtractorIds from ImportSpecStage output
+                const importSpecsResult = importInst.importSpecs.for(file).get()
+                const styleExtractorIds = new RefMap<StyleExtractor>()
+                for (const [ref, extractor] of importSpecsResult.entries()) {
+                    styleExtractorIds.set(ref, extractor)
+                }
 
-                    // Seed styleExtractorIds from ImportSpecStage output
-                    const importSpecsResult = importInst.importSpecs.for(file).get()
-                    const styleExtractorIds = new RefMap<StyleExtractor>()
-                    for (const [ref, extractor] of importSpecsResult.entries()) {
-                        styleExtractorIds.set(ref, extractor)
+                const derivedExtractorBindings = new RefMap<DerivedExtractorBinding>()
+                const parentCallsWithDerived = new Set<SWC.CallExpression>()
+
+                // Pass 1.5: discover derived extractors from destructuring
+                for (const item of ast.body) {
+                    let varDecl: SWC.VariableDeclaration | null = null
+                    if (item.type === "VariableDeclaration") {
+                        varDecl = item
+                    } else if (item.type === "ExportDeclaration" && item.declaration.type === "VariableDeclaration") {
+                        varDecl = item.declaration
                     }
+                    if (!varDecl) continue
 
-                    const derivedExtractorBindings = new RefMap<DerivedExtractorBinding>()
-                    const parentCallsWithDerived = new Set<SWC.CallExpression>()
-
-                    // Pass 1.5: discover derived extractors from destructuring
-                    for (const item of data.ast.body) {
-                        let varDecl: SWC.VariableDeclaration | null = null
-                        if (item.type === "VariableDeclaration") {
-                            varDecl = item
-                        } else if (
-                            item.type === "ExportDeclaration" &&
-                            item.declaration.type === "VariableDeclaration"
-                        ) {
-                            varDecl = item.declaration
-                        }
-                        if (!varDecl) continue
-
-                        for (const declarator of varDecl.declarations) {
-                            discoverDerivedFromDeclarator(
-                                declarator,
-                                styleExtractorIds,
-                                derivedExtractorBindings,
-                                parentCallsWithDerived,
-                                file,
-                                data.onDiagnostic,
-                            )
-                        }
-                    }
-
-                    // Pass 1.75: warn about ignored return values from parent extractors
-                    for (const item of data.ast.body) {
-                        let expr: SWC.Expression | undefined
-                        if (item.type === "ExpressionStatement") {
-                            expr = item.expression
-                        }
-                        if (expr?.type !== "CallExpression") continue
-                        if (expr.callee.type !== "Identifier") continue
-
-                        const calleeRef = idToRef(expr.callee)
-                        const extractor = styleExtractorIds.get(calleeRef)
-                        if (!extractor?.derivedExtractors) continue
-
-                        const extractorName = `${extractor.importPath}:${extractor.symbolName}`
-                        data.onDiagnostic?.({
-                            code: "MOCHI_INVALID_EXTRACTOR_USAGE",
-                            message:
-                                `Return value of "${extractorName}" is not used. ` +
-                                `"${extractor.symbolName}" produces sub-extractors that must be destructured ` +
-                                `(e.g. \`const { css } = ${extractor.symbolName}(...)\`).`,
-                            severity: "warning",
+                    for (const declarator of varDecl.declarations) {
+                        discoverDerivedFromDeclarator(
+                            declarator,
+                            styleExtractorIds,
+                            derivedExtractorBindings,
+                            parentCallsWithDerived,
                             file,
-                            line: expr.span.start,
-                        })
+                            onDiagnostic,
+                        )
                     }
+                }
 
-                    return {
-                        derivedBindings: derivedExtractorBindings,
-                        parentCalls: parentCallsWithDerived,
-                        mergedExtractorIds: styleExtractorIds,
+                // Pass 1.75: warn about ignored return values from parent extractors
+                for (const item of ast.body) {
+                    let expr: SWC.Expression | undefined
+                    if (item.type === "ExpressionStatement") {
+                        expr = item.expression
                     }
-                },
-            )
+                    if (expr?.type !== "CallExpression") continue
+                    if (expr.callee.type !== "Identifier") continue
 
-            return { derived, fileData: importInst.fileData }
-        },
-    })
+                    const calleeRef = idToRef(expr.callee)
+                    const extractor = styleExtractorIds.get(calleeRef)
+                    if (!extractor?.derivedExtractors) continue
 
-    return Object.assign(stage, { [DERIVED_EXTRACTOR_STAGE]: true as const })
-}
+                    const extractorName = `${extractor.importPath}:${extractor.symbolName}`
+                    onDiagnostic?.({
+                        code: "MOCHI_INVALID_EXTRACTOR_USAGE",
+                        message:
+                            `Return value of "${extractorName}" is not used. ` +
+                            `"${extractor.symbolName}" produces sub-extractors that must be destructured ` +
+                            `(e.g. \`const { css } = ${extractor.symbolName}(...)\`).`,
+                        severity: "warning",
+                        file,
+                        line: expr.span.start,
+                    })
+                }
+
+                return {
+                    derivedBindings: derivedExtractorBindings,
+                    parentCalls: parentCallsWithDerived,
+                    mergedExtractorIds: styleExtractorIds,
+                }
+            },
+        )
+
+        return { derived }
+    },
+})
