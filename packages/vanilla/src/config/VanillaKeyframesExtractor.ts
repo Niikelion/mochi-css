@@ -1,5 +1,5 @@
 import type { StyleExtractor, StyleGenerator } from "@mochi-css/plugins"
-import type { OnDiagnostic } from "@mochi-css/builder"
+import type { OnDiagnostic } from "@mochi-css/core"
 import type { CallExpression, Expression } from "@swc/core"
 import { VanillaKeyframesGenerator } from "./VanillaKeyframesGenerator"
 

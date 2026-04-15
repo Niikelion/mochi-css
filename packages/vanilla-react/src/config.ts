@@ -4,8 +4,6 @@ import { styledIdPlugin } from "@mochi-css/plugins"
 import type { Config } from "@mochi-css/config"
 import { css } from "@mochi-css/vanilla"
 
-export { styledIdPlugin } from "@mochi-css/plugins"
-
 class ComponentMock {
     constructor(public readonly selector: string) {
         /* empty */

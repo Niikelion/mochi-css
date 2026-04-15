@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { StitchesCreateThemeGenerator } from "./StitchesCreateThemeGenerator";
-import { buildThemeClassName } from "@mochi-css/stitches";
+import { buildThemeClassName } from "../../runtime/createTheme";
 
 describe("StitchesCreateThemeGenerator", () => {
     it("emits CSS variable declarations in global slot", async () => {

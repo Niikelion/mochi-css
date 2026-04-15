@@ -1,6 +1,6 @@
 import { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { StitchesConfig } from "@mochi-css/stitches";
+import type { OnDiagnostic } from "@mochi-css/core";
+import { StitchesConfig } from "../../types";
 import { StitchesCssGenerator } from "./StitchesCssGenerator";
 import { StitchesGlobalCssGenerator } from "./StitchesGlobalCssGenerator";
 import { StitchesKeyframesGenerator } from "./StitchesKeyframesGenerator";

@@ -1,4 +1,5 @@
-import { OnDiagnostic, RootEntry } from "@mochi-css/builder"
+import type { OnDiagnostic } from "@mochi-css/core"
+import { RootEntry } from "@mochi-css/builder"
 import { makePipeline, Plugin } from "@/plugin"
 import { mergeArrays, mergeCallbacks } from "@/merge"
 import path from "path"

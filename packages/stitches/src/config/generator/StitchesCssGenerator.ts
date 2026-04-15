@@ -6,9 +6,9 @@ import {
     MochiCSS,
 } from "@mochi-css/vanilla";
 import { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { getErrorMessage } from "@mochi-css/builder";
-import { StitchesConfig, preprocess } from "@mochi-css/stitches";
+import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core";
+import { StitchesConfig } from "../../types";
+import { preprocess } from "../../preprocess";
 
 export class StitchesCssGenerator extends StyleGenerator {
     private readonly collectedStyles: { source: string; args: StyleProps[] }[] =

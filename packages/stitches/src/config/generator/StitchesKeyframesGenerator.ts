@@ -1,7 +1,6 @@
 import { KeyframesObject, KeyframeStops, keyframes } from "@mochi-css/vanilla";
 import { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { getErrorMessage } from "@mochi-css/builder";
+import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core";
 
 export class StitchesKeyframesGenerator extends StyleGenerator {
     private readonly collectedKeyframes: {

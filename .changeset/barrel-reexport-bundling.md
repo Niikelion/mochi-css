@@ -2,6 +2,7 @@
 "@mochi-css/builder": patch
 "@mochi-css/plugins": patch
 "@mochi-css/vanilla": major
+"@mochi-css/vanilla-react": major
 "@mochi-css/vite": major
 ---
 
@@ -19,6 +20,11 @@ Fixed several bugs that caused build failures in projects using barrel/reexport 
 **`@mochi-css/vanilla`**
 
 - `MochiCSS.selector` now uses `""` join (compound selector) consistently — corrected test expectations that incorrectly assumed comma-separated output.
+- `styledIdPlugin` is no longer re-exported from `@mochi-css/vanilla/config` — import it from `@mochi-css/plugins` directly.
+
+**`@mochi-css/vanilla-react`**
+
+- `styledIdPlugin` is no longer re-exported from `@mochi-css/vanilla-react/config` — import it from `@mochi-css/plugins` directly.
 
 **`@mochi-css/vite`**
 

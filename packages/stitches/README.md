@@ -9,7 +9,6 @@ It provides a [Stitches](https://stitches.dev)-compatible API for Mochi-CSS, all
 
 ```bash
 npm i @mochi-css/stitches
-npm i -D @mochi-css/stitches-builder
 ```
 
 Add the builder plugin to your `mochi.config.ts`:
@@ -17,7 +16,7 @@ Add the builder plugin to your `mochi.config.ts`:
 ```typescript
 // mochi.config.ts
 import { defineConfig } from "@mochi-css/config";
-import { stitchesPlugin } from "@mochi-css/stitches-builder";
+import { stitchesPlugin } from "@mochi-css/stitches/config";
 
 export default defineConfig({
     plugins: [stitchesPlugin()],

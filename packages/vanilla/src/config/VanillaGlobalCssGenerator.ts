@@ -1,6 +1,5 @@
 import { StyleGenerator } from "@mochi-css/plugins"
-import type { OnDiagnostic } from "@mochi-css/builder"
-import { getErrorMessage } from "@mochi-css/builder"
+import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { globalCss, GlobalCssObject, GlobalCssStyles } from "../index"
 
 export class VanillaGlobalCssGenerator extends StyleGenerator {

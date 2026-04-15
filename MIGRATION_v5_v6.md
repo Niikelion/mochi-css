@@ -1,6 +1,6 @@
 # v5 → v6 Migration Guide
 
-This release overhauls the stage definition API in `@mochi-css/plugins`, restructures how file data flows through the cache engine, and adds first-class barrel-file support. End-users of `@mochi-css/vanilla`, `@mochi-css/stitches`, and `@mochi-css/react` / `@mochi-css/vanilla-react` are **not affected** by these changes.
+This release overhauls the stage definition API in `@mochi-css/plugins`, restructures how file data flows through the cache engine, moves the diagnostics API to `@mochi-css/core`, and adds first-class barrel-file support. End-users of `@mochi-css/vanilla`, `@mochi-css/stitches`, and `@mochi-css/react` / `@mochi-css/vanilla-react` are **not affected** by these changes.
 
 ---
 
@@ -10,7 +10,30 @@ These changes only affect **plugin authors, custom integrations, and tooling** t
 
 ---
 
+## `@mochi-css/core`
+
+### New: diagnostics API
+
+`MochiError`, `getErrorMessage`, `Diagnostic`, `OnDiagnostic`, `diagnosticToString`, and `reportGlobalDiagnostic` are now canonical exports of `@mochi-css/core`. Previously these lived in `@mochi-css/builder`; that re-export has been removed.
+
+**Before:**
+```typescript
+import type { Diagnostic, OnDiagnostic } from "@mochi-css/builder"
+import { MochiError, getErrorMessage } from "@mochi-css/builder"
+```
+
+**After:**
+```typescript
+import { type Diagnostic, type OnDiagnostic, MochiError, getErrorMessage } from "@mochi-css/core"
+```
+
+---
+
 ## `@mochi-css/builder`
+
+### Breaking: `MochiError`, `getErrorMessage`, `Diagnostic`, `OnDiagnostic` removed
+
+These are no longer exported from `@mochi-css/builder`. Import them from `@mochi-css/core` instead (see above).
 
 ### Breaking: `FileInput<T>` — `.cache` wrapper removed
 
@@ -243,6 +266,26 @@ runner.engine.fileData.set(filePath, { filePath, ast })                 // on Ca
 
 ---
 
+## `@mochi-css/vanilla` / `@mochi-css/vanilla-react`
+
+### Breaking: `styledIdPlugin` no longer re-exported from config subpaths
+
+`styledIdPlugin` was previously re-exported from both `@mochi-css/vanilla/config` and `@mochi-css/vanilla-react/config`. Import it directly from `@mochi-css/plugins` instead.
+
+**Before:**
+```typescript
+import { styledIdPlugin } from "@mochi-css/vanilla/config"
+// or
+import { styledIdPlugin } from "@mochi-css/vanilla-react/config"
+```
+
+**After:**
+```typescript
+import { styledIdPlugin } from "@mochi-css/plugins"
+```
+
+---
+
 ## `@mochi-css/config`
 
 ### New: `createBuilder` helper
@@ -257,4 +300,27 @@ const context = new FullContext(config.onDiagnostic ?? (() => {}))
 for (const plugin of config.plugins) plugin.onLoad?.(context)
 
 const builder = createBuilder(config, context)
+```
+
+---
+
+## `@mochi-css/stitches`
+
+### Breaking: `@mochi-css/stitches-builder` removed — use `@mochi-css/stitches/config`
+
+The separate `@mochi-css/stitches-builder` package has been merged into `@mochi-css/stitches` as a `./config` subpath, following the same pattern as `@mochi-css/vanilla/config`.
+
+Uninstall `@mochi-css/stitches-builder` and update your imports:
+
+**Before:**
+```bash
+npm i -D @mochi-css/stitches-builder
+```
+```typescript
+import { stitchesPlugin } from "@mochi-css/stitches-builder"
+```
+
+**After:**
+```typescript
+import { stitchesPlugin } from "@mochi-css/stitches/config"
 ```

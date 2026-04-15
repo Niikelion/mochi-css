@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import { Dirent } from "fs"
 import { path } from "@/utils"
-import { MochiError } from "@/diagnostics"
+import { MochiError } from "@mochi-css/core"
 
 /**
  * Recursively finds all TypeScript/TSX files in a directory.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { findAllFiles } from "@/findAllFiles"
-import { MochiError } from "@/diagnostics"
+import { MochiError } from "@mochi-css/core"
 import fs from "fs/promises"
 import path from "path"
 import os from "os"

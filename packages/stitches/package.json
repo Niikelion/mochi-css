@@ -9,14 +9,33 @@
     "files": [
         "/dist"
     ],
+    "typesVersions": {
+        "*": {
+            "config": [
+                "./dist/config/index.d.ts"
+            ]
+        }
+    },
     "exports": {
-        "import": {
-            "types": "./dist/index.d.mts",
-            "import": "./dist/index.mjs"
+        ".": {
+            "import": {
+                "types": "./dist/index.d.mts",
+                "import": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.ts",
+                "require": "./dist/index.js"
+            }
         },
-        "require": {
-            "types": "./dist/index.d.ts",
-            "require": "./dist/index.js"
+        "./config": {
+            "import": {
+                "types": "./dist/config/index.d.mts",
+                "import": "./dist/config/index.mjs"
+            },
+            "require": {
+                "types": "./dist/config/index.d.ts",
+                "require": "./dist/config/index.js"
+            }
         }
     },
     "scripts": {
@@ -28,11 +47,30 @@
         "format": "prettier --write ."
     },
     "dependencies": {
+        "@mochi-css/core": "^5.0.0",
         "@mochi-css/vanilla": "^5.0.0",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
+        "@mochi-css/builder": "^5.0.0",
+        "@mochi-css/config": "^5.0.0",
+        "@mochi-css/plugins": "^5.0.0",
+        "@swc/core": "^1",
         "react": "^19"
+    },
+    "peerDependenciesMeta": {
+        "@mochi-css/builder": {
+            "optional": true
+        },
+        "@mochi-css/config": {
+            "optional": true
+        },
+        "@mochi-css/plugins": {
+            "optional": true
+        },
+        "@swc/core": {
+            "optional": true
+        }
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",
@@ -41,7 +79,10 @@
         "@gamedev-sensei/tsdown-config": "^2.1.0",
         "@mochi-css/builder": "^5.0.0",
         "@mochi-css/config": "*",
+        "@mochi-css/plugins": "^5.0.0",
         "@mochi-css/shared-config": "^2.0.0",
+        "@swc/types": "^0.1.25",
+        "@types/node": "^24.8.1",
         "@types/react": "^19.2.2",
         "@types/react-dom": "^19.2.3",
         "@vitest/coverage-v8": "^4.0.15",
@@ -55,6 +96,7 @@
         "tsdown": "^0.15.7",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.21.0",
+        "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.0.15"
     }
 }

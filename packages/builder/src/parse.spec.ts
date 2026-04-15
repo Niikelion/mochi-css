@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { parseFile, parseSource } from "@/parse"
-import { MochiError } from "@/diagnostics"
+import { MochiError } from "@mochi-css/core"
 import SWC from "@swc/core"
 import fs from "fs/promises"
 

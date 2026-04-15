@@ -3,19 +3,25 @@ import type { Ref } from "./helpers"
 
 export type { Ref }
 
+/** A parsed source file together with its path on disk. */
 export type Module = {
     ast: SWC.Module
     filePath: string
 }
 
+/** A single import specifier resolved to its `Ref` and originating module path. */
 export interface ImportSpec {
+    /** The local binding that receives the imported value. */
     ref: Ref
+    /** The name as exported by the source module (`default` for default imports). */
     sourceName: string
+    /** Whether this is a namespace import (`import * as ns`). */
     isNamespace: boolean
+    /** The module specifier string from the import declaration. */
     source: string
 }
 
-// Binding information for precise tracking
+/** The AST node(s) that introduce a binding, discriminated by declaration kind. */
 export type BindingDeclarator =
     | { type: "variable"; declarator: SWC.VariableDeclarator; declaration: SWC.VariableDeclaration }
     | { type: "function"; declaration: SWC.FunctionDeclaration }
@@ -26,21 +32,38 @@ export type BindingDeclarator =
           declaration: SWC.ImportDeclaration
       }
 
+/** Full information about a named binding within a module. */
 export interface BindingInfo {
+    /** The identifier node for this binding. */
     identifier: SWC.Identifier
+    /** Unique reference used to look up this binding across the analysis pipeline. */
     ref: Ref
+    /** The declaration that introduces this binding. */
     declarator: BindingDeclarator
+    /** The top-level module item containing this binding. */
     moduleItem: SWC.ModuleItem
 }
 
+/** A cross-file import resolved to an absolute source path and export name. */
 export interface LocalImport {
+    /** Ref of the local binding that receives the imported value. */
     localRef: Ref
-    sourcePath: string // resolved absolute path
-    exportName: string // original export name
+    /** Resolved, absolute path to the imported source file. */
+    sourcePath: string
+    /** Original export name from the imported module. */
+    exportName: string
 }
 
+/** Resolves an import source string to an absolute file path, or `null` if unresolvable. */
 export type ResolveImport = (fromFile: string, importSource: string) => string | null
 
+/**
+ * Two-level map keyed by `Ref` (name and numeric SWC context id).
+ *
+ * @template T - type of values stored in the map
+ * @remark Provides O(1) lookup for per-binding data across the analysis pipeline.
+ */
+// noinspection JSUnusedGlobalSymbols
 export class RefMap<T> {
     private readonly data = new Map<string, Map<number, T>>()
 

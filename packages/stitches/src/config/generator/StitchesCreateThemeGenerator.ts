@@ -1,7 +1,7 @@
 import { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { StitchesConfig, StitchesTheme } from "@mochi-css/stitches";
-import { buildThemeClassName } from "@mochi-css/stitches";
+import type { OnDiagnostic } from "@mochi-css/core";
+import { StitchesConfig, StitchesTheme } from "../../types";
+import { buildThemeClassName } from "../../runtime/createTheme";
 
 export class StitchesCreateThemeGenerator extends StyleGenerator {
     private readonly collectedThemes: {
