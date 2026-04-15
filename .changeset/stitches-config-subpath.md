@@ -1,6 +1,5 @@
 ---
 "@mochi-css/stitches": major
-"@mochi-css/stitches-builder": major
 ---
 
 Moved stitches build tooling into `@mochi-css/stitches/config` subpath. The separate `@mochi-css/stitches-builder` package has been removed.
