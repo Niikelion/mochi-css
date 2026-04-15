@@ -1,7 +1,7 @@
 export type Diagnostic = {
     code: string
     message: string
-    severity: "error" | "warning"
+    severity: "error" | "warning" | "info" | "debug"
     file?: string
     line?: number
     column?: number
@@ -23,6 +23,15 @@ export class MochiError extends Error {
         super(message)
         this.name = "MochiError"
     }
+}
+
+export function diagnosticToString(diagnostic: Diagnostic): string {
+    const positionPart =
+        diagnostic.line !== undefined || diagnostic.column !== undefined
+            ? `:${diagnostic.line ?? "?"}:${diagnostic.column ?? "?"}`
+            : ""
+    const filePart = diagnostic.file !== undefined ? ` (${diagnostic.file}${positionPart})` : ""
+    return `[mochi-css] ${diagnostic.code}${filePart} ${diagnostic.message}`
 }
 
 declare const __global_mochi_diagnostics: OnDiagnostic | undefined

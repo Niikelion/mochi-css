@@ -1,4 +1,4 @@
-![Mochi.css banner](assets/mochi-css-banner-wide.png)
+![Mochi.css banner](assets/mochi-standard.png)
 
 # Near zero-runtime CSS-in-JS solution with build-time style extraction
 

@@ -9,6 +9,7 @@ import { globalCss } from "@mochi-css/vanilla"
 
 globalCss({
     body: {
+        backgroundColor: "#1e1e1e",
         margin: 0,
     },
 })

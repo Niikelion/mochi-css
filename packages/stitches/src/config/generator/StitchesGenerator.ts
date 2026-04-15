@@ -1,6 +1,6 @@
-import type { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { StitchesConfig } from "@mochi-css/stitches";
+import { StyleGenerator } from "@mochi-css/plugins";
+import type { OnDiagnostic } from "@mochi-css/core";
+import { StitchesConfig } from "../../types";
 import { StitchesCssGenerator } from "./StitchesCssGenerator";
 import { StitchesGlobalCssGenerator } from "./StitchesGlobalCssGenerator";
 import { StitchesKeyframesGenerator } from "./StitchesKeyframesGenerator";
@@ -14,10 +14,17 @@ interface SubGeneratorGroup {
     createTheme: StitchesCreateThemeGenerator;
 }
 
-export class StitchesGenerator implements StyleGenerator {
+export class StitchesGenerator extends StyleGenerator {
     private readonly allSubGeneratorGroups: SubGeneratorGroup[] = [];
+    private lastSubGenGroup: SubGeneratorGroup | null = null;
 
-    constructor(private readonly onDiagnostic?: OnDiagnostic) {}
+    constructor(private readonly onDiagnostic?: OnDiagnostic) {
+        super();
+    }
+
+    override mockFunction(..._args: unknown[]): unknown {
+        return this.lastSubGenGroup;
+    }
 
     collectArgs(
         source: string,
@@ -40,6 +47,7 @@ export class StitchesGenerator implements StyleGenerator {
         };
 
         this.allSubGeneratorGroups.push(subGens);
+        this.lastSubGenGroup = subGens;
         return subGens as unknown as Record<string, StyleGenerator>;
     }
 

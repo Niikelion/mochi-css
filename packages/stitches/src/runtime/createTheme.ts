@@ -1,4 +1,4 @@
-import { shortHash } from "@mochi-css/vanilla";
+import { shortHash } from "@mochi-css/core";
 import { StitchesConfig, StitchesTheme } from "@/types";
 
 export type ThemeResult = {

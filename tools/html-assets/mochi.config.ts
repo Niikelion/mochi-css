@@ -4,4 +4,5 @@ export default defineConfig({
     roots: ['src'],
     tmpDir: '.mochi',
     splitCss: true,
+    debug: true,
 })

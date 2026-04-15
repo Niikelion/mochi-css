@@ -1,10 +1,18 @@
 import * as SWC from "@swc/core"
+import { AnyStage } from "@/analysis/Stage"
 
+/**
+ * Unique reference to a binding within a module.
+ * Matches SWC's identifier identity: same `name` + `id` means the same binding.
+ * `id` is undefined for unresolved or synthetic identifiers.
+ */
 export type Ref = {
     name: string
     id?: number
 }
 
+/** Converts an SWC `Identifier` node to a `Ref`. */
+// noinspection JSUnusedGlobalSymbols
 export function idToRef(v: SWC.Identifier): Ref {
     return {
         name: v.value,
@@ -12,20 +20,10 @@ export function idToRef(v: SWC.Identifier): Ref {
     }
 }
 
-export function getOrInsert<K, V>(target: Map<K, V>, key: K, compute: () => V): V {
-    const value = target.get(key)
-    if (value) return value
-    const newValue = compute()
-    target.set(key, newValue)
-    return newValue
-}
-
-export function isLocalImport(source: string): boolean {
-    return source.startsWith("./") || source.startsWith("../")
-}
-
-export type AnyStage = { readonly dependsOn: AnyStage[] }
-
+/**
+ * Sorts stages in topological order so each stage appears after all its dependencies.
+ * Throws if a dependency cycle is detected.
+ */
 export function topoSort<T extends AnyStage>(stages: readonly T[]): T[] {
     const visited = new Set<AnyStage>()
     const visiting = new Set<AnyStage>()

@@ -84,7 +84,7 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
      * Useful for targeting this component from another style.
      */
     get selector(): string {
-        return this.classNames.map((n) => `.${n}`).join()
+        return this.classNames.map((n) => `.${n}`).join("")
     }
 
     toString(): string {

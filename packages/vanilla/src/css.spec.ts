@@ -191,13 +191,13 @@ describe("css", () => {
 
     it("manual string first: selector includes all class names as CSS selector", () => {
         const styles = css("my-external-class", { color: "blue" })
-        expect(styles.selector).toBe(styles.classNames.map((n) => `.${n}`).join(","))
+        expect(styles.selector).toBe(styles.classNames.map((n) => `.${n}`).join(""))
         expect(styles.selector).toContain(".my-external-class")
     })
 
     it("injected s- string last: selector includes all class names as CSS selector", () => {
         const styles = css({ color: "blue" }, "s-Abc12345")
-        expect(styles.selector).toBe(styles.classNames.map((n) => `.${n}`).join(","))
+        expect(styles.selector).toBe(styles.classNames.map((n) => `.${n}`).join(""))
         expect(styles.classNames).toContain("s-Abc12345")
     })
 

@@ -15,7 +15,7 @@ import {
     isNestedSelector,
     StyleProps,
 } from "@/props"
-import { shortHash } from "@/hash"
+import { shortHash } from "@mochi-css/core"
 import { MochiSelector } from "@/selector"
 import { compareStringKey, stringPropComparator } from "@/compare"
 import { CssLike } from "@/values"

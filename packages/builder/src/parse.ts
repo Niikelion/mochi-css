@@ -1,7 +1,7 @@
 import type { Module } from "@/analysis/types"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
-import { MochiError, getErrorMessage } from "@/diagnostics"
+import { MochiError, getErrorMessage } from "@mochi-css/core"
 import { path } from "@/utils"
 
 export async function parseSource(source: string, filePath: string): Promise<Module> {

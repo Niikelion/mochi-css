@@ -31,6 +31,9 @@ vi.mock("@mochi-css/config", () => ({
         resetCrossFileState = { merged: () => undefined }
         getFilesToBundle = { merged: () => undefined }
     },
+    createBuilder: vi.fn(() => ({
+        collectMochiCss: mockCollectMochiCss,
+    })),
 }))
 
 vi.mock("@mochi-css/builder", async (importOriginal) => {
@@ -52,7 +55,7 @@ import { mochiCss } from "./index.js"
 import type { Plugin } from "vite"
 import { path } from "@mochi-css/builder"
 
-type MockModule = { id: string }
+type MockModule = { id: string; importers: Set<MockModule> }
 type MockServer = {
     moduleGraph: {
         getModuleById: (id: string) => MockModule | undefined
@@ -269,7 +272,7 @@ describe("mochiCss vite plugin HMR", () => {
         const hooks = await setupPlugin({ files: { "/src/App.tsx": ".old { color: red; }" } })
 
         // module ID uses hash + ".css" — fileHash mock returns basename without ext → "App.css"
-        const cssModule: MockModule = { id: "\0virtual:mochi-css/App.css" }
+        const cssModule: MockModule = { id: "\0virtual:mochi-css/App.css", importers: new Set() }
         const invalidateModule = vi.fn()
         const mockServer = makeMockServer({ "\0virtual:mochi-css/App.css": cssModule }, invalidateModule)
 
@@ -298,7 +301,7 @@ describe("mochiCss vite plugin HMR", () => {
         const hooks = await setupPlugin({ files: {}, global: ".old { margin: 0; }" })
 
         // RESOLVED_GLOBAL_ID = "\0virtual:mochi-css/global.css"
-        const globalModule: MockModule = { id: "\0virtual:mochi-css/global.css" }
+        const globalModule: MockModule = { id: "\0virtual:mochi-css/global.css", importers: new Set() }
         const invalidateModule = vi.fn()
         const mockServer = makeMockServer({ "\0virtual:mochi-css/global.css": globalModule }, invalidateModule)
 
@@ -322,7 +325,7 @@ describe("mochiCss vite plugin HMR", () => {
     it("handleHotUpdate preserves ctx.modules in return value", async () => {
         const hooks = await setupPlugin({ files: {} })
 
-        const existingModule: MockModule = { id: "/src/App.tsx" }
+        const existingModule: MockModule = { id: "/src/App.tsx", importers: new Set() }
         const mockServer = makeMockServer()
 
         mockCollectMochiCss.mockResolvedValue({ files: {}, global: undefined })

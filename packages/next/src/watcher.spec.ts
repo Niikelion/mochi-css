@@ -55,6 +55,9 @@ vi.mock("@mochi-css/config", () => ({
         this["resetCrossFileState"] = { merged: vi.fn(() => undefined) }
         this["getFilesToBundle"] = { merged: vi.fn(() => undefined) }
     }),
+    createBuilder: vi.fn(() => ({
+        collectMochiCss: mockCollectMochiCss,
+    })),
 }))
 
 vi.mock("@mochi-css/builder", async (importOriginal) => {

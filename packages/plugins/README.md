@@ -25,12 +25,13 @@ Packages a list of `StyleExtractor` instances as a `MochiPlugin`. When loaded, t
 
 ```typescript
 import { createExtractorsPlugin } from "@mochi-css/plugins"
-import { defaultExtractors } from "@mochi-css/builder"
+import { mochiCssFunctionExtractor, mochiGlobalCssFunctionExtractor, mochiKeyframesFunctionExtractor } from "@mochi-css/vanilla/config"
 import { FullContext } from "@mochi-css/config"
 import { Builder, RolldownBundler, VmRunner } from "@mochi-css/builder"
 
+const extractors = [mochiCssFunctionExtractor, mochiGlobalCssFunctionExtractor, mochiKeyframesFunctionExtractor]
 const ctx = new FullContext(onDiagnostic)
-createExtractorsPlugin(defaultExtractors).onLoad(ctx)
+createExtractorsPlugin(extractors).onLoad(ctx)
 
 const builder = new Builder({
     roots: ["./src"],
@@ -67,22 +68,85 @@ const builder = new Builder({
 })
 ```
 
-| Method | Returns |
-|--------|---------|
-| `getStages()` | `readonly StageDefinition[]` |
-| `getSourceTransforms()` | `AstPostProcessor[]` |
-| `getEmitHooks()` | `EmitHook[]` |
-| `runCleanup()` | calls all registered cleanup functions |
+| Method                  | Returns                                |
+| ----------------------- | -------------------------------------- |
+| `getStages()`           | `readonly StageDefinition[]`           |
+| `getSourceTransforms()` | `AstPostProcessor[]`                   |
+| `getEmitHooks()`        | `EmitHook[]`                           |
+| `runCleanup()`          | calls all registered cleanup functions |
 
 ---
 
-## Re-exports
+## `StyleExtractor` and `StyleGenerator`
 
-This package re-exports the following types and utilities from `@mochi-css/builder` for convenience:
+Implement these to support a new style function. `StyleGenerator` is an abstract class — all subclasses must implement `mockFunction`, which is called during bundle execution to produce the runtime return value.
 
-- `StyleExtractor`, `StyleGenerator`
-- `AstPostProcessor`, `EmitHook`, `BuilderOptions`, `RootEntry`
-- `StageDefinition`
-- `createDefaultStages`, `defaultStages`
-- All stage constructors and symbol constants (`ImportSpecStage`, `StyleExprStage`, etc.)
-- `extractRelevantSymbols`
+```typescript
+import type { StyleExtractor, StyleGenerator } from "@mochi-css/plugins"
+import type { OnDiagnostic } from "@mochi-css/core"
+
+class MyGenerator extends StyleGenerator {
+    override mockFunction(...args: unknown[]): unknown {
+        return args[0]
+    }
+
+    collectArgs(source: string, args: unknown[]): void { ... }
+
+    async generateStyles() {
+        return { global: "..." }
+    }
+}
+
+const myExtractor: StyleExtractor = {
+    importPath: "my-css-lib",
+    symbolName: "myStyle",
+    extractStaticArgs(call) { return call.arguments.map((a) => a.expression) },
+    startGeneration(onDiagnostic?: OnDiagnostic) { return new MyGenerator() },
+}
+```
+
+---
+
+## Stage definitions
+
+The default analysis pipeline stages are exported as static `const` values:
+
+```typescript
+import {
+    importStageDef,
+    derivedStageDef,
+    styleExprStageDef,
+    bindingStageDef,
+    crossFileDerivedStageDef,
+    exportsStage,
+} from "@mochi-css/plugins"
+```
+
+`exportsStage` tracks per-file reexports and is registered automatically by `createExtractorsPlugin`.
+
+---
+
+## Utilities
+
+```typescript
+import {
+    extractRelevantSymbols,
+    propagateUsagesFromRef,
+    propagateUsagesFromExpr,
+    getOrInsert,
+    isLocalImport,
+} from "@mochi-css/plugins"
+import type { ReexportResolver } from "@mochi-css/plugins"
+```
+
+- **`propagateUsagesFromExpr` / `propagateUsagesFromRef`** — walk an expression or a binding ref and mark all reachable bindings as used. Accept an optional `ReexportResolver` for cross-barrel propagation.
+- **`getOrInsert`** — `Map` helper: return existing value or compute and insert a new one.
+- **`isLocalImport`** — returns `true` for `./` and `../` import paths.
+
+---
+
+## Re-exports from `@mochi-css/builder`
+
+Commonly needed builder types re-exported for convenience:
+
+- `AstPostProcessor`, `EmitHook`, `BuilderOptions`, `RootEntry`, `StageDefinition`

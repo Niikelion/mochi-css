@@ -5,7 +5,7 @@
 ### Patch Changes
 
 - Updated dependencies [c50b75a]
-  - @mochi-css/vanilla@5.0.0
+    - @mochi-css/vanilla@5.0.0
 
 ## 0.1.3
 
@@ -25,7 +25,7 @@
 
 - c7c2adb: Bigfixes
 - Updated dependencies [c7c2adb]
-  - @mochi-css/vanilla@3.0.1
+    - @mochi-css/vanilla@3.0.1
 
 ## 0.1.0
 

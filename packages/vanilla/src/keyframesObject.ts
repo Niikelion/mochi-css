@@ -1,4 +1,4 @@
-import { shortHash } from "@/hash"
+import { shortHash } from "@mochi-css/core"
 import { cssFromProps, SimpleStyleProps } from "@/props"
 import { compareStringKey } from "@/compare"
 

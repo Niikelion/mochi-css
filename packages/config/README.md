@@ -82,14 +82,14 @@ async function resolveConfig(
 
 The config shape. All fields are optional in `defineConfig`; `resolveConfig` fills required fields from defaults.
 
-| Field          | Type            | Description                                                   |
-| -------------- | --------------- | ------------------------------------------------------------- |
-| `roots`        | `RootEntry[]`   | Directories scanned for source files (default: `["src"]`)     |
-| `splitCss`     | `boolean`       | Emit per-source-file CSS instead of one global file           |
-| `onDiagnostic` | `OnDiagnostic`  | Callback for warnings and non-fatal errors                    |
-| `plugins`      | `MochiPlugin[]` | Mochi plugins — register stages, transforms, and emit hooks   |
-| `tmpDir`       | `string`        | Manifest/styles output directory                              |
-| `debug`        | `boolean`       | Enable debug output                                           |
+| Field          | Type            | Description                                                 |
+| -------------- | --------------- | ----------------------------------------------------------- |
+| `roots`        | `RootEntry[]`   | Directories scanned for source files (default: `["src"]`)   |
+| `splitCss`     | `boolean`       | Emit per-source-file CSS instead of one global file         |
+| `onDiagnostic` | `OnDiagnostic`  | Callback for warnings and non-fatal errors                  |
+| `plugins`      | `MochiPlugin[]` | Mochi plugins — register stages, transforms, and emit hooks |
+| `tmpDir`       | `string`        | Manifest/styles output directory                            |
+| `debug`        | `boolean`       | Enable debug output                                         |
 
 ### `MochiPlugin`
 
@@ -109,14 +109,14 @@ interface MochiPlugin {
 
 Passed to `onLoad`. Each field is a collector that plugins call `register()` on.
 
-| Field              | Purpose                                                           |
-|--------------------|-------------------------------------------------------------------|
-| `stages`           | Register analysis pipeline stages                                 |
-| `sourceTransforms` | Register `AstPostProcessor` hooks (run after analysis)            |
-| `emitHooks`        | Register `EmitHook` hooks (run after evaluation)                  |
-| `cleanup`          | Register cleanup functions called at the end of each build        |
-| `filePreProcess`   | Register source-level text transformations (used by Vite/Next)    |
-| `onDiagnostic`     | Diagnostics callback from the resolved config                     |
+| Field              | Purpose                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `stages`           | Register analysis pipeline stages                              |
+| `sourceTransforms` | Register `AstPostProcessor` hooks (run after analysis)         |
+| `emitHooks`        | Register `EmitHook` hooks (run after evaluation)               |
+| `cleanup`          | Register cleanup functions called at the end of each build     |
+| `filePreProcess`   | Register source-level text transformations (used by Vite/Next) |
+| `onDiagnostic`     | Diagnostics callback from the resolved config                  |
 
 ---
 
@@ -148,21 +148,54 @@ export default defineConfig({
 
 ---
 
-## `styledIdPlugin`
+## `createBuilder`
 
-A built-in plugin that injects stable `s-` class IDs into every `styled()` call matched by the given extractors. This keeps class names stable across incremental builds.
+Constructs a fully wired `Builder` from a resolved `Config` and a `FullContext`. Use this instead of manually mapping `BuilderOptions` when writing a custom integration.
 
 ```typescript
-import { styledIdPlugin } from "@mochi-css/config"
-import { myExtractor } from "./myExtractor"
-
-export default defineConfig({
-    plugins: [styledIdPlugin([myExtractor])],
-})
+function createBuilder(config: Config, context: FullContext): Builder
 ```
 
-The plugin registers two hooks:
-- A `filePreProcess` transformation that inserts stable IDs into the raw source (used by Vite/Next `transform` hooks).
-- A `sourceTransforms` hook that injects the same IDs directly into the AST (used during CSS extraction).
+**Parameters:**
 
-It is idempotent — calls that already carry an `s-` ID are skipped.
+- `config` — a resolved config (output of `resolveConfig`)
+- `context` — a `FullContext` with plugins already loaded via `plugin.onLoad(context)`
+
+`context` is a separate parameter (rather than being created internally) so that the caller can retain a reference to it — e.g. to re-create the builder on config reload, or to inspect collected hooks after construction.
+
+**Example:**
+
+```typescript
+import { loadConfig, resolveConfig, FullContext, createBuilder } from "@mochi-css/config"
+
+const fileConfig = await loadConfig()
+const config = await resolveConfig(fileConfig, inlineOpts, defaults)
+
+const context = new FullContext(config.onDiagnostic ?? (() => {}))
+for (const plugin of config.plugins) plugin.onLoad?.(context)
+
+const builder = createBuilder(config, context)
+const { global, files } = await builder.collectMochiCss()
+```
+
+---
+
+## `FullContext`
+
+The standard `PluginContext` implementation. Construct one, load plugins into it, then pass it to `createBuilder`.
+
+```typescript
+class FullContext implements PluginContext {
+    constructor(onDiagnostic: OnDiagnostic)
+}
+```
+
+---
+
+## `styledIdPlugin`
+
+`styledIdPlugin` has moved to `@mochi-css/plugins`. See the `@mochi-css/plugins` README for details.
+
+```typescript
+import { styledIdPlugin } from "@mochi-css/plugins"
+```

@@ -1,7 +1,7 @@
 import fs from "fs"
 import systemPath from "path"
-import { loadConfig, resolveConfig, FullContext } from "@mochi-css/config"
-import { Builder, RolldownBundler, VmRunner, fileHash, path, type RootEntry } from "@mochi-css/builder"
+import { loadConfig, resolveConfig, FullContext, createBuilder } from "@mochi-css/config"
+import { fileHash, path, type RootEntry } from "@mochi-css/builder"
 
 type DiskManifest = {
     global?: string
@@ -66,31 +66,6 @@ function resolveAbsoluteRoots(cwd: string, roots: RootEntry[]): RootEntry[] {
     )
 }
 
-function createBuilder(resolved: Awaited<ReturnType<typeof resolveConfig>>, roots: RootEntry[]): Builder {
-    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
-    for (const plugin of resolved.plugins) {
-        plugin.onLoad?.(context)
-    }
-    return new Builder({
-        roots,
-        stages: [...context.stages.getAll()],
-        bundler: new RolldownBundler(),
-        runner: new VmRunner(),
-        splitCss: resolved.splitCss,
-        filePreProcess: ({ content, filePath }) =>
-            context.filePreProcess.transform(content, { filePath }),
-        sourceTransforms: [...context.sourceTransforms.getAll()],
-        emitHooks: [...context.emitHooks.getAll()],
-        cleanup: () => { context.cleanup.runAll() },
-        initializeStages: context.initializeStages.merged(),
-        prepareAnalysis: context.prepareAnalysis.merged(),
-        getFileData: context.getFileData.merged(),
-        invalidateFiles: context.invalidateFiles.merged(),
-        resetCrossFileState: context.resetCrossFileState.merged(),
-        getFilesToBundle: context.getFilesToBundle.merged(),
-    })
-}
-
 let watcherStarted = false
 
 /**
@@ -115,20 +90,24 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
 
     const debug = resolved.debug ?? false
 
-    const absoluteRoots = resolveAbsoluteRoots(cwd, resolved.roots)
+    resolved.roots = resolveAbsoluteRoots(cwd, resolved.roots)
 
     if (debug) {
         console.log(
-            `[mochi-css] watcher: roots=${JSON.stringify(absoluteRoots)}, tmpDir=${effectiveTmpDir}`,
+            `[mochi-css] watcher: roots=${JSON.stringify(resolved.roots)}, tmpDir=${effectiveTmpDir}`,
         )
     }
 
-    if (absoluteRoots.length === 0) {
+    if (resolved.roots.length === 0) {
         console.warn("[mochi-css] watcher: no roots configured — add `roots` to mochi.config.ts")
         return
     }
 
-    const builder = createBuilder(resolved, absoluteRoots)
+    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
+    for (const plugin of resolved.plugins) {
+        plugin.onLoad?.(context)
+    }
+    const builder = createBuilder(resolved, context)
 
     let rebuildTimer: ReturnType<typeof setTimeout> | undefined
     let rebuildGuard: Promise<void> = Promise.resolve()
@@ -150,7 +129,7 @@ export async function startCssWatcher(tmpDir: string): Promise<void> {
     scheduleRebuild()
 
     // fs.watch needs system paths
-    const rootDirs = absoluteRoots.map(root =>
+    const rootDirs = resolved.roots.map((root: RootEntry) =>
         path.toSystemPath(typeof root === "string" ? root : root.path),
     )
 
@@ -183,14 +162,18 @@ export async function buildCssOnce(tmpDir: string): Promise<void> {
         ? systemPath.resolve(cwd, resolved.tmpDir)
         : tmpDir
 
-    const absoluteRoots = resolveAbsoluteRoots(cwd, resolved.roots)
+    resolved.roots = resolveAbsoluteRoots(cwd, resolved.roots)
 
-    if (absoluteRoots.length === 0) {
+    if (resolved.roots.length === 0) {
         console.warn("[mochi-css] buildCssOnce: no roots configured — add `roots` to mochi.config.ts")
         return
     }
 
-    const builder = createBuilder(resolved, absoluteRoots)
+    const context = new FullContext(resolved.onDiagnostic ?? (() => {}))
+    for (const plugin of resolved.plugins) {
+        plugin.onLoad?.(context)
+    }
+    const builder = createBuilder(resolved, context)
 
     const css = await builder.collectMochiCss()
     await writeCssFiles(css, effectiveTmpDir)

@@ -21,6 +21,8 @@
     },
     "scripts": {
         "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
         "format": "prettier --write ."
@@ -29,9 +31,11 @@
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@gamedev-sensei/tsdown-config": "^2.1.0",
         "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
         "@types/node": "^24.8.1",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.15"
     }
 }

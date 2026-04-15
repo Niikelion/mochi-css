@@ -1,7 +1,3 @@
-import { defineConfig } from "vitest/config";
+import { vitestConfig } from "@mochi-css/test/vitest"
 
-export default defineConfig({
-    test: {
-        passWithNoTests: true,
-    },
-});
+export default vitestConfig

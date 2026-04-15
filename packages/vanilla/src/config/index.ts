@@ -5,7 +5,6 @@ import { mochiCssFunctionExtractor } from "./VanillaCssExtractor"
 import { mochiKeyframesFunctionExtractor } from "./VanillaKeyframesExtractor"
 import { mochiGlobalCssFunctionExtractor } from "./VanillaGlobalCssExtractor"
 
-export { styledIdPlugin } from "@mochi-css/plugins"
 export * from "./VanillaCssExtractor"
 export * from "./VanillaKeyframesExtractor"
 export * from "./VanillaGlobalCssExtractor"

@@ -1,15 +1,8 @@
-import {PluginCreator, Result, TransformCallback} from "postcss";
+import { PluginCreator, Result, TransformCallback } from "postcss";
 import * as fs from "fs";
 import * as systemPath from "path";
-import {
-    Builder,
-    BuilderOptions,
-    RolldownBundler,
-    VmRunner,
-    fileHash,
-    path,
-} from "@mochi-css/builder"
-import { loadConfig, resolveConfig, mergeCallbacks, FullContext, type Config } from "@mochi-css/config"
+import { fileHash, path } from "@mochi-css/builder"
+import { loadConfig, resolveConfig, mergeCallbacks, FullContext, createBuilder, type Config } from "@mochi-css/config"
 
 async function writeIfChanged(filePath: string, content: string): Promise<void> {
     try {
@@ -40,7 +33,7 @@ type DiskManifest = {
  *
  * @see {@link https://github.com/Niikelion/mochi-css/tree/master/packages/config MochiConfig}
  */
-type Options = Partial<Pick<BuilderOptions, "runner" | "bundler">> & Partial<Config> & {
+type Options = Partial<Config> & {
     /** Pattern matching the global CSS file that Mochi styles are injected into. Default: `/\/globals\.css$/` */
     globalCss?: RegExp
 }
@@ -48,8 +41,6 @@ type Options = Partial<Pick<BuilderOptions, "runner" | "bundler">> & Partial<Con
 const pluginName = "postcss-mochi-css"
 
 const defaultGlobalCssRegex = /\/globals\.css$/
-const defaultBundler = new RolldownBundler()
-const defaultRunner = new VmRunner()
 let _warnedAboutWatcher = false
 
 /**
@@ -80,7 +71,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
         return resolvedPromise
     }
 
-    let builder: Builder | undefined
+    let builder: ReturnType<typeof createBuilder> | undefined
     let currentResult: Result | undefined
     let builderGuard: Promise<void> | undefined
 
@@ -122,24 +113,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
             for (const plugin of resolved.plugins) {
                 plugin.onLoad?.(context)
             }
-            builder = new Builder({
-                onDiagnostic,
-                roots: resolved.roots,
-                stages: [...context.stages.getAll()],
-                bundler: opts?.bundler ?? defaultBundler,
-                runner: opts?.runner ?? defaultRunner,
-                splitCss: resolved.splitCss,
-                filePreProcess: ({ content, filePath }) => context.filePreProcess.transform(content, { filePath }),
-                sourceTransforms: [...context.sourceTransforms.getAll()],
-                emitHooks: [...context.emitHooks.getAll()],
-                cleanup: () => { context.cleanup.runAll() },
-                initializeStages: context.initializeStages.merged(),
-                prepareAnalysis: context.prepareAnalysis.merged(),
-                getFileData: context.getFileData.merged(),
-                invalidateFiles: context.invalidateFiles.merged(),
-                resetCrossFileState: context.resetCrossFileState.merged(),
-                getFilesToBundle: context.getFilesToBundle.merged(),
-            })
+            builder = createBuilder(resolved, context)
         }
 
         // Watch all root directories so new files trigger a rebuild

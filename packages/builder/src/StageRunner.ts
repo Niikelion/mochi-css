@@ -1,18 +1,11 @@
 import * as SWC from "@swc/core"
-import { createCacheRegistry } from "@/analysis/CacheEngine"
+import { createCacheEngine } from "@/analysis/CacheEngine"
+import type { CacheEngine } from "@/analysis/CacheEngine"
 import type { StageDefinition } from "@/analysis/Stage"
 import { topoSort } from "@/analysis/helpers"
-import type {
-    BindingInfo,
-    BindingDeclarator,
-    LocalImport,
-    ImportSpec,
-    Module,
-    ResolveImport,
-    FileView,
-} from "@/analysis/types"
+import type { BindingInfo, BindingDeclarator, LocalImport, ImportSpec, Module, ResolveImport } from "@/analysis/types"
 
-export type { Module, ImportSpec, ResolveImport, FileView }
+export type { Module, ImportSpec, ResolveImport }
 export type { BindingInfo, BindingDeclarator, LocalImport }
 export { RefMap } from "@/analysis/types"
 export type { Ref } from "@/analysis/types"
@@ -27,11 +20,12 @@ export class StageRunner {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private readonly instanceMap: Map<StageDefinition<any[], any>, unknown>
     private readonly filePaths: string[]
+    public readonly engine: CacheEngine
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(filePaths: string[], stages: readonly StageDefinition<any[], any>[]) {
         this.filePaths = filePaths
-        const registry = createCacheRegistry(filePaths)
+        this.engine = createCacheEngine(filePaths)
         const sorted = topoSort(stages)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const instanceMap = new Map<StageDefinition<any[], any>, unknown>()
@@ -40,7 +34,7 @@ export class StageRunner {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             const deps = stage.dependsOn.map((d) => instanceMap.get(d))
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const instance = stage.init(registry, ...deps)
+            const instance = stage.init(this.engine, ...deps)
             instanceMap.set(stage, instance)
         }
         this.instanceMap = instanceMap

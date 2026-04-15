@@ -1,17 +1,37 @@
-import { CSSObject, StyleProps, isMochiCSS } from "@mochi-css/vanilla";
-import type { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { getErrorMessage } from "@mochi-css/builder";
-import { StitchesConfig, preprocess } from "@mochi-css/stitches";
+import {
+    CSSObject,
+    StyleProps,
+    isMochiCSS,
+    css,
+    MochiCSS,
+} from "@mochi-css/vanilla";
+import { StyleGenerator } from "@mochi-css/plugins";
+import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core";
+import { StitchesConfig } from "../../types";
+import { preprocess } from "../../preprocess";
 
-export class StitchesCssGenerator implements StyleGenerator {
+export class StitchesCssGenerator extends StyleGenerator {
     private readonly collectedStyles: { source: string; args: StyleProps[] }[] =
         [];
 
     constructor(
         private readonly config: StitchesConfig,
         private readonly onDiagnostic?: OnDiagnostic,
-    ) {}
+    ) {
+        super();
+    }
+
+    override mockFunction(...args: unknown[]): unknown {
+        const preprocessed = args.map((arg) => {
+            if (arg instanceof MochiCSS) return arg;
+            if (arg == null || typeof arg !== "object") return arg;
+            return preprocess(
+                arg as Record<string, unknown>,
+                this.config,
+            ) as StyleProps;
+        });
+        return (css as (...a: unknown[]) => unknown)(...preprocessed);
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: StyleProps[] = [];

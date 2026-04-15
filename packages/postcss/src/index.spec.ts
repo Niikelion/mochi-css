@@ -28,6 +28,9 @@ vi.mock("@mochi-css/config", () => ({
         this["getFilesToBundle"] = { merged: vi.fn(() => undefined) }
     }),
     mergeCallbacks: vi.fn((_a: unknown, b: unknown) => b),
+    createBuilder: vi.fn(() => ({
+        collectMochiCss: mockCollectMochiCss,
+    })),
 }))
 
 vi.mock("@mochi-css/builder", async (importOriginal) => {

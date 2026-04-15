@@ -1,15 +1,20 @@
-import { KeyframesObject, KeyframeStops } from "@mochi-css/vanilla";
-import type { StyleGenerator } from "@mochi-css/plugins";
-import type { OnDiagnostic } from "@mochi-css/builder";
-import { getErrorMessage } from "@mochi-css/builder";
+import { KeyframesObject, KeyframeStops, keyframes } from "@mochi-css/vanilla";
+import { StyleGenerator } from "@mochi-css/plugins";
+import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core";
 
-export class StitchesKeyframesGenerator implements StyleGenerator {
+export class StitchesKeyframesGenerator extends StyleGenerator {
     private readonly collectedKeyframes: {
         source: string;
         args: KeyframeStops[];
     }[] = [];
 
-    constructor(private readonly onDiagnostic?: OnDiagnostic) {}
+    constructor(private readonly onDiagnostic?: OnDiagnostic) {
+        super();
+    }
+
+    override mockFunction(...args: unknown[]): unknown {
+        return (keyframes as (...a: unknown[]) => unknown)(...args);
+    }
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: KeyframeStops[] = [];
