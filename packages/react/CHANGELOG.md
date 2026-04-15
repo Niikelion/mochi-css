@@ -1,5 +1,12 @@
 # @mochi-css/react
 
+## 4.0.2
+
+### Patch Changes
+
+- Updated dependencies [2bec524]
+    - @mochi-css/vanilla@6.0.0
+
 ## 4.0.1
 
 ### Patch Changes

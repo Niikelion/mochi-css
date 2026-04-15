@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/next",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "5.0.0",
+    "version": "6.0.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -37,8 +37,8 @@
         "coverage": "vitest run --coverage"
     },
     "dependencies": {
-        "@mochi-css/builder": "^5.0.0",
-        "@mochi-css/config": "^5.0.0",
+        "@mochi-css/builder": "^6.0.0",
+        "@mochi-css/config": "^6.0.0",
         "diff": "^8.0.3"
     },
     "peerDependencies": {
