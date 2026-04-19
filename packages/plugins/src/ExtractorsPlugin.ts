@@ -52,9 +52,11 @@ function wrapGenerator(
             generator.collectArgs(source, args)
 
             const result = generator.mockFunction(...args)
-            substitutionByMockResult.set(result, generator.extractSubstitution())
 
-            if (!result || typeof result !== "object") return result
+            if (!result || typeof result !== "object") {
+                substitutionByMockResult.set(result, generator.extractSubstitution())
+                return result
+            }
 
             // wrap all sub-generators
             const ret: Record<string, unknown> = { ...result }
@@ -65,6 +67,7 @@ function wrapGenerator(
 
                 ret[key] = wrapGenerator(v, substitutionByMockResult, onDiagnostic)
             }
+            substitutionByMockResult.set(ret, generator.extractSubstitution())
             return ret
         } catch (err) {
             const message = getErrorMessage(err)
