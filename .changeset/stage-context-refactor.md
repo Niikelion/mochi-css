@@ -5,6 +5,7 @@
 "@mochi-css/vanilla": major
 "@mochi-css/vanilla-react": major
 "@mochi-css/stitches": major
+"@mochi-css/tsuki": major
 ---
 
 Refactor stage initialization: stages receive a `StageContext` object instead of a bare `CacheRegistry`, and per-file callbacks are moved into the stage runner itself.
