@@ -19,11 +19,11 @@ const mockStyledExtractor: StyleExtractor = {
             collectArgs() {
                 /* empty */
             },
+            extractSubstitution() {
+                return null
+            },
             async generateStyles() {
                 return {}
-            },
-            getArgReplacements() {
-                return []
             },
         }
     },
@@ -86,13 +86,8 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
         plugin.onLoad?.(context)
 
         const module = await parseSource(source, filePath)
-        const runner = new StageRunner([filePath], [])
+        const runner = new StageRunner([module], [], noop, () => null)
 
-        // Simulate initializeStages
-        const initFn = context.initializeStages.merged()
-        initFn?.(runner, [module], () => null, undefined)
-
-        // Run source transforms
         const transforms = context.sourceTransforms.getAll()
         const fakeCtx = {
             evaluator: undefined as never,
@@ -100,6 +95,8 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
             emitChunk: () => {},
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             markForEval: () => {},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            emitModifiedSource: () => {},
         }
         for (const transform of transforms) {
             await transform(runner, fakeCtx)
@@ -145,9 +142,7 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
         plugin.onLoad?.(context)
 
         const module = await parseSource(source, "src/Button.ts")
-        const runner = new StageRunner(["src/Button.ts"], [])
-        const initFn = context.initializeStages.merged()
-        initFn?.(runner, [module], () => null, undefined)
+        const runner = new StageRunner([module], [], noop, () => null)
 
         const fakeCtx = {
             evaluator: undefined as never,
@@ -155,6 +150,8 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
             emitChunk: () => {},
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             markForEval: () => {},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            emitModifiedSource: () => {},
         }
         const [hook] = context.sourceTransforms.getAll()
         await hook?.(runner, fakeCtx)

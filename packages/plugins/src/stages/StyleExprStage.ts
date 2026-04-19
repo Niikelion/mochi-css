@@ -2,7 +2,7 @@ import * as SWC from "@swc/core"
 import type { StyleExtractor } from "../types"
 import { visit } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
-import type { CacheRegistry, FileCache } from "@mochi-css/builder"
+import type { FileCache, StageContext } from "@mochi-css/builder"
 import { idToRef } from "@mochi-css/builder"
 import { derivedStageDef, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
 
@@ -41,7 +41,8 @@ export type StyleExprStageOut = {
  */
 export const styleExprStageDef = defineStage({
     dependsOn: [derivedStageDef] as const,
-    init(registry: CacheRegistry, derivedInst: DerivedExtractorStageOut): StyleExprStageOut {
+    init(context: StageContext, derivedInst: DerivedExtractorStageOut): StyleExprStageOut {
+        const { registry } = context
         const styleExprs = registry.fileCache(
             (file) => [derivedInst.derived.for(file), registry.fileData.for(file)],
             (file): StyleExprResult => {

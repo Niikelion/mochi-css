@@ -25,19 +25,14 @@ export function styledIdPlugin(extractors: StyleExtractor[]): MochiPlugin {
     return {
         name: "mochi-styled-ids",
         onLoad(context) {
-            let moduleMap = new Map<string, SWC.Module>()
-
-            context.initializeStages.register((_runner, modules) => {
-                moduleMap = new Map(modules.map((m) => [m.filePath, m.ast]))
-            })
-
             context.filePreProcess.registerTransformation(
                 (source, { filePath }) => transformCallIds(source, filePath, symbolNames),
                 { filter: "*.{ts,tsx,js,jsx}" },
             )
 
-            context.sourceTransforms.register(() => {
-                for (const [filePath, ast] of moduleMap) {
+            context.sourceTransforms.register((runner) => {
+                for (const filePath of runner.getFilePaths()) {
+                    const { ast } = runner.engine.fileData.for(filePath).get()
                     const styledCalls = collectCallsBySymbol(ast, symbolNames)
                     let fallbackIdx = 0
                     for (const { call, varName } of styledCalls) {
@@ -55,10 +50,6 @@ export function styledIdPlugin(extractors: StyleExtractor[]): MochiPlugin {
                         })
                     }
                 }
-            })
-
-            context.cleanup.register(() => {
-                moduleMap.clear()
             })
         },
     }

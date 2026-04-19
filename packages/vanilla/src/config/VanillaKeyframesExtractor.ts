@@ -6,6 +6,7 @@ import { VanillaKeyframesGenerator } from "./VanillaKeyframesGenerator"
 export class VanillaKeyframesExtractor implements StyleExtractor {
     public readonly importPath = "@mochi-css/vanilla"
     public readonly symbolName = "keyframes"
+    public readonly substitution = { mode: "full" as const }
 
     extractStaticArgs(call: CallExpression): Expression[] {
         return call.arguments.slice(0, 1).map((a) => a.expression)

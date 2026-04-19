@@ -26,10 +26,7 @@ export class StitchesGenerator extends StyleGenerator {
         return this.lastSubGenGroup;
     }
 
-    collectArgs(
-        source: string,
-        args: unknown[],
-    ): Record<string, StyleGenerator> {
+    collectArgs(source: string, args: unknown[]): void {
         const config = (args[0] ?? {}) as StitchesConfig;
 
         const subGens: SubGeneratorGroup = {
@@ -48,7 +45,6 @@ export class StitchesGenerator extends StyleGenerator {
 
         this.allSubGeneratorGroups.push(subGens);
         this.lastSubGenGroup = subGens;
-        return subGens as unknown as Record<string, StyleGenerator>;
     }
 
     async generateStyles(): Promise<{

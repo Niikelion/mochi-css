@@ -1,6 +1,5 @@
-import { type CacheRegistry, defineStage, type FileCache } from "@mochi-css/builder"
+import { type StageContext, defineStage, type FileCache } from "@mochi-css/builder"
 import { isLocalImport, getOrInsert } from "../utils"
-import { importStageDef, type ImportSpecStageOut } from "./ImportSpecStage"
 
 /** A single named reexport specifier from one source file. */
 export type ReexportEntry = {
@@ -42,17 +41,15 @@ export type ExportsStageOut = {
  * barrel-compatible virtual bundles — barrel files with no CSS of their own are emitted into
  * the `.mochi/` bundle with their reexport declarations intact so that Rolldown can resolve
  * them correctly.
- *
- * Depends on {@link importStageDef} for per-file callbacks (resolveImport, onDiagnostic).
  */
 export const exportsStage = defineStage({
-    dependsOn: [importStageDef] as const,
-    init(registry: CacheRegistry, importInst: ImportSpecStageOut): ExportsStageOut {
+    dependsOn: [],
+    init(context: StageContext): ExportsStageOut {
+        const { registry, resolveImport, log: onDiagnostic } = context
         const fileExports = registry.fileCache(
-            (file) => [registry.fileData.for(file), importInst.fileCallbacks.for(file)],
+            (file) => [registry.fileData.for(file)],
             (file): ExportsStageResult => {
                 const { ast } = registry.fileData.for(file).get()
-                const { resolveImport, onDiagnostic } = importInst.fileCallbacks.for(file).get()
 
                 const reexports = new Map<string, ReexportEntry[]>()
                 const namespaceReexports = new Set<string>()
@@ -63,7 +60,7 @@ export const exportsStage = defineStage({
                         if (!isLocalImport(sourceValue)) continue
                         const sourcePath = resolveImport(file, sourceValue)
                         if (sourcePath === null) {
-                            onDiagnostic?.({
+                            onDiagnostic({
                                 code: "MOCHI_UNRESOLVED_IMPORT",
                                 message: `Cannot resolve local import "${sourceValue}"`,
                                 severity: "warning",
@@ -87,7 +84,7 @@ export const exportsStage = defineStage({
                         if (!isLocalImport(sourceValue)) continue
                         const sourcePath = resolveImport(file, sourceValue)
                         if (sourcePath === null) {
-                            onDiagnostic?.({
+                            onDiagnostic({
                                 code: "MOCHI_UNRESOLVED_IMPORT",
                                 message: `Cannot resolve local import "${sourceValue}"`,
                                 severity: "warning",

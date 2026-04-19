@@ -4,15 +4,7 @@ import {
     TransformationHookProvider,
 } from "./TransformationPipeline"
 import { globExToRegex } from "./globEx"
-import type {
-    AstPostProcessor,
-    EmitHook,
-    StageDefinition,
-    StageRunner,
-    MutableFileEntry,
-    Module,
-    ResolveImport,
-} from "@mochi-css/builder"
+import type { AstPostProcessor, EmitHook, StageDefinition, StageRunner, MutableFileEntry } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type * as SWC from "@swc/core"
 
@@ -47,6 +39,10 @@ export interface SourceTransformHookProvider {
     register(hook: AstPostProcessor): void
 }
 
+export interface PostEvalTransformHookProvider {
+    register(hook: AstPostProcessor): void
+}
+
 export interface StageHookProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     register(stage: StageDefinition<any[], any>): void
@@ -61,9 +57,7 @@ export interface CleanupHookProvider {
 }
 
 export interface InitializeStagesHookProvider {
-    register(
-        fn: (runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void,
-    ): void
+    register(fn: (runner: StageRunner) => void): void
 }
 
 export interface PrepareAnalysisHookProvider {
@@ -89,6 +83,18 @@ export interface GetFilesToBundleHookProvider {
 }
 
 class SourceTransformCollector implements SourceTransformHookProvider {
+    private readonly hooks: AstPostProcessor[] = []
+
+    register(hook: AstPostProcessor): void {
+        this.hooks.push(hook)
+    }
+
+    getAll(): AstPostProcessor[] {
+        return [...this.hooks]
+    }
+}
+
+class PostEvalTransformCollector implements PostEvalTransformHookProvider {
     private readonly hooks: AstPostProcessor[] = []
 
     register(hook: AstPostProcessor): void {
@@ -140,26 +146,17 @@ class CleanupCollector implements CleanupHookProvider {
 }
 
 class InitializeStagesCollector implements InitializeStagesHookProvider {
-    private readonly fns: ((
-        runner: StageRunner,
-        modules: Module[],
-        resolveImport: ResolveImport,
-        onDiagnostic?: OnDiagnostic,
-    ) => void)[] = []
+    private readonly fns: ((runner: StageRunner) => void)[] = []
 
-    register(
-        fn: (runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void,
-    ): void {
+    register(fn: (runner: StageRunner) => void): void {
         this.fns.push(fn)
     }
 
-    merged():
-        | ((runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void)
-        | undefined {
+    merged(): ((runner: StageRunner) => void) | undefined {
         if (this.fns.length === 0) return undefined
         const fns = [...this.fns]
-        return (runner, modules, resolveImport, onDiagnostic) => {
-            for (const fn of fns) fn(runner, modules, resolveImport, onDiagnostic)
+        return (runner) => {
+            for (const fn of fns) fn(runner)
         }
     }
 }
@@ -254,6 +251,7 @@ class GetFilesToBundleCollector implements GetFilesToBundleHookProvider {
 export interface PluginContext {
     readonly filePreProcess: FileTransformationHookProvider
     readonly sourceTransforms: SourceTransformHookProvider
+    readonly postEvalTransforms: PostEvalTransformHookProvider
     readonly stages: StageHookProvider
     readonly emitHooks: EmitHookProvider
     readonly cleanup: CleanupHookProvider
@@ -269,6 +267,7 @@ export interface PluginContext {
 export class FullContext implements PluginContext {
     readonly filePreProcess = makeFilePipeline()
     readonly sourceTransforms = new SourceTransformCollector()
+    readonly postEvalTransforms = new PostEvalTransformCollector()
     readonly stages = new StageCollector()
     readonly emitHooks = new EmitHookCollector()
     readonly cleanup = new CleanupCollector()

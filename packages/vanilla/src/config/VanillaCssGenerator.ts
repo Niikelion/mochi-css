@@ -25,7 +25,7 @@ function objExpr(properties: [string, SWC.Expression][]): SWC.ObjectExpression {
     }
 }
 
-function mochiCssNode(instance: MochiCSS<AllVariants>): SWC.NewExpression & { ctxt: number } {
+function mochiPrebuiltCallNode(instance: MochiCSS<AllVariants>): SWC.CallExpression & { ctxt: number } {
     const classNamesNode = arrExpr(instance.classNames.map(strLit))
     const variantClassNamesNode = objExpr(
         Object.entries(instance.variantClassNames).map(([varKey, opts]) => [
@@ -39,21 +39,23 @@ function mochiCssNode(instance: MochiCSS<AllVariants>): SWC.NewExpression & { ct
             .map(([k, v]) => [k, strLit(String(v))]),
     )
     return {
-        type: "NewExpression",
+        type: "CallExpression",
         span: emptySpan,
         ctxt: 0,
-        callee: { type: "Identifier", span: emptySpan, ctxt: 0, value: "MochiCSS", optional: false },
+        callee: { type: "Identifier", span: emptySpan, ctxt: 0, value: "_mochiPrebuilt", optional: false },
         arguments: [
             { expression: classNamesNode },
             { expression: variantClassNamesNode },
             { expression: defaultVariantsNode },
         ],
+        typeArguments: undefined,
     }
 }
 
 export class VanillaCssGenerator extends StyleGenerator {
-    private readonly collectedStyles: { source: string; args: StyleProps[]; stableId?: string }[] = []
-    private generatedMochiCss: { source: string; instance: MochiCSS<AllVariants> }[] = []
+    private readonly filesCss = new Map<string, Set<string>>()
+    private currentSubstitution: SWC.Expression | null = null
+    private currentMergedMochi: MochiCSS<AllVariants> | null = null
     private readonly mock: (...args: unknown[]) => unknown
 
     constructor(
@@ -65,11 +67,15 @@ export class VanillaCssGenerator extends StyleGenerator {
     }
 
     override mockFunction(...args: unknown[]): unknown {
+        if (this.currentMergedMochi) {
+            return this.mock(this.currentMergedMochi)
+        }
         return this.mock(...args)
     }
 
     collectArgs(source: string, args: unknown[]): void {
         const validArgs: StyleProps[] = []
+        const prebuilt: MochiCSS<AllVariants>[] = []
         let stableId: string | undefined
         for (const arg of args) {
             if (typeof arg === "string") {
@@ -85,57 +91,63 @@ export class VanillaCssGenerator extends StyleGenerator {
                 })
                 continue
             }
-            // Skip MochiCSS instances — they are runtime style handles whose styles
-            // have already been collected via their own extractor call
-            if (isMochiCSS(arg)) continue
+            if (isMochiCSS(arg)) {
+                prebuilt.push(arg)
+                continue
+            }
             validArgs.push(arg as StyleProps)
         }
-        if (validArgs.length > 0) {
-            this.collectedStyles.push({ source, args: validArgs, stableId })
+
+        if (validArgs.length === 0 && prebuilt.length === 0) {
+            this.currentSubstitution = null
+            this.currentMergedMochi = null
+            return
         }
+
+        let css = this.filesCss.get(source)
+        if (!css) {
+            css = new Set<string>()
+            this.filesCss.set(source, css)
+        }
+
+        const mochiInstances: MochiCSS<AllVariants>[] = [...prebuilt]
+        for (const style of validArgs) {
+            try {
+                const cssObj = new CSSObject(style, stableId)
+                css.add(cssObj.asCssString())
+                mochiInstances.push(MochiCSS.from(cssObj))
+            } catch (err) {
+                const message = getErrorMessage(err)
+                this.onDiagnostic?.({
+                    code: "MOCHI_STYLE_GENERATION",
+                    message: `Failed to generate CSS: ${message}`,
+                    severity: "warning",
+                    file: source,
+                })
+            }
+        }
+
+        if (mochiInstances.length === 0) {
+            this.currentSubstitution = null
+            this.currentMergedMochi = null
+            return
+        }
+
+        const merged = mergeMochiCss(mochiInstances)
+        this.currentMergedMochi = merged
+        this.currentSubstitution = mochiPrebuiltCallNode(merged)
+    }
+
+    override extractSubstitution(): SWC.Expression | null {
+        return this.currentSubstitution
     }
 
     async generateStyles(): Promise<{ files: Record<string, string> }> {
-        this.generatedMochiCss = []
-        const filesCss = new Map<string, Set<string>>()
-        for (const { source, args, stableId } of this.collectedStyles) {
-            let css = filesCss.get(source)
-            if (!css) {
-                css = new Set<string>()
-                filesCss.set(source, css)
-            }
-            const mochiInstances: MochiCSS<AllVariants>[] = []
-            for (const style of args) {
-                try {
-                    const cssObj = new CSSObject(style, stableId)
-                    css.add(cssObj.asCssString())
-                    mochiInstances.push(MochiCSS.from(cssObj))
-                } catch (err) {
-                    const message = getErrorMessage(err)
-                    this.onDiagnostic?.({
-                        code: "MOCHI_STYLE_GENERATION",
-                        message: `Failed to generate CSS: ${message}`,
-                        severity: "warning",
-                        file: source,
-                    })
-                }
-            }
-            if (mochiInstances.length > 0) {
-                this.generatedMochiCss.push({ source, instance: mergeMochiCss(mochiInstances) })
-            }
-        }
         const files: Record<string, string> = {}
-        for (const [source, css] of filesCss) {
+        for (const [source, css] of this.filesCss) {
             const sortedCss = [...css.values()].sort()
             files[source] = sortedCss.join("\n\n")
         }
         return { files }
-    }
-
-    override getArgReplacements(): { source: string; expression: SWC.Expression }[] {
-        return this.generatedMochiCss.map(({ source, instance }) => ({
-            source,
-            expression: mochiCssNode(instance),
-        }))
     }
 }

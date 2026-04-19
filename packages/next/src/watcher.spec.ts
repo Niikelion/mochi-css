@@ -46,6 +46,7 @@ vi.mock("@mochi-css/config", () => ({
         this["stages"] = { getAll: vi.fn(() => []) }
         this["filePreProcess"] = { transform: vi.fn((c: string) => c) }
         this["sourceTransforms"] = { getAll: vi.fn(() => []) }
+        this["postEvalTransforms"] = { getAll: vi.fn(() => []) }
         this["emitHooks"] = { getAll: vi.fn(() => []) }
         this["cleanup"] = { runAll: vi.fn() }
         this["initializeStages"] = { merged: vi.fn(() => undefined) }
@@ -120,7 +121,7 @@ describe("buildCssOnce", () => {
         mockCollectMochiCss.mockResolvedValueOnce({
             global: undefined,
             files: { "C:/src/App.tsx": ".foo { color: red }" },
-            sourcemods: { "C:/src/App.tsx": "--- patch ---" },
+            sourcemods: { "C:/src/App.tsx": "const x = 1;\n" },
         })
         await buildCssOnce(".mochi")
         const writeFileCalls = mockWriteFile.mock.calls

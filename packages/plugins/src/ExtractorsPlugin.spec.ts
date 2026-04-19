@@ -144,13 +144,16 @@ async function runPlugin(
     const plugin = createExtractorsPlugin(extractors)
     const ctx = new PluginContextCollector(extraOptions.onDiagnostic)
     plugin.onLoad?.(ctx)
-    return new Builder({
+    const { chunks } = await new Builder({
         roots: ["./"],
         bundler: new RolldownBundler(),
         runner: new VmRunner(),
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        onDiagnostic: () => {},
         ...extraOptions,
         stages: [...ctx.getStages(), ...(extraOptions.stages ?? [])],
         sourceTransforms: [...ctx.getSourceTransforms(), ...(extraOptions.sourceTransforms ?? [])],
+        postEvalTransforms: [...ctx.getPostEvalTransforms(), ...(extraOptions.postEvalTransforms ?? [])],
         emitHooks: [...(extraOptions.emitHooks ?? []), ...ctx.getEmitHooks()],
         cleanup: async () => {
             ctx.runCleanup()
@@ -163,6 +166,7 @@ async function runPlugin(
         resetCrossFileState: ctx.getResetCrossFileState(),
         getFilesToBundle: ctx.getGetFilesToBundle(),
     }).collectStylesFromModules(modules)
+    return chunks
 }
 
 function getCss(chunks: Map<string, Set<string>>, filePath: string): string {
@@ -752,7 +756,10 @@ describe("Builder", () => {
                     stages: ctx.getStages(),
                     bundler: new RolldownBundler(),
                     runner: new VmRunner(),
+                    // eslint-disable-next-line @typescript-eslint/no-empty-function
+                    onDiagnostic: () => {},
                     sourceTransforms: ctx.getSourceTransforms(),
+                    postEvalTransforms: ctx.getPostEvalTransforms(),
                     emitHooks: ctx.getEmitHooks(),
                     emitDir,
                     cleanup: () => {
@@ -906,6 +913,8 @@ describe("Builder", () => {
                 },
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onDiagnostic: () => {},
                 splitCss: true,
                 initializeStages: ctx.getInitializeStages(),
                 prepareAnalysis: ctx.getPrepareAnalysis(),
@@ -949,6 +958,8 @@ describe("Builder", () => {
                 },
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onDiagnostic: () => {},
                 splitCss: true,
                 initializeStages: ctx.getInitializeStages(),
                 prepareAnalysis: ctx.getPrepareAnalysis(),
@@ -990,6 +1001,8 @@ describe("Builder", () => {
                 },
                 bundler: new RolldownBundler(),
                 runner: new VmRunner(),
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onDiagnostic: () => {},
                 splitCss: true,
                 filePreProcess: ({ content }) =>
                     content.replace("// REPLACE_ME", `export const x = css({ color: "purple" })`),

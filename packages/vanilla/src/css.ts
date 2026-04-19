@@ -148,6 +148,20 @@ export class MochiCSS<V extends AllVariants = DefaultVariants> {
  * // Merging multiple styles
  * const combined = css(baseStyles, additionalStyles)
  */
+/**
+ * Constructs a MochiCSS instance directly from pre-built data.
+ * Used by the build pipeline to replace `css(...)` calls at compile time,
+ * eliminating the runtime cost of CSS object construction.
+ * @internal
+ */
+export function _mochiPrebuilt<V extends AllVariants = DefaultVariants>(
+    classNames: string[],
+    variantClassNames: { [K in keyof V]: { [P in keyof V[K]]: string } },
+    defaultVariants: Partial<RefineVariants<V>>,
+): MochiCSS<V> {
+    return new MochiCSS<V>(classNames, variantClassNames, defaultVariants)
+}
+
 const emptyMochiCSS = new MochiCSS<AllVariants>([], {}, {})
 
 /**

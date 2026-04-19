@@ -2,7 +2,7 @@ import * as SWC from "@swc/core"
 import type { StyleExtractor, DerivedExtractorBinding } from "../types"
 import { visit } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
-import type { CacheRegistry } from "@mochi-css/builder"
+import type { StageContext } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import { idToRef, type Ref } from "@mochi-css/builder"
 import { derivedStageDef, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
@@ -94,10 +94,11 @@ export type CrossFileDerivedStageOut = {
 export const crossFileDerivedStageDef = defineStage({
     dependsOn: [derivedStageDef, bindingStageDef] as const,
     init(
-        registry: CacheRegistry,
+        context: StageContext,
         derivedInst: DerivedExtractorStageOut,
         bindingInst: BindingStageOut,
     ): CrossFileDerivedStageOut {
+        const { registry } = context
         const filePaths = registry.getFilePaths()
 
         const crossFileResult = registry.projectCache(

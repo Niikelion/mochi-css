@@ -1,6 +1,5 @@
 import fs from "fs"
 import path from "path"
-import { applyPatch } from "diff"
 
 type DiskManifest = {
     global?: string
@@ -83,7 +82,7 @@ export default function mochiLoader(this: LoaderContext, source: string): void {
         }
 
         const sourcemod = manifest.sourcemods?.[resourcePath.replaceAll("\\", "/")]
-        const transformed = sourcemod ? (applyPatch(source, sourcemod) || source) : source
+        const transformed = sourcemod ?? source
 
         callback(null, injectImports(this, manifest, transformed as string))
     } catch (err: unknown) {

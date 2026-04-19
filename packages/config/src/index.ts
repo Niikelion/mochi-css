@@ -7,6 +7,7 @@ export { TransformationPipeline, FullContext } from "./plugin"
 export type {
     PluginContext,
     SourceTransformHookProvider,
+    PostEvalTransformHookProvider,
     StageHookProvider,
     EmitHookProvider,
     CleanupHookProvider,

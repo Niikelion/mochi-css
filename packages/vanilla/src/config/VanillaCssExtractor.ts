@@ -4,10 +4,10 @@ import type { CallExpression, Expression } from "@swc/core"
 import { VanillaCssGenerator } from "./VanillaCssGenerator"
 import { css } from "@/css"
 
-//TODO: add function mock to extractor and pass it to generator
 export class VanillaCssExtractor implements StyleExtractor {
     public readonly importPath: string
     public readonly symbolName: string
+    public readonly substitution?: { importName?: string; importPath?: string; mode: "full" | "args" }
     private readonly mock: (...args: unknown[]) => unknown
 
     constructor(
@@ -15,10 +15,12 @@ export class VanillaCssExtractor implements StyleExtractor {
         symbolName: string,
         private readonly extractor: (call: CallExpression) => Expression[],
         mock: (...args: unknown[]) => unknown,
+        substitution?: { importName?: string; importPath?: string; mode: "full" | "args" },
     ) {
         this.importPath = importPath
         this.symbolName = symbolName
         this.mock = mock
+        this.substitution = substitution
     }
 
     extractStaticArgs(call: CallExpression): Expression[] {
@@ -35,4 +37,5 @@ export const mochiCssFunctionExtractor = new VanillaCssExtractor(
     "css",
     (call) => call.arguments.map((a) => a.expression),
     css as (...args: unknown[]) => unknown,
+    { importName: "_mochiPrebuilt", mode: "full" },
 )

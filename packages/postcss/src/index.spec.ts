@@ -18,6 +18,7 @@ vi.mock("@mochi-css/config", () => ({
         this["stages"] = { getAll: vi.fn(() => []) }
         this["filePreProcess"] = { transform: vi.fn((c: string) => c) }
         this["sourceTransforms"] = { getAll: vi.fn(() => []) }
+        this["postEvalTransforms"] = { getAll: vi.fn(() => []) }
         this["emitHooks"] = { getAll: vi.fn(() => []) }
         this["cleanup"] = { runAll: vi.fn() }
         this["initializeStages"] = { merged: vi.fn(() => undefined) }

@@ -1,9 +1,20 @@
+import type * as SWC from "@swc/core"
 import { StyleGenerator } from "@mochi-css/plugins"
 import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { globalCss, GlobalCssObject, GlobalCssStyles } from "../index"
 
+const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
+
+const voidZero: SWC.UnaryExpression = {
+    type: "UnaryExpression",
+    span: emptySpan,
+    operator: "void",
+    argument: { type: "NumericLiteral", span: emptySpan, value: 0, raw: "0" },
+}
+
 export class VanillaGlobalCssGenerator extends StyleGenerator {
-    private readonly collectedStyles: { source: string; styles: GlobalCssStyles }[] = []
+    private readonly allCss = new Set<string>()
+    private currentSubstitution: SWC.Expression | null = null
 
     constructor(private readonly onDiagnostic?: OnDiagnostic) {
         super()
@@ -21,28 +32,32 @@ export class VanillaGlobalCssGenerator extends StyleGenerator {
                 severity: "warning",
                 file: source,
             })
+            this.currentSubstitution = null
             return
         }
-        this.collectedStyles.push({ source, styles: args[0] as GlobalCssStyles })
+
+        try {
+            const obj = new GlobalCssObject(args[0] as GlobalCssStyles)
+            this.allCss.add(obj.asCssString())
+            this.currentSubstitution = voidZero
+        } catch (err) {
+            const message = getErrorMessage(err)
+            this.onDiagnostic?.({
+                code: "MOCHI_STYLE_GENERATION",
+                message: `Failed to generate global CSS: ${message}`,
+                severity: "warning",
+                file: source,
+            })
+            this.currentSubstitution = null
+        }
+    }
+
+    override extractSubstitution(): SWC.Expression | null {
+        return this.currentSubstitution
     }
 
     async generateStyles(): Promise<{ global: string }> {
-        const allCss = new Set<string>()
-        for (const { source, styles } of this.collectedStyles) {
-            try {
-                const obj = new GlobalCssObject(styles)
-                allCss.add(obj.asCssString())
-            } catch (err) {
-                const message = getErrorMessage(err)
-                this.onDiagnostic?.({
-                    code: "MOCHI_STYLE_GENERATION",
-                    message: `Failed to generate global CSS: ${message}`,
-                    severity: "warning",
-                    file: source,
-                })
-            }
-        }
-        const sortedCss = [...allCss].sort()
+        const sortedCss = [...this.allCss].sort()
         return { global: sortedCss.join("\n\n") }
     }
 }

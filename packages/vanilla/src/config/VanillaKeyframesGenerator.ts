@@ -1,9 +1,13 @@
+import type * as SWC from "@swc/core"
 import { StyleGenerator } from "@mochi-css/plugins"
 import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { keyframes, KeyframesObject, KeyframeStops } from "../index"
 
+const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
+
 export class VanillaKeyframesGenerator extends StyleGenerator {
-    private readonly collectedStyles: { source: string; stops: KeyframeStops }[] = []
+    private readonly filesCss = new Map<string, Set<string>>()
+    private currentSubstitution: SWC.Expression | null = null
 
     constructor(private readonly onDiagnostic?: OnDiagnostic) {
         super()
@@ -21,34 +25,45 @@ export class VanillaKeyframesGenerator extends StyleGenerator {
                 severity: "warning",
                 file: source,
             })
+            this.currentSubstitution = null
             return
         }
-        this.collectedStyles.push({ source, stops: args[0] as KeyframeStops })
+
+        try {
+            const obj = new KeyframesObject(args[0] as KeyframeStops)
+
+            let css = this.filesCss.get(source)
+            if (!css) {
+                css = new Set<string>()
+                this.filesCss.set(source, css)
+            }
+            css.add(obj.asCssString())
+
+            this.currentSubstitution = {
+                type: "StringLiteral",
+                span: emptySpan,
+                value: obj.name,
+                raw: undefined,
+            } as SWC.StringLiteral
+        } catch (err) {
+            const message = getErrorMessage(err)
+            this.onDiagnostic?.({
+                code: "MOCHI_STYLE_GENERATION",
+                message: `Failed to generate keyframes CSS: ${message}`,
+                severity: "warning",
+                file: source,
+            })
+            this.currentSubstitution = null
+        }
+    }
+
+    override extractSubstitution(): SWC.Expression | null {
+        return this.currentSubstitution
     }
 
     async generateStyles(): Promise<{ files: Record<string, string> }> {
-        const filesCss = new Map<string, Set<string>>()
-        for (const { source, stops } of this.collectedStyles) {
-            let css = filesCss.get(source)
-            if (!css) {
-                css = new Set<string>()
-                filesCss.set(source, css)
-            }
-            try {
-                const obj = new KeyframesObject(stops)
-                css.add(obj.asCssString())
-            } catch (err) {
-                const message = getErrorMessage(err)
-                this.onDiagnostic?.({
-                    code: "MOCHI_STYLE_GENERATION",
-                    message: `Failed to generate keyframes CSS: ${message}`,
-                    severity: "warning",
-                    file: source,
-                })
-            }
-        }
         const files: Record<string, string> = {}
-        for (const [source, css] of filesCss) {
+        for (const [source, css] of this.filesCss) {
             const sortedCss = [...css.values()].sort()
             files[source] = sortedCss.join("\n\n")
         }
