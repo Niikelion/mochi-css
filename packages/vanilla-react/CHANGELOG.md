@@ -1,5 +1,57 @@
 # @mochi-css/react
 
+## 7.0.0
+
+### Major Changes
+
+- 867321a: Refactor stage initialization: stages receive a `StageContext` object instead of a bare `CacheRegistry`, and per-file callbacks are moved into the stage runner itself.
+
+    **`@mochi-css/builder`**
+    - `StageDefinition.init` first parameter is now `StageContext` (`{ registry, log, resolveImport }`) instead of `CacheRegistry`; destructure `{ registry }` to preserve existing behavior
+    - `BuilderOptions.onDiagnostic` is now required (was optional); pass `() => {}` if unused
+    - `BuilderOptions.initializeStages` callback signature changed from `(runner, modules, resolveImport, onDiagnostic) => void` to `(runner) => void`
+    - `StageRunner` constructor now accepts `(modules, stages, onDiagnostic, resolveImport)`; callers no longer need to seed module data manually
+    - New export: `StageContext` type
+
+    **`@mochi-css/plugins`**
+    - `ImportSpecStageOut.fileCallbacks` (`FileInput<FileCallbacks>`) removed — `resolveImport` and `log` are now accessible via `StageContext` in `init()`
+    - `FileCallbacks` type removed
+    - `BindingStage` and `ExportsStage` no longer depend on `importStageDef`
+
+    **`@mochi-css/config`**
+    - `InitializeStagesHookProvider.register` callback type narrowed to `(runner: StageRunner) => void`
+
+    **`@mochi-css/stitches`**
+    - `StitchesGenerator.collectArgs` return type changed from `Record<string, StyleGenerator>` to `void`; sub-generators are now accessible via `getLastSubGenGroup()` instead of the return value
+
+### Minor Changes
+
+- 867321a: Add zero-runtime substitution: `css()`, `keyframes()`, and `globalCss()` call sites are replaced at build time with pre-computed values, eliminating all runtime style object construction overhead.
+
+    **`@mochi-css/plugins`**
+    - `StyleGenerator.getArgReplacements()` removed — implement `extractSubstitution(): SWC.Expression | null` and set substitution state inside `collectArgs()` instead
+    - New optional field on `StyleExtractor`: `substitution?: { importName?, importPath?, mode: "full" | "args" }` — enables AST replacement of the original call site
+    - New default method on `StyleGenerator`: `extractSubstitution(): SWC.Expression | null` — returns `null` by default
+    - New hook on `PluginContext`: `postEvalTransforms` — registers `AstPostProcessor` hooks that run after evaluation, before emit; `context.emitModifiedSource(filePath, code)` writes transformed source back
+    - `Builder.collectStylesFromModules` return type is now `{ chunks: Map<string, Set<string>>; modifiedSources: Map<string, string> }` (was `Map<string, Set<string>>`)
+
+    **`@mochi-css/vanilla`**
+    - `css()` call sites are substituted with `_mochiPrebuilt(classNames, variantClassNames, defaultVariants)` at build time
+    - `keyframes()` call sites are substituted with the animation name string literal at build time
+    - `globalCss()` call sites are substituted with `void 0` at build time
+    - New export `_mochiPrebuilt` — used by the build pipeline; not intended for direct use
+
+    **`@mochi-css/vanilla-react`**
+    - `styled()` call sites are substituted with `styled(target, _mochiPrebuilt(...))` at build time; the runtime `styled()` function detects the pre-built instance and skips redundant `css()` construction
+
+### Patch Changes
+
+- Updated dependencies [867321a]
+- Updated dependencies [867321a]
+    - @mochi-css/plugins@7.0.0
+    - @mochi-css/config@7.0.0
+    - @mochi-css/vanilla@7.0.0
+
 ## 6.0.0
 
 ### Major Changes

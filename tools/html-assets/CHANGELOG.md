@@ -1,5 +1,14 @@
 # @mochi-css/html-assets
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [867321a]
+- Updated dependencies [867321a]
+  - @mochi-css/vanilla@7.0.0
+  - @mochi-css/vanilla-react@7.0.0
+
 ## 0.0.2
 
 ### Patch Changes
