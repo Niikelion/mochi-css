@@ -8,12 +8,18 @@ const Left = styled(Layout.Left, {
 })
 
 const GridWrapper = styled("section", {
+    gridColumn: "2 / 4",
     display: "grid",
     gridTemplateColumns: "subgrid",
     ...gridBackground({ cell: 170 }),
 })
 
+const Middle = styled(Layout.Middle, {
+    gridArea: "auto",
+})
+
 const Right = styled(Layout.Right, {
+    gridArea: "auto",
     display: "flex",
     placeItems: "center",
     placeContent: "center",
@@ -27,6 +33,7 @@ export default function MochiWidePage() {
                     <LeftContent />
                 </Left>
                 <GridWrapper>
+                    <Middle>Center</Middle>
                     <Right>
                         <RightContent />
                     </Right>
