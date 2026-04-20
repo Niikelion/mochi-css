@@ -1,9 +1,18 @@
 import type { CacheRegistry } from "./CacheEngine"
+import { OnDiagnostic } from "@mochi-css/core"
+import type { ResolveImport } from "./types"
+
+export type StageContext = {
+    registry: CacheRegistry
+    log: OnDiagnostic
+    resolveImport: ResolveImport
+}
 
 /** Structural base type used to constrain stage dependency arrays without recursive expansion. */
 export type AnyStage = {
     readonly dependsOn: AnyStage[]
-    init(registry: CacheRegistry, ...instances: unknown[]): unknown
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    init(context: StageContext, ...instances: any[]): unknown
 }
 
 /**
@@ -23,11 +32,11 @@ export type StageDefinition<Deps extends AnyStage[], Out> = {
      *
      * @remarks This method should not compute any value directly. Instead, it should declare cached
      *          values and methods to compute those values and return them.
-     * @param registry - cache registry
+     * @param context - context of the stage
      * @param instances - instances of stages this stage depends on
      * @returns cached values defined by this stage
      */
-    init(registry: CacheRegistry, ...instances: Instances<Deps>): Out
+    init(context: StageContext, ...instances: Instances<Deps>): Out
 }
 
 /** Extracts the output type of stage definition. */

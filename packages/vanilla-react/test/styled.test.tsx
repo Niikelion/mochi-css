@@ -2,6 +2,8 @@
 import React from "react"
 import { describe, it, expect } from "vitest"
 import { createTestRenderer, toMatchCss } from "./utils"
+import { styled } from "@/styled"
+import { _mochiPrebuilt, isMochiCSS } from "@mochi-css/vanilla"
 
 expect.extend({ toMatchCss })
 
@@ -66,6 +68,29 @@ describe("variant prop stripping", () => {
         const { container } = renderer.render(<Button size="lg">click</Button>)
         const btn = container.querySelector("button")
         expect(btn?.hasAttribute("size")).toBe(false)
+    })
+})
+
+describe("_mochiPrebuilt fast path", () => {
+    it("isMochiCSS recognizes _mochiPrebuilt result", () => {
+        const instance = _mochiPrebuilt(["s-test"], { color: { red: "cRed", green: "cGreen" } }, { color: "red" })
+        expect(isMochiCSS(instance)).toBe(true)
+    })
+
+    it("styled fast path strips variant props from DOM when given _mochiPrebuilt result", () => {
+        const instance = _mochiPrebuilt(["s-fp"], { size: { sm: "c-sm", lg: "c-lg" } }, {})
+        const Button = styled("button", instance)
+        const { container } = renderer.render(<Button size="lg">click</Button>)
+        const btn = container.querySelector("button")
+        expect(btn?.hasAttribute("size")).toBe(false)
+    })
+
+    it("styled fast path applies variant class from _mochiPrebuilt result", () => {
+        const instance = _mochiPrebuilt(["s-fp2"], { size: { sm: "c-sm2", lg: "c-lg2" } }, {})
+        const Button = styled("button", instance)
+        const { container } = renderer.render(<Button size="lg">click</Button>)
+        const btn = container.querySelector("button")
+        expect(btn?.className).toContain("c-lg2")
     })
 })
 

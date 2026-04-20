@@ -22,6 +22,7 @@ const mochiStyledFunctionExtractor = new VanillaCssExtractor(
         const res = (css as (...args: unknown[]) => { get selector(): string })(...args)
         return new ComponentMock(res.selector)
     },
+    { importName: "_mochiPrebuilt", importPath: "@mochi-css/vanilla", mode: "args" as const },
 )
 
 export function defineConfig(config: Partial<Config> & { extractors?: StyleExtractor[] }): Partial<Config> {

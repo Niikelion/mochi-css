@@ -1,6 +1,7 @@
 import type {
     PluginContext,
     SourceTransformHookProvider,
+    PostEvalTransformHookProvider,
     StageHookProvider,
     EmitHookProvider,
     CleanupHookProvider,
@@ -11,15 +12,7 @@ import type {
     ResetCrossFileStateHookProvider,
     GetFilesToBundleHookProvider,
 } from "@mochi-css/config"
-import type {
-    AstPostProcessor,
-    EmitHook,
-    StageDefinition,
-    MutableFileEntry,
-    Module,
-    ResolveImport,
-    StageRunner,
-} from "@mochi-css/builder"
+import type { AstPostProcessor, EmitHook, StageDefinition, MutableFileEntry, StageRunner } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type * as SWC from "@swc/core"
 
@@ -32,14 +25,10 @@ export class PluginContextCollector implements PluginContext {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private readonly _stages: StageDefinition<any[], any>[] = []
     private readonly _sourceTransforms: AstPostProcessor[] = []
+    private readonly _postEvalTransforms: AstPostProcessor[] = []
     private readonly _emitHooks: EmitHook[] = []
     private readonly _cleanupFns: (() => void)[] = []
-    private readonly _initializeStages: ((
-        runner: StageRunner,
-        modules: Module[],
-        resolveImport: ResolveImport,
-        onDiagnostic?: OnDiagnostic,
-    ) => void)[] = []
+    private readonly _initializeStages: ((runner: StageRunner) => void)[] = []
     private readonly _prepareAnalysis: ((
         runner: StageRunner,
         markedForEval: Map<string, Set<SWC.Expression>>,
@@ -67,6 +56,12 @@ export class PluginContextCollector implements PluginContext {
     readonly sourceTransforms: SourceTransformHookProvider = {
         register: (h: AstPostProcessor) => {
             this._sourceTransforms.push(h)
+        },
+    }
+
+    readonly postEvalTransforms: PostEvalTransformHookProvider = {
+        register: (h: AstPostProcessor) => {
+            this._postEvalTransforms.push(h)
         },
     }
 
@@ -134,6 +129,10 @@ export class PluginContextCollector implements PluginContext {
         return [...this._sourceTransforms]
     }
 
+    getPostEvalTransforms(): AstPostProcessor[] {
+        return [...this._postEvalTransforms]
+    }
+
     getEmitHooks(): EmitHook[] {
         return [...this._emitHooks]
     }
@@ -142,13 +141,11 @@ export class PluginContextCollector implements PluginContext {
         for (const fn of this._cleanupFns) fn()
     }
 
-    getInitializeStages():
-        | ((runner: StageRunner, modules: Module[], resolveImport: ResolveImport, onDiagnostic?: OnDiagnostic) => void)
-        | undefined {
+    getInitializeStages(): ((runner: StageRunner) => void) | undefined {
         if (this._initializeStages.length === 0) return undefined
         const fns = [...this._initializeStages]
-        return (runner, modules, resolveImport, onDiagnostic) => {
-            for (const fn of fns) fn(runner, modules, resolveImport, onDiagnostic)
+        return (runner) => {
+            for (const fn of fns) fn(runner)
         }
     }
 

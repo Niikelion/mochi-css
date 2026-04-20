@@ -10,7 +10,7 @@ import { VmRunner } from "@/Runner"
 import type { AstPostProcessor, AnalysisContext, BuilderOptions, EmitHook } from "@/Builder"
 import type { Module } from "@/StageRunner"
 import { defineStage } from "@/analysis/Stage"
-import type { CacheRegistry } from "@/analysis/CacheEngine"
+import type { StageContext } from "@/analysis/Stage"
 import { Evaluator } from "@/Evaluator"
 import type { Expression } from "@swc/core"
 import * as SWC from "@swc/core"
@@ -19,7 +19,7 @@ async function runBuilder(
     modules: Module[],
     extraOptions: Partial<BuilderOptions> = {},
 ): Promise<Map<string, Set<string>>> {
-    return new Builder({
+    const { chunks } = await new Builder({
         roots: ["./"],
         bundler: new RolldownBundler(),
         runner: new VmRunner(),
@@ -27,6 +27,7 @@ async function runBuilder(
         stages: [...(extraOptions.stages ?? [])],
         sourceTransforms: [...(extraOptions.sourceTransforms ?? [])],
     }).collectStylesFromModules(modules)
+    return chunks
 }
 
 describe("Builder", () => {
@@ -421,8 +422,8 @@ describe("Builder", () => {
 
             const FilePathStage = defineStage({
                 dependsOn: [],
-                init(registry: CacheRegistry) {
-                    const paths = registry.fileCache(
+                init(context: StageContext) {
+                    const paths = context.registry.fileCache(
                         () => [],
                         (file) => file,
                     )

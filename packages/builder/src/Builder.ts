@@ -1,7 +1,6 @@
 import { path } from "@/utils"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
-import { createPatch } from "diff"
 import { StageRunner, Module, ResolveImport } from "@/StageRunner"
 import type { StageDefinition } from "@/analysis/Stage"
 import { parseFile, parseSource } from "@/parse"
@@ -18,6 +17,7 @@ export type AnalysisContext = {
     evaluator: Evaluator
     emitChunk(path: string, content: string): void
     markForEval(filePath: string, expression: SWC.Expression): void
+    emitModifiedSource(filePath: string, code: string): void
 }
 
 export type AstPostProcessor = (runner: StageRunner, context: AnalysisContext) => void | Promise<void>
@@ -59,7 +59,7 @@ export type BuilderOptions = {
     /** When `true`, CSS is split per source file instead of merged into one global output. Default: `false`. */
     splitCss?: boolean
     /** Callback invoked for warnings and non-fatal errors during extraction. */
-    onDiagnostic?: OnDiagnostic
+    onDiagnostic: OnDiagnostic
     /** Preprocessing hook that runs on every loaded file before parsing. */
     filePreProcess?(params: { content: string; filePath: string }): string | Promise<string>
     /** Handlers that run after analysis, before evaluation. Each handler may mutate AST nodes via a proxy layer. Mutations persist in the canonical index and are visible to postEvalTransforms. Can call evaluator.valueWithTracking() to mark expressions for capture. */
@@ -80,13 +80,8 @@ export type BuilderOptions = {
 
     // --- Plugin-registered hooks ---
 
-    /** Called after the StageRunner is created — feeds module data into the root stage. */
-    initializeStages?: (
-        runner: StageRunner,
-        modules: Module[],
-        resolveImport: ResolveImport,
-        onDiagnostic?: OnDiagnostic,
-    ) => void
+    /** Called after the StageRunner is created — allows accessing and configuring stage instances. */
+    initializeStages?: (runner: StageRunner) => void
 
     /** Called before each analysis pass. Should run discovery + usage propagation. */
     prepareAnalysis?: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => void
@@ -97,7 +92,7 @@ export type BuilderOptions = {
     /** Called when files are dirtied after a transform pass — should invalidate stage caches. */
     invalidateFiles?: (runner: StageRunner, dirtyFiles: Set<string>) => void
 
-    /** Called to reset cross-file state (e.g. after invalidation). */
+    /** Called to reset the cross-file state (e.g., after invalidation). */
     resetCrossFileState?: (runner: StageRunner) => void
 
     /** Called to produce the minimal source files to bundle. Returns null for files to skip. */
@@ -106,10 +101,10 @@ export type BuilderOptions = {
         markedForEval: Map<string, Set<SWC.Expression>>,
     ) => Record<string, string | null>
 
-    /** When `true`, logs extra information (e.g. bundled code on execution failure) to help diagnose issues. */
+    /** When `true`, logs extra information (e.g., bundled code on execution failure) to help diagnose issues. */
     debug?: boolean
 
-    /** Specifies path to the ts config for the project */
+    /** Specifies the path to the ts config for the project */
     tsConfigPath?: string
 }
 
@@ -175,11 +170,8 @@ export class Builder {
     }
 
     private createRunner(modules: Module[], resolveImport: ResolveImport): StageRunner {
-        const runner = new StageRunner(
-            modules.map((m) => m.filePath),
-            this.options.stages ?? [],
-        )
-        this.options.initializeStages?.(runner, modules, resolveImport, this.options.onDiagnostic)
+        const runner = new StageRunner(modules, this.options.stages ?? [], this.options.onDiagnostic, resolveImport)
+        this.options.initializeStages?.(runner)
         return runner
     }
 
@@ -240,7 +232,7 @@ export class Builder {
         } catch (err) {
             if (this.options.debug) {
                 for (const [path, code] of Object.entries(fileLookup)) {
-                    this.options.onDiagnostic?.({
+                    this.options.onDiagnostic({
                         severity: "debug",
                         file: path,
                         code: "MOCHI_BUNDLE_INPUT",
@@ -259,7 +251,7 @@ export class Builder {
         } catch (err) {
             const message = getErrorMessage(err)
             if (this.options.debug) {
-                this.options.onDiagnostic?.({
+                this.options.onDiagnostic({
                     code: "MOCHI_DEBUG",
                     message: `bundled code that failed to execute:\n${code}`,
                     severity: "debug",
@@ -269,13 +261,16 @@ export class Builder {
         }
     }
 
-    public async collectStylesFromModules(modules: Module[]): Promise<Map<string, Set<string>>> {
+    public async collectStylesFromModules(
+        modules: Module[],
+    ): Promise<{ chunks: Map<string, Set<string>>; modifiedSources: Map<string, string> }> {
         const resolveImport = this.buildResolveImport(modules)
         const onDiagnostic = this.options.onDiagnostic
         const runner = this.createRunner(modules, resolveImport)
         const evaluator = new Evaluator(this.options.runner)
         evaluator.setGlobal("__global_mochi_diagnostics", onDiagnostic)
         const chunks = new Map<string, Set<string>>()
+        const modifiedSources = new Map<string, string>()
         const markedForEval = new Map<string, Set<SWC.Expression>>()
 
         const context: AnalysisContext = {
@@ -296,6 +291,9 @@ export class Builder {
                     markedForEval.set(filePath, set)
                 }
                 set.add(expression)
+            },
+            emitModifiedSource(filePath: string, code: string) {
+                modifiedSources.set(filePath, code)
             },
         }
 
@@ -336,7 +334,7 @@ export class Builder {
 
         await this.options.cleanup?.()
 
-        return chunks
+        return { chunks, modifiedSources }
     }
 
     private async syncEmittedFiles(emitDir: string, files: Record<string, string | null>): Promise<void> {
@@ -402,19 +400,25 @@ export class Builder {
             options?.onDep?.(file)
         }
 
-        const sourcemods: Record<string, string> = {}
+        const preprocessedSources: Record<string, string> = {}
         const modules = await Promise.all(
             allFiles.map(async (filePath) => {
                 const source = await fs.readFile(path.toSystemPath(filePath), "utf8")
                 const transformed = await this.preTransformFile(source, filePath)
                 if (transformed !== source) {
-                    sourcemods[filePath] = createPatch(filePath, source, transformed)
+                    preprocessedSources[filePath] = transformed
                 }
                 return transformed === source ? parseFile(filePath) : parseSource(transformed, filePath)
             }),
         )
 
-        const chunks = await this.collectStylesFromModules(modules)
+        const { chunks, modifiedSources } = await this.collectStylesFromModules(modules)
+
+        // Build sourcemods: preprocessed files first, then AST-substituted files override
+        const sourcemods: Record<string, string> = { ...preprocessedSources }
+        for (const [filePath, code] of modifiedSources) {
+            sourcemods[filePath] = code
+        }
 
         const globalCss: string[] = []
         const filesCss: Record<string, string> = {}

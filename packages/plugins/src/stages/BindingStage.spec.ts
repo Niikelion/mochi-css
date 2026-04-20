@@ -6,18 +6,17 @@ import { derivedStageDef } from "./DerivedExtractorStage"
 import { styleExprStageDef } from "./StyleExprStage"
 import { bindingStageDef } from "./BindingStage"
 
-async function buildFileInfo(source: string, resolveImport = () => null, onDiagnostic?: OnDiagnostic) {
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+async function buildFileInfo(source: string, resolveImport = () => null, onDiagnostic: OnDiagnostic = () => {}) {
     const module = await parseSource(source, "test.ts")
     const runner = new StageRunner(
-        [module.filePath],
+        [module],
         [importStageDef, derivedStageDef, styleExprStageDef, bindingStageDef],
+        onDiagnostic,
+        resolveImport,
     )
-
-    runner.engine.fileData.set(module.filePath, { filePath: module.filePath, ast: module.ast })
     const importOut = runner.getInstance(importStageDef)
     importOut.extractors.set(new Map())
-    importOut.fileCallbacks.set(module.filePath, { resolveImport, onDiagnostic })
-
     const bindingOut = runner.getInstance(bindingStageDef)
     return bindingOut.fileBindings.for(module.filePath).get()
 }

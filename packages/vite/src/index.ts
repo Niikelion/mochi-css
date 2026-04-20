@@ -93,7 +93,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             }
             builder = createBuilder(resolved, ctx)
             const result = await builder.collectMochiCss()
-            manifest = { global: result.global, files: result.files ?? {} }
+            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -139,7 +139,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             const oldManifest = manifest
 
             const result = await builder.collectMochiCss()
-            manifest = { global: result.global, files: result.files ?? {} }
+            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -174,6 +174,17 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 }
             }
 
+            // Invalidate source files whose sourcemods changed so transform() re-runs with the new substitution
+            const oldSourcemods = oldManifest.sourcemods ?? {}
+            const newSourcemods = manifest.sourcemods ?? {}
+            const allSourcemodKeys = new Set([...Object.keys(oldSourcemods), ...Object.keys(newSourcemods)])
+            for (const source of allSourcemodKeys) {
+                if (oldSourcemods[source] !== newSourcemods[source]) {
+                    const mod = ctx.server.moduleGraph.getModuleById(source)
+                    if (mod) invalidateAndCollectImporters(mod)
+                }
+            }
+
             return [...ctx.modules, ...invalidatedModules, ...extraModules]
         },
 
@@ -194,8 +205,10 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             if (!/\.(ts|tsx|js|jsx)$/.test(id)) return undefined
             if (!context) return undefined
 
-            // Apply registered source transforms (e.g. styledIdPlugin for runtime "s-*" id injection)
-            const transformed = await context.filePreProcess.transform(code, { filePath: id })
+            // Use pre-built sourcemod if available (already includes filePreProcess + AST substitutions).
+            // Fall back to live filePreProcess only when no sourcemod exists for this file.
+            const sourcemod = manifest?.sourcemods?.[id]
+            const transformed = sourcemod ?? await context.filePreProcess.transform(code, { filePath: id })
 
             const imports: string[] = []
 

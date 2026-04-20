@@ -2,7 +2,7 @@ import * as SWC from "@swc/core"
 import type { StyleExtractor, DerivedExtractorBinding } from "../types"
 import type { Diagnostic } from "@mochi-css/core"
 import { defineStage } from "@mochi-css/builder"
-import type { CacheRegistry, FileCache } from "@mochi-css/builder"
+import type { FileCache, StageContext } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import { idToRef } from "@mochi-css/builder"
 import { importStageDef, type ImportSpecStageOut } from "./ImportSpecStage"
@@ -31,7 +31,7 @@ function discoverDerivedFromDeclarator(
     derivedExtractorBindings: RefMap<DerivedExtractorBinding>,
     parentCallsWithDerived: Set<SWC.CallExpression>,
     filePath: string,
-    onDiagnostic: ((d: Diagnostic) => void) | undefined,
+    onDiagnostic: (d: Diagnostic) => void,
 ): void {
     if (declarator.init?.type !== "CallExpression") return
     if (declarator.init.callee.type !== "Identifier") return
@@ -43,7 +43,7 @@ function discoverDerivedFromDeclarator(
     const extractorName = `${parentExtractor.importPath}:${parentExtractor.symbolName}`
 
     if (declarator.id.type !== "ObjectPattern") {
-        onDiagnostic?.({
+        onDiagnostic({
             code: "MOCHI_INVALID_EXTRACTOR_USAGE",
             message:
                 `Return value of "${extractorName}" must be destructured with an object pattern ` +
@@ -59,7 +59,7 @@ function discoverDerivedFromDeclarator(
 
     const hasRestSpread = declarator.id.properties.some((p) => p.type === "RestElement")
     if (hasRestSpread) {
-        onDiagnostic?.({
+        onDiagnostic({
             code: "MOCHI_INVALID_EXTRACTOR_USAGE",
             message:
                 `Destructuring of "${extractorName}" must not use rest spread (\`...\`). ` +
@@ -115,16 +115,12 @@ function discoverDerivedFromDeclarator(
  */
 export const derivedStageDef = defineStage({
     dependsOn: [importStageDef] as const,
-    init(registry: CacheRegistry, importInst: ImportSpecStageOut): DerivedExtractorStageOut {
+    init(context: StageContext, importInst: ImportSpecStageOut): DerivedExtractorStageOut {
+        const { registry, log: onDiagnostic } = context
         const derived = registry.fileCache(
-            (file) => [
-                importInst.importSpecs.for(file),
-                registry.fileData.for(file),
-                importInst.fileCallbacks.for(file),
-            ],
+            (file) => [importInst.importSpecs.for(file), registry.fileData.for(file)],
             (file): DerivedStageResult => {
                 const { ast } = registry.fileData.for(file).get()
-                const { onDiagnostic } = importInst.fileCallbacks.for(file).get()
 
                 // Seed styleExtractorIds from ImportSpecStage output
                 const importSpecsResult = importInst.importSpecs.for(file).get()
@@ -172,7 +168,7 @@ export const derivedStageDef = defineStage({
                     if (!extractor?.derivedExtractors) continue
 
                     const extractorName = `${extractor.importPath}:${extractor.symbolName}`
-                    onDiagnostic?.({
+                    onDiagnostic({
                         code: "MOCHI_INVALID_EXTRACTOR_USAGE",
                         message:
                             `Return value of "${extractorName}" is not used. ` +

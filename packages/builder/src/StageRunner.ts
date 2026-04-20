@@ -1,9 +1,10 @@
 import * as SWC from "@swc/core"
 import { createCacheEngine } from "@/analysis/CacheEngine"
 import type { CacheEngine } from "@/analysis/CacheEngine"
-import type { StageDefinition } from "@/analysis/Stage"
+import type { AnyStage, StageContext, StageDefinition } from "@/analysis/Stage"
 import { topoSort } from "@/analysis/helpers"
 import type { BindingInfo, BindingDeclarator, LocalImport, ImportSpec, Module, ResolveImport } from "@/analysis/types"
+import { OnDiagnostic } from "@mochi-css/core"
 
 export type { Module, ImportSpec, ResolveImport }
 export type { BindingInfo, BindingDeclarator, LocalImport }
@@ -17,24 +18,31 @@ declare module "@swc/core" {
 }
 
 export class StageRunner {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private readonly instanceMap: Map<StageDefinition<any[], any>, unknown>
+    private readonly instanceMap: Map<AnyStage, unknown>
     private readonly filePaths: string[]
     public readonly engine: CacheEngine
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    constructor(filePaths: string[], stages: readonly StageDefinition<any[], any>[]) {
-        this.filePaths = filePaths
-        this.engine = createCacheEngine(filePaths)
+    constructor(modules: Module[], stages: readonly AnyStage[], log: OnDiagnostic, resolveImport: ResolveImport) {
+        this.filePaths = modules.map((m) => m.filePath)
+        this.engine = createCacheEngine(this.filePaths)
+
+        for (const module of modules) {
+            this.engine.fileData.set(module.filePath, module)
+        }
+
         const sorted = topoSort(stages)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const instanceMap = new Map<StageDefinition<any[], any>, unknown>()
+        const instanceMap = new Map<AnyStage, unknown>()
+
+        const context: StageContext = {
+            registry: this.engine,
+            log,
+            resolveImport,
+        }
 
         for (const stage of sorted) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             const deps = stage.dependsOn.map((d) => instanceMap.get(d))
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const instance = stage.init(this.engine, ...deps)
+
+            const instance = stage.init(context, ...deps)
             instanceMap.set(stage, instance)
         }
         this.instanceMap = instanceMap
@@ -44,8 +52,7 @@ export class StageRunner {
         return this.filePaths
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public getInstance<D extends StageDefinition<any[], any>[], O>(stage: StageDefinition<D, O>): O {
+    public getInstance<D extends AnyStage[], O>(stage: StageDefinition<D, O>): O {
         const inst = this.instanceMap.get(stage)
         if (inst === undefined) throw new Error(`Stage not registered`)
         return inst as O

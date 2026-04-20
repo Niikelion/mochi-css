@@ -1,4 +1,4 @@
-import type { EmitHook, MutableFileEntry, Ref } from "@mochi-css/builder"
+import type { AnalysisContext, EmitHook, MutableFileEntry, Ref } from "@mochi-css/builder"
 import { propagateUsagesFromExpr, type ReexportResolver } from "./propagation"
 import { getOrInsert } from "./utils"
 import {
@@ -44,17 +44,19 @@ function buildExtractorLookup(extractors: StyleExtractor[]): ExtractorLookup {
 
 function wrapGenerator(
     generator: StyleGenerator,
+    substitutionByMockResult: Map<unknown, SWC.Expression | null>,
     onDiagnostic: OnDiagnostic | undefined,
 ): (source: string, ...args: unknown[]) => unknown {
     return (source: string, ...args: unknown[]) => {
         try {
-            // collect args
             generator.collectArgs(source, args)
 
-            // call mocked function to get the result
             const result = generator.mockFunction(...args)
 
-            if (!result || typeof result !== "object") return result
+            if (!result || typeof result !== "object") {
+                substitutionByMockResult.set(result, generator.extractSubstitution())
+                return result
+            }
 
             // wrap all sub-generators
             const ret: Record<string, unknown> = { ...result }
@@ -63,8 +65,9 @@ function wrapGenerator(
                 const v = ret[key]
                 if (!(v instanceof StyleGenerator)) continue
 
-                ret[key] = wrapGenerator(v, onDiagnostic)
+                ret[key] = wrapGenerator(v, substitutionByMockResult, onDiagnostic)
             }
+            substitutionByMockResult.set(ret, generator.extractSubstitution())
             return ret
         } catch (err) {
             const message = getErrorMessage(err)
@@ -193,6 +196,50 @@ function mergeMap<K, V extends unknown[]>(base: Map<K, V>, extra: Map<K, V>): Ma
     return result
 }
 
+const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
+
+function replaceNodeInPlace(target: SWC.Expression, source: SWC.Expression): void {
+    for (const key of Object.keys(target)) {
+        Reflect.deleteProperty(target, key)
+    }
+    Object.assign(target, source)
+}
+
+function ensureNamedImport(ast: SWC.Module, importPath: string, name: string): void {
+    const existing = ast.body.find(
+        (item): item is SWC.ImportDeclaration => item.type === "ImportDeclaration" && item.source.value === importPath,
+    )
+    if (existing) {
+        const alreadyPresent = existing.specifiers.some((s) => s.type === "ImportSpecifier" && s.local.value === name)
+        if (!alreadyPresent) {
+            existing.specifiers.push({
+                type: "ImportSpecifier",
+                span: emptySpan,
+                local: { type: "Identifier", span: emptySpan, ctxt: 0, value: name, optional: false },
+                imported: undefined,
+                isTypeOnly: false,
+            } as SWC.NamedImportSpecifier)
+        }
+    } else {
+        ast.body.unshift({
+            type: "ImportDeclaration",
+            span: emptySpan,
+            specifiers: [
+                {
+                    type: "ImportSpecifier",
+                    span: emptySpan,
+                    local: { type: "Identifier", span: emptySpan, ctxt: 0, value: name, optional: false },
+                    imported: undefined,
+                    isTypeOnly: false,
+                } as SWC.NamedImportSpecifier,
+            ],
+            source: { type: "StringLiteral", span: emptySpan, value: importPath, raw: `"${importPath}"` },
+            typeOnly: false,
+            with: undefined,
+        } as SWC.ImportDeclaration)
+    }
+}
+
 export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugin {
     const extractorLookup = buildExtractorLookup(extractors)
 
@@ -200,6 +247,12 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
         name: "mochi-extractor-plugin",
         onLoad(ctx) {
             let capturedGenerators: Map<string, StyleGenerator> | null = null
+            let substitutionByMockResult: Map<unknown, SWC.Expression | null> | null = null
+            let pendingCallsByWrappedNode: Map<
+                SWC.CallExpression,
+                { canonicalCall: SWC.CallExpression; source: string; extractor: StyleExtractor }
+            > | null = null
+            let capturedEvaluator: AnalysisContext["evaluator"] | null = null
 
             // Register all analysis stages
             for (const stage of [
@@ -213,13 +266,9 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 ctx.stages.register(stage)
             }
 
-            ctx.initializeStages.register((runner, modules, resolveImport, onDiagnostic) => {
+            ctx.initializeStages.register((runner) => {
                 const importOut = runner.getInstance(importStageDef)
                 importOut.extractors.set(extractorLookup)
-                for (const m of modules) {
-                    runner.engine.fileData.set(m.filePath, { filePath: m.filePath, ast: m.ast })
-                    importOut.fileCallbacks.set(m.filePath, { resolveImport, onDiagnostic })
-                }
             })
 
             ctx.prepareAnalysis.register((runner, markedForEval) => {
@@ -275,10 +324,8 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
             })
 
             ctx.invalidateFiles.register((runner, dirtyFiles) => {
-                const importOut = runner.getInstance(importStageDef)
                 for (const fp of dirtyFiles) {
                     runner.engine.fileData.invalidate(fp)
-                    importOut.fileCallbacks.invalidate(fp)
                 }
             })
 
@@ -331,7 +378,28 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                     }
                 }
 
-                return extractRelevantSymbols([...filesInfoMap.entries()], markedForEval)
+                const localPendingCallsByWrappedNode = pendingCallsByWrappedNode
+                const localCapturedEvaluator = capturedEvaluator
+                const onReplacementCall =
+                    localPendingCallsByWrappedNode && localCapturedEvaluator
+                        ? (
+                              canonicalCall: SWC.CallExpression,
+                              replacementCall: SWC.CallExpression & { ctxt: number },
+                              filePath: string,
+                              extractor: StyleExtractor,
+                          ): SWC.Expression => {
+                              if (!extractor.substitution) return replacementCall
+                              const wrappedNode = localCapturedEvaluator.valueWithTracking(replacementCall)
+                              localPendingCallsByWrappedNode.set(wrappedNode, {
+                                  canonicalCall,
+                                  source: filePath,
+                                  extractor,
+                              })
+                              return wrappedNode
+                          }
+                        : undefined
+
+                return extractRelevantSymbols([...filesInfoMap.entries()], markedForEval, onReplacementCall)
             })
 
             // sourceTransform: sets up generators and extractors global
@@ -342,53 +410,64 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                     generators.set(id, extractor.startGeneration(ctx.onDiagnostic))
                 }
                 capturedGenerators = generators
+                substitutionByMockResult = new Map()
+                pendingCallsByWrappedNode = new Map()
+                capturedEvaluator = context.evaluator
+
+                const localSubstitutionByMockResult = substitutionByMockResult
 
                 const extractorsObj: Record<string, (source: string, ...args: unknown[]) => unknown> = {}
                 for (const [id, gen] of generators) {
-                    extractorsObj[id] = wrapGenerator(gen, ctx.onDiagnostic)
+                    extractorsObj[id] = wrapGenerator(gen, localSubstitutionByMockResult, ctx.onDiagnostic)
                 }
                 context.evaluator.setGlobal("extractors", extractorsObj)
             })
 
-            const emitHook: EmitHook = async (runner, context) => {
-                if (!capturedGenerators) return
+            ctx.postEvalTransforms.register(async (runner, context) => {
+                if (!pendingCallsByWrappedNode || !substitutionByMockResult) return
 
-                const crossFileOut = runner.getInstance(crossFileDerivedStageDef)
-                const bindingOut = runner.getInstance(bindingStageDef)
-                const styleExprOut = runner.getInstance(styleExprStageDef)
+                const filesToSerialize = new Set<string>()
+
+                for (const [wrappedNode, { canonicalCall, source, extractor }] of pendingCallsByWrappedNode) {
+                    const mockResult = context.evaluator.getTrackedValue(wrappedNode)
+                    const substitution = substitutionByMockResult.get(mockResult)
+                    if (!substitution) continue
+
+                    const subSpec = extractor.substitution
+                    if (!subSpec) continue
+                    const { mode, importName, importPath: substitutionImportPath } = subSpec
+                    const helperImportPath = substitutionImportPath ?? extractor.importPath
+
+                    if (mode === "full") {
+                        replaceNodeInPlace(canonicalCall, substitution)
+                    } else {
+                        const staticArgExprs = new Set(extractor.extractStaticArgs(canonicalCall))
+                        const keptArgs = canonicalCall.arguments.filter(
+                            (a: SWC.Argument) => !staticArgExprs.has(a.expression),
+                        )
+                        canonicalCall.arguments = [...keptArgs, { expression: substitution }]
+                    }
+
+                    filesToSerialize.add(source)
+
+                    if (importName) {
+                        const { ast } = runner.engine.fileData.for(source).get()
+                        ensureNamedImport(ast, helperImportPath, importName)
+                    }
+                }
+
+                for (const source of filesToSerialize) {
+                    const { ast } = runner.engine.fileData.for(source).get()
+                    const { code } = SWC.printSync(ast)
+                    context.emitModifiedSource(source, code)
+                }
+            })
+
+            const emitHook: EmitHook = async (_runner, context) => {
+                if (!capturedGenerators) return
 
                 for (const [, generator] of capturedGenerators) {
                     const styles = await generator.generateStyles()
-                    const replacements = generator.getArgReplacements()
-
-                    const replacementsBySource = new Map<string, { expression: SWC.Expression }[]>()
-                    for (const rep of replacements) {
-                        const list = replacementsBySource.get(rep.source)
-                        if (list) {
-                            list.push({ expression: rep.expression })
-                        } else {
-                            replacementsBySource.set(rep.source, [{ expression: rep.expression }])
-                        }
-                    }
-
-                    for (const [source, repList] of replacementsBySource) {
-                        const styleExprResult = styleExprOut.styleExprs.for(source).get()
-
-                        for (const extractor of extractors) {
-                            const callNodes = styleExprResult.extractedCallExpressions.get(extractor)
-                            if (callNodes?.length !== repList.length) continue
-
-                            for (let i = 0; i < callNodes.length; i++) {
-                                const callNode = callNodes[i]
-                                const rep = repList[i]
-                                if (!callNode || !rep) continue
-                                callNode.arguments = [{ expression: rep.expression }]
-                            }
-                        }
-
-                        void crossFileOut
-                        void bindingOut
-                    }
 
                     if (styles.files) {
                         for (const [source, css] of Object.entries(styles.files)) {
@@ -404,6 +483,9 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
             ctx.emitHooks.register(emitHook)
             ctx.cleanup.register(() => {
                 capturedGenerators = null
+                substitutionByMockResult = null
+                pendingCallsByWrappedNode = null
+                capturedEvaluator = null
             })
         },
     }

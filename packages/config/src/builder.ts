@@ -14,6 +14,7 @@ export function createBuilder(config: Config, context: FullContext): Builder {
         filePreProcess: ({ content, filePath }) => context.filePreProcess.transform(content, { filePath }),
         stages: [...context.stages.getAll()],
         sourceTransforms: [...context.sourceTransforms.getAll()],
+        postEvalTransforms: [...context.postEvalTransforms.getAll()],
         emitHooks: [...context.emitHooks.getAll()],
         cleanup: () => {
             context.cleanup.runAll()

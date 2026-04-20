@@ -2,12 +2,11 @@ import * as SWC from "@swc/core"
 import type { DerivedExtractorBinding } from "@/types"
 import { visit } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
-import type { CacheRegistry, FileCache } from "@mochi-css/builder"
+import type { FileCache, StageContext } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import type { BindingInfo, BindingDeclarator, LocalImport } from "@mochi-css/builder"
 import { idToRef, type Ref } from "@mochi-css/builder"
 import { isLocalImport } from "@/utils"
-import { importStageDef, type ImportSpecStageOut } from "./ImportSpecStage"
 import { styleExprStageDef, type StyleExprStageOut } from "./StyleExprStage"
 
 function collectBindingsFromPattern(
@@ -116,17 +115,13 @@ export type BindingStageOut = {
  * Depends on {@link styleExprStageDef} and {@link importStageDef}.
  */
 export const bindingStageDef = defineStage({
-    dependsOn: [styleExprStageDef, importStageDef] as const,
-    init(registry: CacheRegistry, styleExprInst: StyleExprStageOut, importInst: ImportSpecStageOut): BindingStageOut {
+    dependsOn: [styleExprStageDef] as const,
+    init(context: StageContext, styleExprInst: StyleExprStageOut): BindingStageOut {
+        const { registry, resolveImport, log: onDiagnostic } = context
         const fileBindings = registry.fileCache(
-            (file) => [
-                registry.fileData.for(file),
-                importInst.fileCallbacks.for(file),
-                styleExprInst.derived.for(file),
-            ],
+            (file) => [registry.fileData.for(file), styleExprInst.derived.for(file)],
             (file): BindingStageResult => {
                 const { ast } = registry.fileData.for(file).get()
-                const { resolveImport, onDiagnostic } = importInst.fileCallbacks.for(file).get()
                 const { derivedBindings } = styleExprInst.derived.for(file).get()
 
                 const moduleBindings = new RefMap<BindingInfo>()
@@ -142,7 +137,7 @@ export const bindingStageDef = defineStage({
                             const sourcePath = isLocal ? resolveImport(file, item.source.value) : null
 
                             if (isLocal && sourcePath === null) {
-                                onDiagnostic?.({
+                                onDiagnostic({
                                     code: "MOCHI_UNRESOLVED_IMPORT",
                                     message: `Cannot resolve local import "${item.source.value}"`,
                                     severity: "warning",

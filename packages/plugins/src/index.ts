@@ -4,7 +4,7 @@ export { PluginContextCollector } from "./PluginContextCollector"
 
 export type { StyleExtractor, DerivedExtractorBinding, FileInfo } from "./types"
 export { StyleGenerator } from "./types"
-export type { ImportSpecStageOut, ExtractorLookup, FileCallbacks } from "./stages/ImportSpecStage"
+export type { ImportSpecStageOut, ExtractorLookup } from "./stages/ImportSpecStage"
 export { importStageDef } from "./stages/ImportSpecStage"
 export type { DerivedExtractorStageOut } from "./stages/DerivedExtractorStage"
 export { derivedStageDef } from "./stages/DerivedExtractorStage"

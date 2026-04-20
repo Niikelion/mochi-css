@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { createPatch } from "diff"
 
 const { mockStatSync, mockReadFileSync } = vi.hoisted(() => ({
     mockStatSync: vi.fn((_p: string) => undefined as { mtimeMs: number } | undefined),
@@ -58,33 +57,15 @@ describe("mochiLoader", () => {
         const resourcePath = "/project/src/App.tsx"
         const original = "const x = 1\n"
         const modified = "const x = 2\n"
-        const sourcemod = createPatch(resourcePath, original, modified)
 
         mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(
-            JSON.stringify({ files: {}, sourcemods: { [resourcePath]: sourcemod } }),
+            JSON.stringify({ files: {}, sourcemods: { [resourcePath]: modified } }),
         )
 
         const { ctx, callback } = makeCtx({ resourcePath })
         mochiLoader.call(ctx, original)
         expect(callback).toHaveBeenCalledWith(null, modified)
-    })
-
-    it("passes source through unchanged when sourcemod does not apply (stale)", () => {
-        const resourcePath = "/project/src/App.tsx"
-        const original = "const x = 1\n"
-        const staleSource = "const old = 0\n"
-        const sourcemod = createPatch(resourcePath, staleSource, staleSource + "//extra\n")
-
-        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
-        mockReadFileSync.mockReturnValue(
-            JSON.stringify({ files: {}, sourcemods: { [resourcePath]: sourcemod } }),
-        )
-
-        const { ctx, callback } = makeCtx({ resourcePath })
-        mochiLoader.call(ctx, original)
-        // applyPatch returns false when patch doesn't apply — falls back to original
-        expect(callback).toHaveBeenCalledWith(null, original)
     })
 
     it("injects CSS import from manifest", () => {
@@ -108,13 +89,12 @@ describe("mochiLoader", () => {
         const resourcePath = "/project/src/App.tsx"
         const original = "const x = 1\n"
         const modified = "const x = 2\n"
-        const sourcemod = createPatch(resourcePath, original, modified)
 
         mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(
             JSON.stringify({
                 files: { [resourcePath]: "/project/.mochi/abc123.css" },
-                sourcemods: { [resourcePath]: sourcemod },
+                sourcemods: { [resourcePath]: modified },
             }),
         )
 
@@ -207,10 +187,9 @@ describe("mochiLoader", () => {
         const normalizedKey = "C:/project/src/App.tsx"
         const original = "const x = 1\n"
         const modified = "const x = 2\n"
-        const sourcemod = createPatch(normalizedKey, original, modified)
         mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
         mockReadFileSync.mockReturnValue(
-            JSON.stringify({ files: {}, sourcemods: { [normalizedKey]: sourcemod } }),
+            JSON.stringify({ files: {}, sourcemods: { [normalizedKey]: modified } }),
         )
         const { ctx, callback } = makeCtx({ resourcePath })
         mochiLoader.call(ctx, original)

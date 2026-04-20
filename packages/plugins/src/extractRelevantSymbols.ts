@@ -2,6 +2,13 @@ import * as SWC from "@swc/core"
 import type { FileInfo, StyleExtractor, DerivedExtractorBinding } from "./types"
 import { generateMinimalModuleItem } from "@mochi-css/builder"
 
+type OnReplacementCall = (
+    canonicalCall: SWC.CallExpression,
+    replacementCall: SWC.CallExpression & { ctxt: number },
+    filePath: string,
+    extractor: StyleExtractor,
+) => SWC.Expression
+
 const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
 
 function getExtractorId(extractor: StyleExtractor): string {
@@ -127,7 +134,7 @@ function makeExtractorCallForNode(
  */
 function transformExpression(
     expr: SWC.Expression,
-    replacementMap: Map<SWC.CallExpression, SWC.CallExpression>,
+    replacementMap: Map<SWC.CallExpression, SWC.Expression>,
     handledCalls: Set<SWC.CallExpression>,
 ): SWC.Expression {
     if (expr.type === "CallExpression") {
@@ -267,7 +274,7 @@ function transformExpression(
 
 function transformCallee(
     callee: SWC.Expression | SWC.Super | SWC.Import,
-    replacementMap: Map<SWC.CallExpression, SWC.CallExpression>,
+    replacementMap: Map<SWC.CallExpression, SWC.Expression>,
     handledCalls: Set<SWC.CallExpression>,
 ): SWC.Expression | SWC.Super | SWC.Import {
     if (callee.type === "Super" || callee.type === "Import") return callee
@@ -281,7 +288,7 @@ function transformCallee(
  */
 function substituteExtractedCalls(
     item: SWC.ModuleItem,
-    replacementMap: Map<SWC.CallExpression, SWC.CallExpression>,
+    replacementMap: Map<SWC.CallExpression, SWC.Expression>,
     handledCalls: Set<SWC.CallExpression>,
 ): SWC.ModuleItem {
     if (item.type === "VariableDeclaration") {
@@ -302,7 +309,7 @@ function substituteExtractedCalls(
 
 function substituteInVarDecl(
     decl: SWC.VariableDeclaration,
-    replacementMap: Map<SWC.CallExpression, SWC.CallExpression>,
+    replacementMap: Map<SWC.CallExpression, SWC.Expression>,
     handledCalls: Set<SWC.CallExpression>,
 ): SWC.VariableDeclaration {
     let changed = false
@@ -418,6 +425,7 @@ function generateDerivedStatements(
 export function extractRelevantSymbols(
     files: [string, FileInfo][],
     extraExpressions?: Map<string, Set<SWC.Expression>>,
+    onReplacementCall?: OnReplacementCall,
 ): Record<string, string | null> {
     return Object.fromEntries(
         files.map(([filePath, info]) => {
@@ -452,12 +460,14 @@ export function extractRelevantSymbols(
                 derivedLookup.set(binding.extractor, binding)
             }
 
-            // Build replacement map: extracted call node → extractors[...] call
-            const replacementMap = new Map<SWC.CallExpression, SWC.CallExpression & { ctxt: number }>()
+            // Build replacement map: extracted call node → extractors[...] call (optionally tracked)
+            const replacementMap = new Map<SWC.CallExpression, SWC.Expression>()
             for (const [extractor, callNodes] of info.extractedCallExpressions) {
                 for (const callNode of callNodes) {
                     const rep = makeExtractorCallForNode(filePath, extractor, callNode, derivedLookup)
-                    if (rep) replacementMap.set(callNode, rep)
+                    if (!rep) continue
+                    const finalRep = onReplacementCall ? onReplacementCall(callNode, rep, filePath, extractor) : rep
+                    replacementMap.set(callNode, finalRep)
                 }
             }
 

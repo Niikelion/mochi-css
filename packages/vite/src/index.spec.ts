@@ -21,6 +21,7 @@ vi.mock("@mochi-css/config", () => ({
         }
         stages = { getAll: () => [] }
         sourceTransforms = { getAll: () => [] }
+        postEvalTransforms = { getAll: () => [] }
         emitHooks = { getAll: () => [] }
         cleanup = { runAll: () => {} }
         onDiagnostic = () => {}

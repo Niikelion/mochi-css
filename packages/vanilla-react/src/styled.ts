@@ -5,7 +5,15 @@
  */
 
 import { ComponentPropsWithRef, ComponentType, createElement, ElementType, FC } from "react"
-import { css, MochiCSS, AllVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@mochi-css/vanilla"
+import {
+    css,
+    isMochiCSS,
+    MochiCSS,
+    AllVariants,
+    MergeCSSVariants,
+    MochiCSSProps,
+    RefineVariants,
+} from "@mochi-css/vanilla"
 import clsx from "clsx"
 
 /** Props added by MochiCSS to styled components */
@@ -59,7 +67,12 @@ export function styled<T extends ElementType, V extends AllVariants[]>(
     target: T,
     ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS<V[K]> | string }
 ): MochiStyledComponent<T, V> {
-    const styles = css<V>(...(props as Parameters<typeof css<V>>))
+    // When the builder has pre-built a single MochiCSS instance (via _mochiPrebuilt),
+    // use it directly to avoid the runtime css() construction cost.
+    const styles: MochiCSS<MergeCSSVariants<V>> =
+        props.length === 1 && isMochiCSS(props[0])
+            ? (props[0] as unknown as MochiCSS<MergeCSSVariants<V>>)
+            : css<V>(...(props as Parameters<typeof css<V>>))
     const selector = styles.selector
     const variantKeys = new Set(Object.keys(styles.variantClassNames))
     return Object.assign(

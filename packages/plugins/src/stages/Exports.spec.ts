@@ -7,14 +7,13 @@ import { exportsStage } from "./Exports"
 async function buildExportsInfo(
     source: string,
     resolveImport: (file: string, spec: string) => string | null = () => null,
-    onDiagnostic?: OnDiagnostic,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    onDiagnostic: OnDiagnostic = () => {},
 ) {
     const module = await parseSource(source, "test.ts")
-    const runner = new StageRunner([module.filePath], [importStageDef, exportsStage])
-    runner.engine.fileData.set(module.filePath, { filePath: module.filePath, ast: module.ast })
+    const runner = new StageRunner([module], [importStageDef, exportsStage], onDiagnostic, resolveImport)
     const importOut = runner.getInstance(importStageDef)
     importOut.extractors.set(new Map())
-    importOut.fileCallbacks.set(module.filePath, { resolveImport, onDiagnostic })
     return runner.getInstance(exportsStage).fileExports.for(module.filePath).get()
 }
 
