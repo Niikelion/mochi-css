@@ -7,16 +7,14 @@ import {
     MochiCSSProps,
     MergeCSSVariants,
 } from "@mochi-css/vanilla";
-import { ComponentType, HTMLElementType } from "react";
+import { HTMLElementType } from "react";
 import { StitchesConfig, StitchesTheme, defaultThemeMap } from "@/types";
 import { buildThemeRefs } from "@/theme";
 import { runtimeCss } from "@/runtime/css";
 import { runtimeKeyframes } from "@/runtime/keyframes";
 import { runtimeGlobalCss } from "@/runtime/globalCss";
 import { runtimeCreateTheme, ThemeResult } from "@/runtime/createTheme";
-import { runtimeStyled, MochiStyledComponent } from "@/runtime/styled";
-
-type Cls = { className?: string };
+import { runtimeStyled, StyledFunction } from "@/runtime/styled";
 
 export function createStitches(config: StitchesConfig) {
     const resolvedConfig: StitchesConfig = {
@@ -35,17 +33,12 @@ export function createStitches(config: StitchesConfig) {
         ): MochiCSS<MergeCSSVariants<V>> {
             return runtimeCss<V>(args, resolvedConfig);
         },
-        /* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
-        styled<
-            T extends
-                | HTMLElementType
-                | ComponentType<Cls>
-                | MochiStyledComponent,
-            Args extends (MochiCSSProps<AllVariants> | MochiCSS)[],
-        >(target: T, ...args: Args) {
-            /* eslint-enable @typescript-eslint/no-unnecessary-type-parameters */
-            return runtimeStyled(target, args, resolvedConfig);
-        },
+        styled: ((target: unknown, ...args: unknown[]) =>
+            runtimeStyled(
+                target as HTMLElementType,
+                args as (MochiCSSProps<AllVariants> | MochiCSS)[],
+                resolvedConfig,
+            )) as StyledFunction,
         keyframes(stops: KeyframeStops): MochiKeyframes {
             return runtimeKeyframes(stops);
         },
