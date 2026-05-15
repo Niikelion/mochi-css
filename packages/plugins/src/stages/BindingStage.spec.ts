@@ -124,6 +124,35 @@ describe("BindingStage — collectBindingsFromPattern", () => {
     })
 })
 
+describe("BindingStage — ExportDeclaration with ObjectPattern destructuring", () => {
+    it("registers shorthand-destructured export names in the exports map", async () => {
+        const fileInfo = await buildFileInfo(`
+const obj = {}
+export const { a, b } = obj
+`)
+        expect(fileInfo.exports.get("a")).toBeDefined()
+        expect(fileInfo.exports.get("b")).toBeDefined()
+    })
+
+    it("registers renamed destructured export names using the exported (key) name", async () => {
+        const fileInfo = await buildFileInfo(`
+const obj = {}
+export const { orig: renamed } = obj
+`)
+        expect(fileInfo.exports.get("orig")).toBeDefined()
+        expect(fileInfo.exports.get("renamed")).toBeUndefined()
+    })
+
+    it("adds all destructured names to moduleBindings as well", async () => {
+        const fileInfo = await buildFileInfo(`
+const obj = {}
+export const { a, b } = obj
+`)
+        expect(fileInfo.moduleBindings.getByName("a")).toBeDefined()
+        expect(fileInfo.moduleBindings.getByName("b")).toBeDefined()
+    })
+})
+
 describe("BindingStage — unresolved local import diagnostic", () => {
     it("emits MOCHI_UNRESOLVED_IMPORT diagnostic when resolveImport returns null", async () => {
         const onDiagnostic = vi.fn()

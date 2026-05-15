@@ -10,11 +10,16 @@ export function resolveScopedTokens(
         if (key.startsWith("$$")) {
             const varName = `--${prefix}${key.slice(2)}`;
             result[varName] = value;
-        } else if (
-            value !== null &&
-            typeof value === "object" &&
-            !Array.isArray(value)
-        ) {
+        } else if (Array.isArray(value)) {
+            result[key] = (value as unknown[]).map((item) =>
+                item !== null && typeof item === "object"
+                    ? resolveScopedTokens(
+                          item as Record<string, unknown>,
+                          config,
+                      )
+                    : item,
+            );
+        } else if (value !== null && typeof value === "object") {
             result[key] = resolveScopedTokens(
                 value as Record<string, unknown>,
                 config,

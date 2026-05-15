@@ -1,6 +1,6 @@
 import { StyleGenerator } from "@mochi-css/plugins";
 import type { OnDiagnostic } from "@mochi-css/core";
-import { StitchesConfig } from "../../types";
+import { StitchesConfig, StitchesTheme } from "../../types";
 import { StitchesCssGenerator } from "./StitchesCssGenerator";
 import { StitchesGlobalCssGenerator } from "./StitchesGlobalCssGenerator";
 import { StitchesKeyframesGenerator } from "./StitchesKeyframesGenerator";
@@ -14,9 +14,38 @@ interface SubGeneratorGroup {
     createTheme: StitchesCreateThemeGenerator;
 }
 
+function buildRootCss(theme: StitchesTheme, prefix: string): string {
+    const declarations: string[] = [];
+    for (const [scale, vals] of Object.entries(theme).sort(([a], [b]) =>
+        a.localeCompare(b),
+    )) {
+        for (const [token, value] of Object.entries(vals).sort(([a], [b]) =>
+            a.localeCompare(b),
+        )) {
+            if (typeof value === "string") {
+                declarations.push(
+                    `    --${prefix}${scale}-${token}: ${value};`,
+                );
+            } else {
+                for (const [subKey, subVal] of Object.entries(value).sort(
+                    ([a], [b]) => a.localeCompare(b),
+                )) {
+                    declarations.push(
+                        `    --${prefix}${scale}-${token}-${subKey}: ${subVal};`,
+                    );
+                }
+            }
+        }
+    }
+    return declarations.length > 0
+        ? `:root {\n${declarations.join("\n")}\n}`
+        : "";
+}
+
 export class StitchesGenerator extends StyleGenerator {
     private readonly allSubGeneratorGroups: SubGeneratorGroup[] = [];
     private lastSubGenGroup: SubGeneratorGroup | null = null;
+    private readonly defaultThemeCssBlocks = new Set<string>();
 
     constructor(private readonly onDiagnostic?: OnDiagnostic) {
         super();
@@ -28,6 +57,12 @@ export class StitchesGenerator extends StyleGenerator {
 
     collectArgs(source: string, args: unknown[]): void {
         const config = (args[0] ?? {}) as StitchesConfig;
+
+        if (config.theme) {
+            const prefix = config.prefix ? `${config.prefix}-` : "";
+            const block = buildRootCss(config.theme, prefix);
+            if (block) this.defaultThemeCssBlocks.add(block);
+        }
 
         const subGens: SubGeneratorGroup = {
             css: new StitchesCssGenerator(config, this.onDiagnostic),
@@ -51,7 +86,7 @@ export class StitchesGenerator extends StyleGenerator {
         global?: string;
         files?: Record<string, string>;
     }> {
-        const globalParts: string[] = [];
+        const globalParts: string[] = [...this.defaultThemeCssBlocks];
         const allFiles: Record<string, string> = {};
 
         for (const subGens of this.allSubGeneratorGroups) {

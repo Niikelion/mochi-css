@@ -23,6 +23,20 @@ describe("base styles", () => {
 
         expect(getComputedStyle(getByText("Box content"))).toMatchCss({ width: "200px", height: "200px" })
     })
+
+    it("emits :: double colon for pseudo-element selectors", () => {
+        renderer.styled("div", {
+            "&::after": { content: '""' },
+            "&::before": { content: '""' },
+            "& > li:not(:last-child)::after": { content: '""' },
+        })
+        renderer.render(<div />)
+        const css = document.getElementById("mochi-test-styles")?.textContent ?? ""
+        expect(css).toContain("::after")
+        expect(css).toContain("::before")
+        expect(css).not.toMatch(/(?<!:):after/)
+        expect(css).not.toMatch(/(?<!:):before/)
+    })
 })
 
 describe("merging css() result with variants into styled", () => {

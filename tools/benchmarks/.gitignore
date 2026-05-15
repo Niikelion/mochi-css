@@ -1,0 +1,3 @@
+test-results/
+results/*.json
+results/[0-9]*.md

@@ -397,6 +397,26 @@ describe("CssObject", () => {
         expect(spanRule?.declarations).toMatchObject({ "font-weight": "bold" })
     })
 
+    it("should emit :: double colon for pseudo-element selectors", () => {
+        const obj = new CSSObject({
+            "&::after": {
+                content: '""',
+            },
+            "&::before": {
+                content: '""',
+            },
+            "& > li:not(:last-child)::after": {
+                content: '""',
+            },
+        })
+
+        const cssString = obj.asCssString()
+        expect(cssString).toContain("::after")
+        expect(cssString).toContain("::before")
+        expect(cssString).not.toMatch(/(?<!:):after/)
+        expect(cssString).not.toMatch(/(?<!:):before/)
+    })
+
     it("should generate css code for variant styles with nested selectors", () => {
         const obj = new CSSObject({
             variants: {
@@ -673,5 +693,57 @@ describe("CssObject", () => {
         const rules = parseRules(obj.asCssString())
 
         expect(rules.some((r) => r.selector.includes(obj.variantBlocks.color.red.className))).toBe(true)
+    })
+
+    it("should give distinct class names to variant values with identical CSS", () => {
+        const obj = new CSSObject({
+            color: "blue",
+            variants: {
+                color: {
+                    gold: {},
+                    neutral: {},
+                    danger: {},
+                },
+            },
+        })
+
+        const goldCls = obj.variantBlocks.color.gold.className
+        const neutralCls = obj.variantBlocks.color.neutral.className
+        const dangerCls = obj.variantBlocks.color.danger.className
+
+        expect(goldCls).not.toBe(neutralCls)
+        expect(goldCls).not.toBe(dangerCls)
+        expect(neutralCls).not.toBe(dangerCls)
+    })
+
+    it("should apply compound variants only to the correct variant combination when multiple values share the same CSS", () => {
+        const obj = new CSSObject({
+            variants: {
+                variant: {
+                    solid: { backgroundColor: "gold" },
+                    ghost: {},
+                },
+                color: {
+                    gold: {},
+                    danger: {},
+                },
+            },
+            compoundVariants: [{ variant: "solid", color: "danger", css: { backgroundColor: "red" } }],
+        })
+
+        const rules = parseRules(obj.asCssString())
+        const solidCls = obj.variantBlocks.variant.solid.className
+        const dangerCls = obj.variantBlocks.color.danger.className
+        const goldCls = obj.variantBlocks.color.gold.className
+
+        // compound rule applies to solid+danger, not solid+gold
+        // conditions are sorted alphabetically: "color" < "variant", so dangerCls comes before solidCls
+        const dangerCompoundSelector = `${obj.mainBlock.selector}.${dangerCls}.${solidCls}`
+        const goldCompoundSelector = `${obj.mainBlock.selector}.${goldCls}.${solidCls}`
+
+        expect(rules.find((r) => r.selector === dangerCompoundSelector)?.declarations).toMatchObject({
+            "background-color": "red",
+        })
+        expect(rules.find((r) => r.selector === goldCompoundSelector)).toBeUndefined()
     })
 })

@@ -11,11 +11,13 @@ export function expandUtils(
             const expanded = util(value);
             const expandedRecursive = expandUtils(expanded, config);
             Object.assign(result, expandedRecursive);
-        } else if (
-            value !== null &&
-            typeof value === "object" &&
-            !Array.isArray(value)
-        ) {
+        } else if (Array.isArray(value)) {
+            result[key] = (value as unknown[]).map((item) =>
+                item !== null && typeof item === "object"
+                    ? expandUtils(item as Record<string, unknown>, config)
+                    : item,
+            );
+        } else if (value !== null && typeof value === "object") {
             result[key] = expandUtils(value as Record<string, unknown>, config);
         } else {
             result[key] = value;

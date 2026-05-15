@@ -37,5 +37,5 @@ export const mochiCssFunctionExtractor = new VanillaCssExtractor(
     "css",
     (call) => call.arguments.map((a) => a.expression),
     css as (...args: unknown[]) => unknown,
-    { importName: "_mochiPrebuilt", mode: "full" },
+    { importName: "_mochiPrebuilt", importPath: "@mochi-css/vanilla/runtime", mode: "full" },
 )

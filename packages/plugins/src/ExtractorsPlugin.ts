@@ -42,6 +42,16 @@ function buildExtractorLookup(extractors: StyleExtractor[]): ExtractorLookup {
     return lookup
 }
 
+function isStyleGeneratorLike(v: unknown): v is StyleGenerator {
+    if (!v || typeof v !== "object") return false
+    const obj = v as Record<string, unknown>
+    return (
+        typeof obj["collectArgs"] === "function" &&
+        typeof obj["generateStyles"] === "function" &&
+        typeof obj["mockFunction"] === "function"
+    )
+}
+
 function wrapGenerator(
     generator: StyleGenerator,
     substitutionByMockResult: Map<unknown, SWC.Expression | null>,
@@ -63,7 +73,7 @@ function wrapGenerator(
 
             for (const key in ret) {
                 const v = ret[key]
-                if (!(v instanceof StyleGenerator)) continue
+                if (!isStyleGeneratorLike(v)) continue
 
                 ret[key] = wrapGenerator(v, substitutionByMockResult, onDiagnostic)
             }

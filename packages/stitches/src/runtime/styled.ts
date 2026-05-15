@@ -38,10 +38,6 @@ function isMochiStyled(target: unknown): target is MochiStyledComponent {
     return typeof target === "function" && MOCHI_CSS in target;
 }
 
-type StyledVariantProp<V extends AllVariants> =
-    | (keyof V[keyof V] & string)
-    | Partial<Record<string, keyof V[keyof V] & string>>;
-
 /** Extract the AllVariants shape from a single CSS arg */
 type ExtractVariants<T> =
     T extends MochiCSS<infer V>
@@ -59,6 +55,10 @@ type ArgsVariants<
         ? M
         : AllVariants[]
 >;
+
+type StyledVariantProp<V extends AllVariants> =
+    | (keyof V[keyof V] & string)
+    | Partial<Record<string, keyof V[keyof V] & string>>;
 
 type StyledProps<AV extends AllVariants> = {
     as?: HTMLElementType | ComponentType;
@@ -95,26 +95,19 @@ function extractVariantStyles(
  * The MochiStyledComponent<P> overload must come first so TypeScript picks it for styled components.
  */
 export interface StyledFunction {
-    <
-        P extends object,
-        Args extends readonly (MochiCSSProps<AllVariants> | MochiCSS)[],
-    >(
+    <P extends object, V extends AllVariants = DefaultVariants>(
         target: MochiStyledComponent<P>,
-        ...args: Args
-    ): MochiStyledComponent<
-        Omit<P, keyof StyledProps<ArgsVariants<Args>>> &
-            StyledProps<ArgsVariants<Args>>
-    >;
+        cssArg: MochiCSSProps<V> | MochiCSS<V>,
+    ): MochiStyledComponent<Omit<P, keyof StyledProps<V>> & StyledProps<V>>;
 
     <
         T extends HTMLElementType | ComponentType<Cls>,
-        Args extends readonly (MochiCSSProps<AllVariants> | MochiCSS)[],
+        V extends AllVariants = DefaultVariants,
     >(
         target: T,
-        ...args: Args
+        cssArg?: MochiCSSProps<V> | MochiCSS<V>,
     ): MochiStyledComponent<
-        Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
-            StyledProps<ArgsVariants<Args>>
+        Omit<ComponentProps<T>, keyof StyledProps<V>> & StyledProps<V>
     >;
 }
 
