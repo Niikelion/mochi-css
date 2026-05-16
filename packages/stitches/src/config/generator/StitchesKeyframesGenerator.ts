@@ -13,7 +13,9 @@ export class StitchesKeyframesGenerator extends StyleGenerator {
     }
 
     override mockFunction(...args: unknown[]): unknown {
-        const kf = (keyframes as (...a: unknown[]) => unknown)(...args) as { name: string };
+        const kf = (keyframes as (...a: unknown[]) => unknown)(...args) as {
+            name: string;
+        };
         return kf.name;
     }
 
