@@ -17,7 +17,7 @@ jobs:
             -   name: Install dependencies
                 run: yarn install --immutable
             -   name: Build packages
-                run: yarn turbo build --filter="!./tools/benchmarks/**"
+                run: yarn turbo build --filter="!./tools/benchmarks/**" --filter="!@mochi-css/nextjs-example"
             -   name: Build benchmarks
                 run: yarn workspace @mochi-css/benchmarks build
             -   name: Save build artifacts
