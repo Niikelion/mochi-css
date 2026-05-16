@@ -7,6 +7,7 @@
         "codegen": "tsx codegen/index.ts stitches && tsx codegen/index.ts mochi-stitches && tsx codegen/index.ts vanilla-extract && tsx codegen/index.ts panda && tsx codegen/index.ts css-modules",
         "benchmark": "tsx scripts/run.ts",
         "report": "yarn codegen && tsx scripts/report.ts",
+        "build": "yarn codegen && npx tsx scripts/build-impls.ts",
         "test": "playwright test"
     },
     "devDependencies": {

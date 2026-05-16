@@ -17,6 +17,7 @@ const implementations = [
 export default defineConfig({
     testDir: "./tests",
     timeout: 30_000,
+    snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
     use: { headless: true },
     webServer: implementations.map(({ name, port }) => ({
         command: `yarn vite preview --port ${port} --strictPort`,
