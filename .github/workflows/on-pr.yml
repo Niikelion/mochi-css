@@ -17,7 +17,9 @@ jobs:
             -   name: Install dependencies
                 run: yarn install --immutable
             -   name: Build packages
-                run: yarn turbo build --filter="!./tools/benchmarks/implementations/**"
+                run: yarn turbo build --filter="!./tools/benchmarks/**"
+            -   name: Build benchmarks
+                run: yarn workspace @mochi-css/benchmarks build
             -   name: Save build artifacts
                 uses: actions/cache/save@v5
                 with:
