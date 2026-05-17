@@ -20,7 +20,7 @@ vi.mock("../src/install", () => ({
 import * as p from "@clack/prompts"
 import { installPackages } from "@/install"
 import { ModuleRunner } from "@/runner"
-import { vitePreset, nextjsPreset } from "@/presets"
+import { vitePreset, nextjsPreset, esbuildPreset } from "@/presets"
 
 let tmpDir: string
 let origCwd: string
@@ -59,6 +59,41 @@ describe("vite preset integration", () => {
 
         const viteContent = await fs.readFile(path.join(tmpDir, "vite.config.ts"), "utf-8")
         expect(viteContent).toContain("mochiCss()")
+
+        expect(installPackages).toHaveBeenCalled()
+    })
+})
+
+describe("esbuild preset integration", () => {
+    it("creates default build.mjs and mochi config when neither exists", async () => {
+        const runner = new ModuleRunner()
+        esbuildPreset.setup(runner)
+        await runner.run({ moduleOptions: { esbuild: true } })
+
+        const buildContent = await fs.readFile(path.join(tmpDir, "build.mjs"), "utf-8")
+        expect(buildContent).toContain("mochiCss()")
+        expect(buildContent).toContain("@mochi-css/esbuild")
+
+        const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+        expect(mochiContent).toContain("tmpDir")
+        expect(mochiContent).toContain(".mochi")
+
+        expect(installPackages).toHaveBeenCalled()
+    })
+
+    it("patches existing build.mjs to add mochiCss()", async () => {
+        await fs.writeFile(
+            path.join(tmpDir, "build.mjs"),
+            `import { build } from "esbuild"\nawait build({ entryPoints: ["src/index.ts"], outdir: "dist", bundle: true, plugins: [] })\n`,
+        )
+
+        const runner = new ModuleRunner()
+        esbuildPreset.setup(runner)
+        await runner.run({ moduleOptions: { esbuild: true } })
+
+        const buildContent = await fs.readFile(path.join(tmpDir, "build.mjs"), "utf-8")
+        expect(buildContent).toContain("mochiCss()")
+        expect(buildContent).toContain("@mochi-css/esbuild")
 
         expect(installPackages).toHaveBeenCalled()
     })

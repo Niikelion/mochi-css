@@ -1883,6 +1883,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mochi-css/esbuild@workspace:packages/esbuild":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/esbuild@workspace:packages/esbuild"
+  dependencies:
+    "@mochi-css/builder": "npm:^7.0.0"
+    "@mochi-css/config": "npm:^7.0.0"
+    "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/test": "npm:^2.0.0"
+    "@types/node": "npm:^24.8.1"
+    esbuild: "npm:^0.25.0"
+    eslint: "npm:^9.39.2"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    esbuild: ^0.25
+  languageName: unknown
+  linkType: soft
+
 "@mochi-css/html-assets@workspace:tools/html-assets":
   version: 0.0.0-use.local
   resolution: "@mochi-css/html-assets@workspace:tools/html-assets"

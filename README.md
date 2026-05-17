@@ -71,6 +71,7 @@ Detailed documentation about different parts of Mochi.css can be found here:
 - [**@mochi-css/postcss**](packages/postcss/README.md) - postcss plugin
 - [**@mochi-css/next**](packages/next/README.md) - Next.js plugin
 - [**@mochi-css/vite**](packages/vite/README.md) - Vite plugin
+- [**@mochi-css/esbuild**](packages/esbuild/README.md) - esbuild plugin
 - [**@mochi-css/builder**](packages/builder/README.md) - utilities for extracting styles from source code and generating CSS from them
 
 ---
@@ -78,12 +79,28 @@ Detailed documentation about different parts of Mochi.css can be found here:
 ## 🌱 Project Status
 
 **Early release** – starting with version 3, new features and improvements will be added while preserving code compatibility within the same major version.
-This guarantees that package upgrades within the same major version will not break your code, as long as you don't rely on bugs existing in the previous versions.
+This guarantees that package upgrades within the same major version will not break your code,
+as long as you don't rely on bugs existing in the previous versions.
 If you want to upgrade to the next major version, please read release notes and migration guides to ensure a smooth transition.
 
-Starting with version 4, code-mods for upgrading to the next major version will be provided.
+Benchmarks comparing bundle size and runtime overhead against other CSS-in-JS libraries are available in [`tools/benchmarks/`](tools/benchmarks/README.md).
+Run `yarn workspace @mochi-css/benchmarks benchmark` from the repo root to reproduce results on your machine.
 
-Benchmarks and performance comparisons will be released at a later stage.
+### Latest benchmark results
+
+Fixture: mock Mochi homepage (Navbar, Hero, Stats, Features, CodeShowcase, ApiCarousel, ComponentExplorer, Cta, Footer).
+Measured on an Intel Core i7-14700K with Slow 4G throttling (1.6 Mbps, 150 ms RTT) and 8x CPU slowdown.
+
+| Library               | Build time | JS bundle (gz) | CSS output (gz) | FCP   |
+|-----------------------|------------|----------------|-----------------|-------|
+| `mochi-vanilla-react` | 1.6 s      | 61.4 kB        | 2.1 kB          | 1.9 s |
+| `mochi-stitches`      | 1.6 s      | 69.6 kB        | 1.8 kB          | 2.2 s |
+| `vanilla-extract`     | 2.3 s      | 60.9 kB        | 1.6 kB          | 1.9 s |
+| `stitches`            | 1.5 s      | 67.4 kB        | 0 kB *          | 2.0 s |
+| `panda`               | 2.4 s      | 72.0 kB        | 6.1 kB          | 2.3 s |
+| `tailwind`            | 1.6 s      | 60.6 kB        | 3.4 kB          | 1.9 s |
+
+* Stitches.js injects styles at runtime — no CSS file is produced.
 
 ---
 
@@ -91,20 +108,17 @@ Benchmarks and performance comparisons will be released at a later stage.
 
 | Feature                      | Status         | Notes                                                                                                                                                  |
 |------------------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Zero runtime**             | ✅ Done        | Style object arguments are replaced with pre-computed values at build time, eliminating runtime overhead                                               |
-| **Benchmarks**               | ✅ Done        | Compare bundle/runtime size with other CSS-in-JS libraries                                                                                             |
 | **Mochi.css/mango**          | 🕒 Queued      | Theming library built on top of Mochi.css/vanilla                                                                                                      |
-| **Stitches.js adapter**      | ✅ Done        | Drop-in replacement for `css`, `styled`, `globalCss`, `keyframes`, and `createTheme` from Stitches.js that runs on Mochi.css                           |
 | **Partial PandaCSS adapter** | 🕒 Queued      | Drop-in replacement for `styled` and `cva` from PandaCSS. Other features may not be supported due to different architectures of PandaCSS and Mochi.css |
-| **Standalone css building**  | 🚧 In Progress | Extract and bundle static styles from a library                                                                                                        |
-| **CSS optimization**         | 🕒 Queued      | Perform simple optimizations on the generated code                                                                                                     |
-| **Mochi.css/bento**          | 🕒 Queued      | Layouting library providing primitives for shaping your ui                                                                                             |
+| **CSS optimization**         | 🚧 In Progress | Perform simple optimizations on the generated code                                                                                                     |
+| **Mochi.css/bento**          | 🚧 In Progress | Layouting library providing primitives for shaping your ui                                                                                             |
 | **Blog example app**         | 🕒 Queued      | My(Niikelion) personal blog built with Mochi.css provided as an example of a small, functional app                                                     |
 | **Japanese learning app**    | 🕒 Queued      | Example japanese learning website. Content will not be included in the source code                                                                     |
 
 Status legend
 
 🚧 In Progress – actively being worked on
+
 🕒 Queued – planned, not yet in development
 
 ---

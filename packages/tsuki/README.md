@@ -9,7 +9,7 @@ You can run it with:
 npx @mochi-css/tsuki
 ```
 
-`tsuki` handles installing integrations for next.js and vite frameworks.
+`tsuki` handles installing integrations for vite, next.js, and esbuild.
 To get more info, run it with `-h` or `--help` option.
 
 ## What `tsuki` sets up
@@ -24,6 +24,15 @@ Use the `--preset` / `-p` flag to choose a framework preset non-interactively:
 ```bash
 npx @mochi-css/tsuki --preset vite
 npx @mochi-css/tsuki --preset nextjs
+npx @mochi-css/tsuki --preset esbuild
+npx @mochi-css/tsuki --preset lib
 ```
 
 If `-p` is omitted, `tsuki` will prompt you to select a preset interactively.
+
+| Preset    | Description |
+|-----------|-------------|
+| `vite`    | Vite app — adds `mochiCss()` to `vite.config.ts` |
+| `nextjs`  | Next.js app — wraps `next.config.ts` with `withMochi()` |
+| `esbuild` | Standalone esbuild build — creates or patches a `build.mjs` script |
+| `lib`     | Framework-agnostic library — sets up `mochi.config.ts` and PostCSS only |
