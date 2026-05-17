@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vanilla",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "7.0.0",
+    "version": "7.0.1",
     "license": "MIT",
     "keywords": [
         "css-in-js",
@@ -69,7 +69,7 @@
     "devDependencies": {
         "@mochi-css/builder": "^7.0.0",
         "@mochi-css/config": "^7.0.0",
-        "@mochi-css/plugins": "^7.0.0",
+        "@mochi-css/plugins": "^7.0.1",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
         "@swc/core": "^1.15.13",
@@ -98,7 +98,7 @@
     "peerDependencies": {
         "@mochi-css/builder": "^7.0.0",
         "@mochi-css/config": "^7.0.0",
-        "@mochi-css/plugins": "^7.0.0",
+        "@mochi-css/plugins": "^7.0.1",
         "@swc/core": "^1"
     },
     "peerDependenciesMeta": {

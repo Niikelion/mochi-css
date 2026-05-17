@@ -1,5 +1,13 @@
 # @mochi-css/vanilla
 
+## 7.0.1
+
+### Patch Changes
+
+- 0c02ce2: Extract `MochiCSS` class and `isMochiCSS` into a dedicated `mochiCss.ts` module to reduce coupling in `css.ts`.
+- Updated dependencies [0c02ce2]
+    - @mochi-css/plugins@7.0.1
+
 ## 7.0.0
 
 ### Major Changes

@@ -1,5 +1,11 @@
 # @mochi-css/next
 
+## 6.0.2
+
+### Patch Changes
+
+- 0c02ce2: Fix Turbopack production builds: loader now triggers `buildCssOnce` on demand when no manifest exists, so source transforms are applied even without a webpack `beforeRun` hook.
+
 ## 6.0.1
 
 ### Patch Changes

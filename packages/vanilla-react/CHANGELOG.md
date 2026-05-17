@@ -1,5 +1,15 @@
 # @mochi-css/react
 
+## 7.0.1
+
+### Patch Changes
+
+- 0c02ce2: Switch `styled.ts` to a local duck-typed `RuntimeStyles` interface instead of importing `MochiCSS` directly, avoiding cross-boundary type coupling.
+- Updated dependencies [0c02ce2]
+- Updated dependencies [0c02ce2]
+    - @mochi-css/plugins@7.0.1
+    - @mochi-css/vanilla@7.0.1
+
 ## 7.0.0
 
 ### Major Changes

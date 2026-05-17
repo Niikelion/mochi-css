@@ -1,5 +1,11 @@
 # @mochi-css/plugins
 
+## 7.0.1
+
+### Patch Changes
+
+- 0c02ce2: Replace `instanceof StyleGenerator` with a duck-type check in `wrapGenerator`. The `instanceof` check fails after object spread across VM context boundaries; the duck-type check is robust to that.
+
 ## 7.0.0
 
 ### Major Changes

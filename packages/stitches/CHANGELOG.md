@@ -1,5 +1,15 @@
 # @mochi-css/stitches
 
+## 2.0.1
+
+### Patch Changes
+
+- 0c02ce2: Fix keyframes animation name in `StitchesKeyframesGenerator`. `mockFunction` was returning a `MochiKeyframes` object which `wrapGenerator` spread into a plain object, losing `toString()`. Template literals then produced `[object Object]` instead of the keyframe name in generated CSS.
+- Updated dependencies [0c02ce2]
+- Updated dependencies [0c02ce2]
+  - @mochi-css/plugins@7.0.1
+  - @mochi-css/vanilla@7.0.1
+
 ## 2.0.0
 
 ### Major Changes

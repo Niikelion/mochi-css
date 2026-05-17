@@ -1,5 +1,12 @@
 # @mochi-css/tsuki
 
+## 7.0.1
+
+### Patch Changes
+
+- 0c02ce2: Bump for suite package updates.
+- 0c02ce2: Fix Turbopack production builds: loader now triggers `buildCssOnce` on demand when no manifest exists, so source transforms are applied even without a webpack `beforeRun` hook.
+
 ## 7.0.0
 
 ### Major Changes
