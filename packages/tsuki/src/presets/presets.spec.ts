@@ -78,10 +78,10 @@ describe("vitePreset", () => {
         expect(modules.at(4)?.id).toBe("gitignore")
     })
 
-    it("calls createMochiConfigModule with tmpDir: .mochi", () => {
+    it("calls createMochiConfigModule with tmpDir: .mochi and roots: src", () => {
         const { runner } = makeRunner()
         vitePreset.setup(runner)
-        expect(createMochiConfigModule).toHaveBeenCalledWith({ tmpDir: ".mochi" })
+        expect(createMochiConfigModule).toHaveBeenCalledWith({ tmpDir: ".mochi", roots: ["src"] })
     })
 
     it("calls createPostcssModule with no options", () => {
@@ -114,10 +114,15 @@ describe("nextjsPreset", () => {
         expect(modules.at(3)?.id).toBe("gitignore")
     })
 
-    it("calls createMochiConfigModule with styledId: true, tmpDir: .mochi, and splitCss: true", () => {
+    it("calls createMochiConfigModule with styledId: true, tmpDir: .mochi, splitCss: true, and roots: src", () => {
         const { runner } = makeRunner()
         nextjsPreset.setup(runner)
-        expect(createMochiConfigModule).toHaveBeenCalledWith({ styledId: true, tmpDir: ".mochi", splitCss: true })
+        expect(createMochiConfigModule).toHaveBeenCalledWith({
+            styledId: true,
+            tmpDir: ".mochi",
+            splitCss: true,
+            roots: ["src"],
+        })
     })
 
     it("calls createUiFrameworkModule with auto: true", () => {

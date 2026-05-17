@@ -24,9 +24,12 @@ function defaultMochiConfigWithOptions(
     tmpDir: string | undefined,
     styledId: boolean,
     splitCss: boolean | undefined,
+    roots: string[] | undefined,
 ): string {
     const importPath = styledId ? "@mochi-css/vanilla-react/config" : "@mochi-css/vanilla/config"
     const lines: string[] = []
+    if (roots !== undefined && roots.length > 0)
+        lines.push(`    roots: [${roots.map((r) => JSON.stringify(r)).join(", ")}],`)
     if (tmpDir !== undefined) lines.push(`    tmpDir: ${JSON.stringify(tmpDir)},`)
     if (splitCss !== undefined) lines.push(`    splitCss: ${splitCss},`)
 
@@ -81,6 +84,33 @@ async function addTmpDirToExistingConfig(configPath: string, tmpDir: string): Pr
     await fs.writeFile(configPath, code)
 }
 
+async function addRootsToExistingConfig(configPath: string, roots: string[]): Promise<void> {
+    const content = await fs.readFile(configPath, "utf-8")
+    const mod = parseModule(content)
+    const obj = getConfigObject(mod)
+    if (!obj) throw new Error(`Failed to add roots to ${configPath}`)
+
+    const hasRoots = (obj["properties"] as Record<string, unknown>[]).some((prop) => getPropKeyName(prop) === "roots")
+    if (hasRoots) return
+
+    obj["properties"] = [
+        {
+            type: "ObjectProperty",
+            key: { type: "StringLiteral", value: "roots" },
+            value: {
+                type: "ArrayExpression",
+                elements: roots.map((r) => ({ type: "StringLiteral", value: r })),
+            },
+            computed: false,
+            shorthand: false,
+        },
+        ...(obj["properties"] as unknown[]),
+    ]
+
+    const { code } = generateCode(mod)
+    await fs.writeFile(configPath, code)
+}
+
 async function addSplitCssToExistingConfig(configPath: string, splitCss: boolean): Promise<void> {
     const content = await fs.readFile(configPath, "utf-8")
     const mod = parseModule(content)
@@ -121,10 +151,12 @@ export interface MochiConfigModuleOptions {
     tmpDir?: string
     /** Whether to emit per-file CSS chunks instead of a single global file */
     splitCss?: boolean
+    /** Source directories for the CSS builder to scan */
+    roots?: string[]
 }
 
 export function createMochiConfigModule(options: MochiConfigModuleOptions = {}): Module {
-    const { styledId = false, tmpDir, splitCss } = options
+    const { styledId = false, tmpDir, splitCss, roots } = options
 
     return {
         id: "mochi-config",
@@ -135,9 +167,17 @@ export function createMochiConfigModule(options: MochiConfigModuleOptions = {}):
 
             if (!existing) {
                 const configPath = "mochi.config.ts"
-                await fs.writeFile(configPath, defaultMochiConfigWithOptions(tmpDir, styledId, splitCss))
+                await fs.writeFile(configPath, defaultMochiConfigWithOptions(tmpDir, styledId, splitCss, roots))
                 p.log.success("Created mochi.config.ts")
             } else {
+                if (roots !== undefined && roots.length > 0) {
+                    try {
+                        await addRootsToExistingConfig(existing, roots)
+                        p.log.success(`Added roots to ${existing}`)
+                    } catch {
+                        p.log.warn(`Could not automatically add roots to ${existing} — add it manually`)
+                    }
+                }
                 if (tmpDir !== undefined) {
                     try {
                         await addTmpDirToExistingConfig(existing, tmpDir)
