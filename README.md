@@ -92,9 +92,9 @@ Benchmarks and performance comparisons will be released at a later stage.
 | Feature                      | Status         | Notes                                                                                                                                                  |
 |------------------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Zero runtime**             | ✅ Done        | Style object arguments are replaced with pre-computed values at build time, eliminating runtime overhead                                               |
-| **Benchmarks**               | 🕒 Queued      | Compare bundle/runtime size with other CSS-in-JS libraries                                                                                             |
+| **Benchmarks**               | ✅ Done        | Compare bundle/runtime size with other CSS-in-JS libraries                                                                                             |
 | **Mochi.css/mango**          | 🕒 Queued      | Theming library built on top of Mochi.css/vanilla                                                                                                      |
-| **Stitches.js adapter**      | 🚧 In Progress | Drop-in replacement for `css`, `styled`, `globalCss` and `createTheme` from Stiches.js that runs on Mochi.css                                          |
+| **Stitches.js adapter**      | ✅ Done        | Drop-in replacement for `css`, `styled`, `globalCss`, `keyframes`, and `createTheme` from Stitches.js that runs on Mochi.css                           |
 | **Partial PandaCSS adapter** | 🕒 Queued      | Drop-in replacement for `styled` and `cva` from PandaCSS. Other features may not be supported due to different architectures of PandaCSS and Mochi.css |
 | **Standalone css building**  | 🚧 In Progress | Extract and bundle static styles from a library                                                                                                        |
 | **CSS optimization**         | 🕒 Queued      | Perform simple optimizations on the generated code                                                                                                     |
