@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-const { mockStatSync, mockReadFileSync } = vi.hoisted(() => ({
+const { mockStatSync, mockReadFileSync, mockBuildCssOnce } = vi.hoisted(() => ({
     mockStatSync: vi.fn((_p: string) => undefined as { mtimeMs: number } | undefined),
     mockReadFileSync: vi.fn((_p: string, _enc: string) => "{}"),
+    mockBuildCssOnce: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock("fs", () => ({
@@ -10,6 +11,10 @@ vi.mock("fs", () => ({
         statSync: (p: string, _opts?: unknown) => mockStatSync(p),
         readFileSync: (p: string, enc: string) => mockReadFileSync(p, enc),
     },
+}))
+
+vi.mock("./watcher.js", () => ({
+    buildCssOnce: mockBuildCssOnce,
 }))
 
 import mochiLoader from "./loader.js"
@@ -38,10 +43,10 @@ describe("mochiLoader", () => {
         mockStatSync.mockReturnValue(undefined)
     })
 
-    it("passes source through unchanged when manifest does not exist", () => {
+    it("passes source through unchanged when manifest does not exist", async () => {
         const { ctx, callback } = makeCtx()
         mochiLoader.call(ctx, "const x = 1")
-        expect(callback).toHaveBeenCalledWith(null, "const x = 1")
+        await vi.waitFor(() => expect(callback).toHaveBeenCalledWith(null, "const x = 1"))
     })
 
     it("passes source through unchanged when manifest has no entries for this file", () => {
