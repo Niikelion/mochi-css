@@ -112,6 +112,29 @@ describe("styled builder pipeline", () => {
         expect(sourcemod).toContain('"green"')
     })
 
+    it("preserves :: double colon for pseudo-element selectors in generated CSS", async () => {
+        const filePath = path.resolve("src/page.tsx")
+        const source = dedent`
+            import { styled } from "@mochi-css/vanilla-react"
+
+            export const Box = styled("div", {
+                "&::after": { content: '""' },
+                "&::before": { content: '""' },
+                "& > li:not(:last-child)::after": { content: '""' },
+            })
+        `
+
+        const { chunks } = await runDefineConfig(source, filePath)
+
+        const cssChunks = [...chunks.entries()].flatMap(([, v]) => [...v])
+        const css = cssChunks.join("\n")
+
+        expect(css).toContain("::after")
+        expect(css).toContain("::before")
+        expect(css).not.toMatch(/(?<!:):after/)
+        expect(css).not.toMatch(/(?<!:):before/)
+    })
+
     it("merges css() result with additional styled variants in _mochiPrebuilt", async () => {
         const filePath = path.resolve("src/Text.tsx")
         const source = dedent`

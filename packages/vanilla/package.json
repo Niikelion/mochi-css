@@ -15,10 +15,14 @@
     "files": [
         "/dist"
     ],
+    "sideEffects": false,
     "typesVersions": {
         "*": {
             "config": [
                 "./dist/config/index.d.ts"
+            ],
+            "runtime": [
+                "./dist/runtime.d.ts"
             ]
         }
     },
@@ -41,6 +45,16 @@
             "require": {
                 "types": "./dist/config/index.d.ts",
                 "require": "./dist/config/index.js"
+            }
+        },
+        "./runtime": {
+            "import": {
+                "types": "./dist/runtime.d.mts",
+                "import": "./dist/runtime.mjs"
+            },
+            "require": {
+                "types": "./dist/runtime.d.ts",
+                "require": "./dist/runtime.js"
             }
         }
     },

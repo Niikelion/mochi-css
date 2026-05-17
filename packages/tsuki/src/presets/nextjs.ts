@@ -8,7 +8,7 @@ export const nextjsPreset: Preset = {
     id: "nextjs",
     name: "Next.js",
     setup(runner) {
-        runner.register(createMochiConfigModule({ styledId: true, tmpDir: ".mochi", splitCss: true }))
+        runner.register(createMochiConfigModule({ styledId: true, tmpDir: ".mochi", splitCss: true, roots: ["src"] }))
         runner.register(nextModule)
         runner.register(createUiFrameworkModule({ auto: true }))
         runner.register(createGitignoreModule(".mochi"))

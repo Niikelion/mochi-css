@@ -1,5 +1,6 @@
 import fs from "fs"
 import path from "path"
+import { buildCssOnce } from "./watcher.js"
 
 type DiskManifest = {
     global?: string
@@ -9,6 +10,8 @@ type DiskManifest = {
 
 type ManifestCache = { path: string; mtime: number; manifest: DiskManifest }
 let manifestCache: ManifestCache | undefined
+// Shared across all concurrent loader invocations so buildCssOnce runs only once.
+let onDemandBuild: Promise<void> | undefined
 
 function readManifest(manifestPath: string): DiskManifest | null {
     const stat = fs.statSync(manifestPath, { throwIfNoEntry: false })
@@ -63,8 +66,13 @@ function injectImports(
 
 /**
  * Webpack/Turbopack loader that:
- * 1. Applies source transforms from the manifest (sourcemods produced by the PostCSS/builder pipeline).
- * 2. Injects CSS `import` statements for per-file styles produced by the PostCSS plugin.
+ * 1. Applies source transforms from the manifest (sourcemods produced by the builder pipeline).
+ * 2. Injects CSS `import` statements for per-file styles.
+ *
+ * With webpack the manifest is already present (written by the beforeRun plugin).
+ * With Turbopack there is no beforeRun hook, so the first invocation triggers buildCssOnce()
+ * and waits for it before reading the manifest. All concurrent invocations share the same
+ * promise so the build runs only once.
  */
 export default function mochiLoader(this: LoaderContext, source: string): void {
     const { manifestPath } = this.getOptions()
@@ -73,19 +81,27 @@ export default function mochiLoader(this: LoaderContext, source: string): void {
 
     this.addDependency(manifestPath)
 
-    try {
-        const manifest = readManifest(manifestPath)
+    void (async () => {
+        try {
+            let manifest = readManifest(manifestPath)
 
-        if (!manifest) {
-            callback(null, source)
-            return
+            if (!manifest) {
+                onDemandBuild ??= buildCssOnce(path.dirname(manifestPath))
+                await onDemandBuild
+                manifest = readManifest(manifestPath)
+            }
+
+            if (!manifest) {
+                callback(null, source)
+                return
+            }
+
+            const sourcemod = manifest.sourcemods?.[resourcePath.replaceAll("\\", "/")]
+            const transformed = sourcemod ?? source
+
+            callback(null, injectImports(this, manifest, transformed as string))
+        } catch (err: unknown) {
+            callback(err instanceof Error ? err : new Error(String(err)))
         }
-
-        const sourcemod = manifest.sourcemods?.[resourcePath.replaceAll("\\", "/")]
-        const transformed = sourcemod ?? source
-
-        callback(null, injectImports(this, manifest, transformed as string))
-    } catch (err: unknown) {
-        callback(err instanceof Error ? err : new Error(String(err)))
-    }
+    })()
 }

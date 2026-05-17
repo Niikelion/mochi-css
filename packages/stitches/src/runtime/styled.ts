@@ -38,10 +38,6 @@ function isMochiStyled(target: unknown): target is MochiStyledComponent {
     return typeof target === "function" && MOCHI_CSS in target;
 }
 
-type StyledVariantProp<V extends AllVariants> =
-    | (keyof V[keyof V] & string)
-    | Partial<Record<string, keyof V[keyof V] & string>>;
-
 /** Extract the AllVariants shape from a single CSS arg */
 type ExtractVariants<T> =
     T extends MochiCSS<infer V>
@@ -51,12 +47,18 @@ type ExtractVariants<T> =
           : DefaultVariants;
 
 /** Merge variant shapes from all args, mirroring MergeCSSVariants over a mapped tuple */
-type ArgsVariants<Args extends (MochiCSSProps<AllVariants> | MochiCSS)[]> =
-    MergeCSSVariants<
-        { [K in keyof Args]: ExtractVariants<Args[K]> } extends AllVariants[]
-            ? { [K in keyof Args]: ExtractVariants<Args[K]> }
-            : AllVariants[]
-    >;
+type ArgsVariants<
+    Args extends readonly (MochiCSSProps<AllVariants> | MochiCSS)[],
+> = MergeCSSVariants<
+    { [K in keyof Args]: ExtractVariants<Args[K]> } extends infer M extends
+        AllVariants[]
+        ? M
+        : AllVariants[]
+>;
+
+type StyledVariantProp<V extends AllVariants> =
+    | (keyof V[keyof V] & string)
+    | Partial<Record<string, keyof V[keyof V] & string>>;
 
 type StyledProps<AV extends AllVariants> = {
     as?: HTMLElementType | ComponentType;
@@ -88,17 +90,59 @@ function extractVariantStyles(
     return result;
 }
 
+/**
+ * Overloaded interface for the styled function.
+ * The MochiStyledComponent<P> overload must come first so TypeScript picks it for styled components.
+ */
+export interface StyledFunction {
+    <P extends object, V extends AllVariants = DefaultVariants>(
+        target: MochiStyledComponent<P>,
+        cssArg: MochiCSSProps<V> | MochiCSS<V>,
+    ): MochiStyledComponent<Omit<P, keyof StyledProps<V>> & StyledProps<V>>;
+
+    <
+        T extends HTMLElementType | ComponentType<Cls>,
+        V extends AllVariants = DefaultVariants,
+    >(
+        target: T,
+        cssArg?: MochiCSSProps<V> | MochiCSS<V>,
+    ): MochiStyledComponent<
+        Omit<ComponentProps<T>, keyof StyledProps<V>> & StyledProps<V>
+    >;
+}
+
 export function runtimeStyled<
-    T extends HTMLElementType | ComponentType<Cls> | MochiStyledComponent,
-    Args extends (MochiCSSProps<AllVariants> | MochiCSS)[],
+    P extends object,
+    Args extends readonly (MochiCSSProps<AllVariants> | MochiCSS)[],
+>(
+    target: MochiStyledComponent<P>,
+    args: readonly [...Args],
+    config: StitchesConfig,
+): MochiStyledComponent<
+    Omit<P, keyof StyledProps<ArgsVariants<Args>>> &
+        StyledProps<ArgsVariants<Args>>
+>;
+
+export function runtimeStyled<
+    T extends HTMLElementType | ComponentType<Cls>,
+    Args extends readonly (MochiCSSProps<AllVariants> | MochiCSS)[],
 >(
     target: T,
-    args: Args,
+    args: readonly [...Args],
     config: StitchesConfig,
 ): MochiStyledComponent<
     Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
         StyledProps<ArgsVariants<Args>>
-> {
+>;
+
+export function runtimeStyled<
+    T extends HTMLElementType | ComponentType<Cls> | MochiStyledComponent,
+    Args extends readonly (MochiCSSProps<AllVariants> | MochiCSS)[],
+>(
+    target: T,
+    args: readonly [...Args],
+    config: StitchesConfig,
+): MochiStyledComponent {
     // Variant inheritance: unwrap parent styled component
     const renderTarget: HTMLElementType | ComponentType<Cls> = isMochiStyled(
         target,
@@ -242,10 +286,7 @@ export function runtimeStyled<
     }
 
     // Attach metadata for variant inheritance and component-targeting selectors
-    const component = StitchesComponent as MochiStyledComponent<
-        Omit<ComponentProps<T>, keyof StyledProps<ArgsVariants<Args>>> &
-            StyledProps<ArgsVariants<Args>>
-    >;
+    const component = StitchesComponent as MochiStyledComponent;
     component[MOCHI_CSS] = mochiInstance;
     component[MOCHI_TARGET] = renderTarget;
 

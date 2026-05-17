@@ -129,15 +129,18 @@ describe("variant inheritance", () => {
             config,
         );
 
+        // Compile-time check: both variants must be in the prop type
+        type Props = Parameters<typeof PrimaryButton>[0];
+        const _size: "size" extends keyof Props ? true : false = true;
+        const _intent: "intent" extends keyof Props ? true : false = true;
+
         // Should render without error when both parent and child variants are passed
         expect(() =>
             renderHtml(
-                createElement(
-                    PrimaryButton as MochiStyledComponent<
-                        Record<string, unknown>
-                    >,
-                    { size: "large", intent: "primary" },
-                ),
+                createElement(PrimaryButton, {
+                    size: "large",
+                    intent: "primary",
+                }),
             ),
         ).not.toThrow();
     });

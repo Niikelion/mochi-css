@@ -6,6 +6,7 @@
     "workspaces": [
         "packages/*",
         "tools/*",
+        "tools/benchmarks/implementations/*",
         "examples/*",
         "!**/dist"
     ],
@@ -15,7 +16,8 @@
         "coverage": "turbo coverage",
         "dev": "turbo dev",
         "format": "turbo format",
-        "lint": "turbo lint"
+        "lint": "turbo lint",
+        "report": "yarn workspace @mochi-css/benchmarks report"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",

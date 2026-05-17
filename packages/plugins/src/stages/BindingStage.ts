@@ -216,9 +216,26 @@ export const bindingStageDef = defineStage({
                             if (decl.type === "VariableDeclaration") {
                                 for (const declarator of decl.declarations) {
                                     collectBindingsFromPattern(declarator.id, declarator, decl, item, moduleBindings)
-                                    if (declarator.id.type !== "Identifier") continue
-                                    const ref = idToRef(declarator.id)
-                                    exports.set(ref.name, ref)
+                                    if (declarator.id.type === "Identifier") {
+                                        const ref = idToRef(declarator.id)
+                                        exports.set(ref.name, ref)
+                                    } else if (declarator.id.type === "ObjectPattern") {
+                                        for (const prop of declarator.id.properties) {
+                                            if (prop.type === "AssignmentPatternProperty") {
+                                                const ref = idToRef(prop.key)
+                                                exports.set(prop.key.value, ref)
+                                            } else if (
+                                                prop.type === "KeyValuePatternProperty" &&
+                                                prop.value.type === "Identifier"
+                                            ) {
+                                                const exportedName =
+                                                    prop.key.type === "Identifier" ? prop.key.value : null
+                                                if (!exportedName) continue
+                                                const ref = idToRef(prop.value)
+                                                exports.set(exportedName, ref)
+                                            }
+                                        }
+                                    }
                                 }
                                 break
                             }

@@ -17,11 +17,15 @@ jobs:
             -   name: Install dependencies
                 run: yarn install --immutable
             -   name: Build packages
-                run: yarn build
+                run: yarn turbo build --filter="!./tools/benchmarks/**"
+            -   name: Build benchmarks
+                run: yarn workspace @mochi-css/benchmarks build
             -   name: Save build artifacts
                 uses: actions/cache/save@v5
                 with:
-                    path: packages/*/dist
+                    path: |
+                        packages/*/dist
+                        tools/benchmarks/implementations/*/dist
                     key: build-${{ github.sha }}
     lint:
         needs: build
@@ -35,7 +39,9 @@ jobs:
             -   name: Restore build artifacts
                 uses: actions/cache/restore@v5
                 with:
-                    path: packages/*/dist
+                    path: |
+                        packages/*/dist
+                        tools/benchmarks/implementations/*/dist
                     key: build-${{ github.sha }}
             -   name: Use Node.js 24.x
                 uses: actions/setup-node@v6
@@ -58,7 +64,9 @@ jobs:
             -   name: Restore build artifacts
                 uses: actions/cache/restore@v5
                 with:
-                    path: packages/*/dist
+                    path: |
+                        packages/*/dist
+                        tools/benchmarks/implementations/*/dist
                     key: build-${{ github.sha }}
             -   name: Use Node.js 24.x
                 uses: actions/setup-node@v6
@@ -67,6 +75,8 @@ jobs:
                     cache: 'yarn'
             -   name: Install dependencies
                 run: yarn install --immutable
+            -   name: Install Playwright browsers
+                run: yarn workspace @mochi-css/benchmarks exec playwright install chromium --with-deps
             -   name: Run tests
                 run: yarn test
     changeset:

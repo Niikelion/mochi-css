@@ -19,11 +19,13 @@ export function expandBreakpoints(
                       )
                     : value;
             result[newKey] = newValue;
-        } else if (
-            value !== null &&
-            typeof value === "object" &&
-            !Array.isArray(value)
-        ) {
+        } else if (Array.isArray(value)) {
+            result[key] = (value as unknown[]).map((item) =>
+                item !== null && typeof item === "object"
+                    ? expandBreakpoints(item as Record<string, unknown>, config)
+                    : item,
+            );
+        } else if (value !== null && typeof value === "object") {
             result[key] = expandBreakpoints(
                 value as Record<string, unknown>,
                 config,

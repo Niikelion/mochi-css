@@ -27,3 +27,5 @@ node_modules
 .claude
 CLAUDE.md
 .smoke-tmp
+
+/blog/

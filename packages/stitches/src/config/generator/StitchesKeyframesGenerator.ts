@@ -13,7 +13,10 @@ export class StitchesKeyframesGenerator extends StyleGenerator {
     }
 
     override mockFunction(...args: unknown[]): unknown {
-        return (keyframes as (...a: unknown[]) => unknown)(...args);
+        const kf = (keyframes as (...a: unknown[]) => unknown)(...args) as {
+            name: string;
+        };
+        return kf.name;
     }
 
     collectArgs(source: string, args: unknown[]): void {

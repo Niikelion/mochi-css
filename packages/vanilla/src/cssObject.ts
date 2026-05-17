@@ -157,11 +157,12 @@ export class CssObjectBlock {
      * Generates a unique class name based on the content hash, or uses the provided class name.
      * @param styles - The style properties to compile
      * @param className - Optional stable class name; if omitted, a content-hash-based name is generated
+     * @param seed - Optional extra string mixed into the hash to distinguish blocks with identical CSS
      */
-    constructor(styles: StyleProps, className?: string) {
+    constructor(styles: StyleProps, className?: string, seed?: string) {
         const blocks = CssObjectSubBlock.fromProps(styles)
-
-        this.className = className ?? "c" + shortHash(blocks.map((b) => b.hash).join("+"))
+        const contentHash = blocks.map((b) => b.hash).join("+")
+        this.className = className ?? "c" + shortHash(seed !== undefined ? contentHash + "\0" + seed : contentHash)
         this.subBlocks = blocks
     }
 
@@ -304,6 +305,8 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
                 for (const variantItemName in variantGroup) {
                     this.variantBlocks[variantGroupName][variantItemName] = new CssObjectBlock(
                         variantGroup[variantItemName] ?? {},
+                        undefined,
+                        `${variantGroupName}/${variantItemName}`,
                     )
                 }
             }
