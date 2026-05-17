@@ -11,6 +11,7 @@ export interface ModuleOptions {
     postcss?: string | true
     vite?: string | true
     next?: string | true
+    esbuild?: string | true
     framework?: string
 }
 

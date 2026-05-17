@@ -143,6 +143,58 @@ describe("smoke", () => {
     )
 
     it(
+        "esbuild fixture (esbuild preset)",
+        async () => {
+            await copyFixture("esbuild", tmpDir)
+            await runTsuki(tmpDir, ["--no-interactive", "--preset", "esbuild"])
+
+            const build = await fs.readFile(path.join(tmpDir, "build.mjs"), "utf-8")
+            expect(build).toContain("mochiCss()")
+            expect(build).toContain("@mochi-css/esbuild")
+
+            const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
+            expect(mochi).toContain(".mochi")
+
+            await applyOverlay("esbuild", tmpDir)
+            await runCommand("npm", ["install"], tmpDir)
+            await runCommand("npm", ["run", "build"], tmpDir)
+        },
+        BUILD_TIMEOUT,
+    )
+
+    it(
+        "esbuild-css fixture — single combined CSS file (splitCss: false)",
+        async () => {
+            await copyFixture("esbuild-css", tmpDir)
+            await runTsuki(tmpDir, ["--no-interactive", "--preset", "esbuild"])
+            await applyOverlay("esbuild-single", tmpDir)
+            await runCommand("npm", ["install"], tmpDir)
+            await runCommand("npm", ["run", "build"], tmpDir)
+
+            const distFiles = await fs.readdir(path.join(tmpDir, "dist"))
+            expect(distFiles).toContain("global.css")
+            expect(distFiles.filter((f) => f.endsWith(".css") && f !== "global.css")).toHaveLength(0)
+        },
+        BUILD_TIMEOUT,
+    )
+
+    it(
+        "esbuild-css fixture — split CSS per file (splitCss: true)",
+        async () => {
+            await copyFixture("esbuild-css", tmpDir)
+            await runTsuki(tmpDir, ["--no-interactive", "--preset", "esbuild"])
+            await applyOverlay("esbuild-split", tmpDir)
+            await runCommand("npm", ["install"], tmpDir)
+            await runCommand("npm", ["run", "build"], tmpDir)
+
+            const distFiles = await fs.readdir(path.join(tmpDir, "dist"))
+            expect(distFiles).not.toContain("global.css")
+            expect(distFiles.some((f) => f.endsWith(".css"))).toBe(true)
+        },
+        BUILD_TIMEOUT,
+    )
+
+    it(
         "wrapped fixture (lib preset)",
         async () => {
             await copyFixture("wrapped", tmpDir)
