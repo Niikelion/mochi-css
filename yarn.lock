@@ -1893,6 +1893,7 @@ __metadata:
     "@mochi-css/test": "npm:^2.0.0"
     "@types/node": "npm:^24.8.1"
     esbuild: "npm:^0.25.0"
+    eslint: "npm:^9.39.2"
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.0.15"
   peerDependencies:
