@@ -90,15 +90,16 @@ Run `yarn workspace @mochi-css/benchmarks benchmark` from the repo root to repro
 
 Fixture: mock Mochi homepage (Navbar, Hero, Stats, Features, CodeShowcase, ApiCarousel, ComponentExplorer, Cta, Footer).
 Measured on an Intel Core i7-14700K with Slow 4G throttling (1.6 Mbps, 150 ms RTT) and 8x CPU slowdown.
+Results as of 2026-05-23.
 
-| Library               | Build time | JS bundle (gz) | CSS output (gz) | FCP   |
-|-----------------------|------------|----------------|-----------------|-------|
-| `mochi-vanilla-react` | 1.6 s      | 61.4 kB        | 2.1 kB          | 1.9 s |
-| `mochi-stitches`      | 1.6 s      | 69.6 kB        | 1.8 kB          | 2.2 s |
-| `vanilla-extract`     | 2.3 s      | 60.9 kB        | 1.6 kB          | 1.9 s |
-| `stitches`            | 1.5 s      | 67.4 kB        | 0 kB *          | 2.0 s |
-| `panda`               | 2.4 s      | 72.0 kB        | 6.1 kB          | 2.3 s |
-| `tailwind`            | 1.6 s      | 60.6 kB        | 3.4 kB          | 1.9 s |
+| Library               | Build time | JS bundle (gz) | CSS output (gz) | FCP   | TBT  | CLS   |
+|-----------------------|------------|----------------|-----------------|-------|------|-------|
+| `mochi-vanilla-react` | 2.3 s      | 61.4 kB        | 2.1 kB          | 1.9 s | 0 ms | 0.000 |
+| `mochi-stitches`      | 1.6 s      | 70.0 kB        | 2.2 kB          | 2.1 s | 0 ms | 0.000 |
+| `vanilla-extract`     | 3.0 s      | 61.6 kB        | 1.9 kB          | 1.9 s | 0 ms | 0.000 |
+| `stitches`            | 1.5 s      | 67.8 kB        | 0 kB *          | 2.0 s | 0 ms | 0.000 |
+| `panda`               | 3.8 s      | 67.5 kB        | 6.4 kB          | 2.2 s | 0 ms | 0.000 |
+| `css-modules`         | 1.6 s      | 61.5 kB        | 2.3 kB          | 2.1 s | 0 ms | 0.000 |
 
 * Stitches.js injects styles at runtime — no CSS file is produced.
 
