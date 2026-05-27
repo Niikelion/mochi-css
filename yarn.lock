@@ -1824,7 +1824,33 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/builder@npm:^7.0.0, @mochi-css/builder@npm:^7.1.0, @mochi-css/builder@workspace:packages/builder":
+"@mochi-css/bento@workspace:packages/bento":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/bento@workspace:packages/bento"
+  dependencies:
+    "@mochi-css/rolldown": "workspace:^"
+    "@mochi-css/shared-config": "workspace:^"
+    "@mochi-css/test": "workspace:^"
+    "@mochi-css/vanilla": "workspace:^"
+    "@types/node": "npm:^24.8.1"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    clsx: "npm:^2.1.1"
+    eslint: "npm:^9.39.2"
+    happy-dom: "npm:^20.8.9"
+    prettier: "npm:^3.8.1"
+    react: "npm:^19"
+    react-dom: "npm:^19.2.4"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    react: ^19
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/builder@npm:^7.0.0, @mochi-css/builder@workspace:packages/builder":
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
@@ -1833,10 +1859,8 @@ __metadata:
     "@mochi-css/test": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
-    "@types/css-tree": "npm:^2.3.10"
     "@types/diff": "npm:^8.0.0"
     "@types/node": "npm:^24.8.1"
-    css-tree: "npm:^3.1.0"
     dedent: "npm:^1.7.1"
     diff: "npm:^8.0.3"
     eslint: "npm:^9.39.2"
@@ -1869,7 +1893,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/core@npm:^6.0.0, @mochi-css/core@workspace:^, @mochi-css/core@workspace:packages/core":
+"@mochi-css/core@npm:^6.0.0, @mochi-css/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@mochi-css/core@workspace:packages/core"
   dependencies:
@@ -1885,32 +1909,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/esbuild@workspace:packages/esbuild":
-  version: 0.0.0-use.local
-  resolution: "@mochi-css/esbuild@workspace:packages/esbuild"
-  dependencies:
-    "@mochi-css/builder": "npm:^7.0.0"
-    "@mochi-css/config": "npm:^7.0.0"
-    "@mochi-css/shared-config": "npm:^2.0.0"
-    "@mochi-css/test": "npm:^2.0.0"
-    "@types/node": "npm:^24.8.1"
-    esbuild: "npm:^0.25.0"
-    eslint: "npm:^9.39.2"
-    typescript: "npm:^5.9.3"
-    vitest: "npm:^4.0.15"
-  peerDependencies:
-    esbuild: ^0.25
-  languageName: unknown
-  linkType: soft
-
 "@mochi-css/html-assets@workspace:tools/html-assets":
   version: 0.0.0-use.local
   resolution: "@mochi-css/html-assets@workspace:tools/html-assets"
   dependencies:
     "@fontsource/ibm-plex-mono": "npm:^5.1.0"
     "@fontsource/noto-sans-jp": "npm:^5.1.0"
-    "@mochi-css/vanilla": "npm:^8.0.0"
-    "@mochi-css/vanilla-react": "npm:^7.0.2"
+    "@mochi-css/vanilla": "npm:^7.0.0"
+    "@mochi-css/vanilla-react": "npm:^7.0.0"
     "@mochi-css/vite": "npm:^6.0.1"
     "@types/node": "npm:^24.12.2"
     "@types/react": "npm:^19.2.14"
@@ -1955,12 +1961,12 @@ __metadata:
   resolution: "@mochi-css/nextjs-example@workspace:examples/nextjs"
   dependencies:
     "@eslint/eslintrc": "npm:^3"
-    "@mochi-css/builder": "npm:^7.1.0"
+    "@mochi-css/builder": "npm:^7.0.0"
     "@mochi-css/config": "npm:^7.0.0"
     "@mochi-css/next": "npm:^6.0.2"
     "@mochi-css/postcss": "npm:^6.0.1"
-    "@mochi-css/vanilla": "npm:^8.0.0"
-    "@mochi-css/vanilla-react": "npm:^7.0.2"
+    "@mochi-css/vanilla": "npm:^7.0.1"
+    "@mochi-css/vanilla-react": "npm:^7.0.1"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -1973,21 +1979,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/plugins@npm:^7.1.0, @mochi-css/plugins@workspace:packages/plugins":
+"@mochi-css/plugins@npm:^7.0.1, @mochi-css/plugins@workspace:packages/plugins":
   version: 0.0.0-use.local
   resolution: "@mochi-css/plugins@workspace:packages/plugins"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^7.1.0"
+    "@mochi-css/builder": "npm:^7.0.0"
     "@mochi-css/config": "npm:^7.0.0"
     "@mochi-css/core": "npm:^6.0.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
-    "@types/css-tree": "npm:^2.3.10"
     "@types/node": "npm:^24.8.1"
-    css-tree: "npm:^3.1.0"
     dedent: "npm:^1.7.1"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -2019,7 +2023,7 @@ __metadata:
   dependencies:
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^8.0.0"
+    "@mochi-css/vanilla": "npm:^7.0.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/css-tree": "npm:^2.3.10"
@@ -2042,7 +2046,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/shared-config@npm:^2.0.0, @mochi-css/shared-config@workspace:packages/shared-config":
+"@mochi-css/rolldown@workspace:^, @mochi-css/rolldown@workspace:packages/rolldown":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/rolldown@workspace:packages/rolldown"
+  dependencies:
+    "@mochi-css/builder": "npm:^7.0.0"
+    "@mochi-css/config": "npm:^7.0.0"
+    "@mochi-css/core": "npm:^6.0.0"
+    "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/test": "npm:^2.0.0"
+    "@types/node": "npm:^24.8.1"
+    eslint: "npm:^9.39.2"
+    rolldown: "npm:^1.0.0-beta.45"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    rolldown: ">=1.0.0-beta.45"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/shared-config@npm:^2.0.0, @mochi-css/shared-config@workspace:^, @mochi-css/shared-config@workspace:packages/shared-config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/shared-config@workspace:packages/shared-config"
   dependencies:
@@ -2069,12 +2092,12 @@ __metadata:
     "@eslint/js": "npm:^9.18.0"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    "@mochi-css/builder": "npm:^7.1.0"
+    "@mochi-css/builder": "npm:^7.0.0"
     "@mochi-css/config": "npm:*"
     "@mochi-css/core": "npm:^6.0.0"
-    "@mochi-css/plugins": "npm:^7.1.0"
+    "@mochi-css/plugins": "npm:^7.0.1"
     "@mochi-css/shared-config": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^8.0.0"
+    "@mochi-css/vanilla": "npm:^7.0.1"
     "@swc/types": "npm:^0.1.25"
     "@types/node": "npm:^24.8.1"
     "@types/react": "npm:^19.2.2"
@@ -2094,9 +2117,9 @@ __metadata:
     vite-tsconfig-paths: "npm:^5.1.4"
     vitest: "npm:^4.0.15"
   peerDependencies:
-    "@mochi-css/builder": ^7.1.0
+    "@mochi-css/builder": ^7.0.0
     "@mochi-css/config": ^7.0.0
-    "@mochi-css/plugins": ^7.1.0
+    "@mochi-css/plugins": ^7.0.1
     "@swc/core": ^1
     react: ^19
   peerDependenciesMeta:
@@ -2111,7 +2134,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:packages/test":
+"@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:^, @mochi-css/test@workspace:packages/test":
   version: 0.0.0-use.local
   resolution: "@mochi-css/test@workspace:packages/test"
   dependencies:
@@ -2125,7 +2148,6 @@ __metadata:
   resolution: "@mochi-css/tsuki@workspace:packages/tsuki"
   dependencies:
     "@clack/prompts": "npm:^1.0.1"
-    "@mochi-css/core": "workspace:^"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
     "@types/cross-spawn": "npm:^6.0.6"
@@ -2147,16 +2169,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla-react@npm:*, @mochi-css/vanilla-react@npm:^7.0.2, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
+"@mochi-css/vanilla-react@npm:*, @mochi-css/vanilla-react@npm:^7.0.0, @mochi-css/vanilla-react@npm:^7.0.1, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla-react@workspace:packages/vanilla-react"
   dependencies:
-    "@mochi-css/builder": "npm:^7.1.0"
+    "@mochi-css/builder": "npm:^7.0.0"
     "@mochi-css/config": "npm:^7.0.0"
-    "@mochi-css/plugins": "npm:^7.1.0"
+    "@mochi-css/plugins": "npm:^7.0.1"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
-    "@mochi-css/vanilla": "npm:^8.0.0"
+    "@mochi-css/vanilla": "npm:^7.0.1"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/css-tree": "npm:^2.3.10"
@@ -2179,14 +2201,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:*, @mochi-css/vanilla@npm:^8.0.0, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:*, @mochi-css/vanilla@npm:^7.0.0, @mochi-css/vanilla@npm:^7.0.1, @mochi-css/vanilla@workspace:^, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
-    "@mochi-css/builder": "npm:^7.1.0"
+    "@mochi-css/builder": "npm:^7.0.0"
     "@mochi-css/config": "npm:^7.0.0"
     "@mochi-css/core": "npm:^6.0.0"
-    "@mochi-css/plugins": "npm:^7.1.0"
+    "@mochi-css/plugins": "npm:^7.0.1"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
@@ -2209,9 +2231,9 @@ __metadata:
     typescript: "npm:^5.9.3"
     vitest: "npm:^4.0.15"
   peerDependencies:
-    "@mochi-css/builder": ^7.1.0
+    "@mochi-css/builder": ^7.0.0
     "@mochi-css/config": ^7.0.0
-    "@mochi-css/plugins": ^7.1.0
+    "@mochi-css/plugins": ^7.0.1
     "@swc/core": ^1
   peerDependenciesMeta:
     "@mochi-css/builder":
@@ -2856,6 +2878,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@oxc-project/types@npm:=0.133.0":
+  version: 0.133.0
+  resolution: "@oxc-project/types@npm:0.133.0"
+  checksum: 10c0/70c57ba58644f7ec217b670c301801f4d06995f4ccdba6b2bd106ea3e5ee49d616573e6ef8d55530b87571a960696543687f3850e87ad173d3f88965c30cdd63
+  languageName: node
+  linkType: hard
+
 "@oxc-project/types@npm:=0.95.0":
   version: 0.95.0
   resolution: "@oxc-project/types@npm:0.95.0"
@@ -3242,6 +3271,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-android-arm64@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-android-arm64@npm:1.0.3"
+  conditions: os=android & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-darwin-arm64@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-darwin-arm64@npm:1.0.0-beta.45"
@@ -3266,6 +3302,13 @@ __metadata:
 "@rolldown/binding-darwin-arm64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-darwin-arm64@npm:1.0.0-rc.17"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-darwin-arm64@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-darwin-arm64@npm:1.0.3"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
@@ -3298,6 +3341,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-darwin-x64@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-darwin-x64@npm:1.0.3"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-freebsd-x64@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-freebsd-x64@npm:1.0.0-beta.45"
@@ -3322,6 +3372,13 @@ __metadata:
 "@rolldown/binding-freebsd-x64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-freebsd-x64@npm:1.0.0-rc.17"
+  conditions: os=freebsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-freebsd-x64@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-freebsd-x64@npm:1.0.3"
   conditions: os=freebsd & cpu=x64
   languageName: node
   linkType: hard
@@ -3354,6 +3411,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-arm-gnueabihf@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-arm-gnueabihf@npm:1.0.3"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-arm64-gnu@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-linux-arm64-gnu@npm:1.0.0-beta.45"
@@ -3378,6 +3442,13 @@ __metadata:
 "@rolldown/binding-linux-arm64-gnu@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-linux-arm64-gnu@npm:1.0.0-rc.17"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-linux-arm64-gnu@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-arm64-gnu@npm:1.0.3"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
@@ -3410,6 +3481,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-arm64-musl@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-arm64-musl@npm:1.0.3"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-ppc64-gnu@npm:1.0.0-rc.12":
   version: 1.0.0-rc.12
   resolution: "@rolldown/binding-linux-ppc64-gnu@npm:1.0.0-rc.12"
@@ -3424,6 +3502,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-ppc64-gnu@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-ppc64-gnu@npm:1.0.3"
+  conditions: os=linux & cpu=ppc64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.12":
   version: 1.0.0-rc.12
   resolution: "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.12"
@@ -3434,6 +3519,13 @@ __metadata:
 "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.17"
+  conditions: os=linux & cpu=s390x & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-linux-s390x-gnu@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-s390x-gnu@npm:1.0.3"
   conditions: os=linux & cpu=s390x & libc=glibc
   languageName: node
   linkType: hard
@@ -3466,6 +3558,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-x64-gnu@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-x64-gnu@npm:1.0.3"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-x64-musl@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-linux-x64-musl@npm:1.0.0-beta.45"
@@ -3494,6 +3593,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-x64-musl@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-linux-x64-musl@npm:1.0.3"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-openharmony-arm64@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-openharmony-arm64@npm:1.0.0-beta.45"
@@ -3518,6 +3624,13 @@ __metadata:
 "@rolldown/binding-openharmony-arm64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-openharmony-arm64@npm:1.0.0-rc.17"
+  conditions: os=openharmony & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-openharmony-arm64@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-openharmony-arm64@npm:1.0.3"
   conditions: os=openharmony & cpu=arm64
   languageName: node
   linkType: hard
@@ -3560,6 +3673,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-wasm32-wasi@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-wasm32-wasi@npm:1.0.3"
+  dependencies:
+    "@emnapi/core": "npm:1.10.0"
+    "@emnapi/runtime": "npm:1.10.0"
+    "@napi-rs/wasm-runtime": "npm:^1.1.4"
+  conditions: cpu=wasm32
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-win32-arm64-msvc@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-win32-arm64-msvc@npm:1.0.0-beta.45"
@@ -3584,6 +3708,13 @@ __metadata:
 "@rolldown/binding-win32-arm64-msvc@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-win32-arm64-msvc@npm:1.0.0-rc.17"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-win32-arm64-msvc@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-win32-arm64-msvc@npm:1.0.3"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
@@ -3623,6 +3754,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-win32-x64-msvc@npm:1.0.3":
+  version: 1.0.3
+  resolution: "@rolldown/binding-win32-x64-msvc@npm:1.0.3"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
 "@rolldown/pluginutils@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/pluginutils@npm:1.0.0-beta.45"
@@ -3655,6 +3793,13 @@ __metadata:
   version: 1.0.0-rc.7
   resolution: "@rolldown/pluginutils@npm:1.0.0-rc.7"
   checksum: 10c0/9d5490b5805b25bcd1720ca01c4c032b55a0ef953dab36a8dd42c568e82214576baa464f3027cd5dff3fabcfbe3bf3db2251d12b60220f5d1cd2ffde5ee37082
+  languageName: node
+  linkType: hard
+
+"@rolldown/pluginutils@npm:^1.0.0":
+  version: 1.0.1
+  resolution: "@rolldown/pluginutils@npm:1.0.1"
+  checksum: 10c0/99d9b06d90196823e4d8c841f258db7a16e5dbba5824a2962b05d907b79f1ba929d56f22dd744fd530936e568c865ee56a719dc31e57e13bc0a8eb4764a8d8dd
   languageName: node
   linkType: hard
 
@@ -11288,6 +11433,64 @@ __metadata:
   bin:
     rolldown: bin/cli.mjs
   checksum: 10c0/bb99abc62ece4e34edd06d2b8eb9ffb7194dc2f0465a4329bb106cbde3006a10f1575e3580b198b793341109a2109581aed623c537c12b0c3a4ba0d72169b2fb
+  languageName: node
+  linkType: hard
+
+"rolldown@npm:^1.0.0-beta.45":
+  version: 1.0.3
+  resolution: "rolldown@npm:1.0.3"
+  dependencies:
+    "@oxc-project/types": "npm:=0.133.0"
+    "@rolldown/binding-android-arm64": "npm:1.0.3"
+    "@rolldown/binding-darwin-arm64": "npm:1.0.3"
+    "@rolldown/binding-darwin-x64": "npm:1.0.3"
+    "@rolldown/binding-freebsd-x64": "npm:1.0.3"
+    "@rolldown/binding-linux-arm-gnueabihf": "npm:1.0.3"
+    "@rolldown/binding-linux-arm64-gnu": "npm:1.0.3"
+    "@rolldown/binding-linux-arm64-musl": "npm:1.0.3"
+    "@rolldown/binding-linux-ppc64-gnu": "npm:1.0.3"
+    "@rolldown/binding-linux-s390x-gnu": "npm:1.0.3"
+    "@rolldown/binding-linux-x64-gnu": "npm:1.0.3"
+    "@rolldown/binding-linux-x64-musl": "npm:1.0.3"
+    "@rolldown/binding-openharmony-arm64": "npm:1.0.3"
+    "@rolldown/binding-wasm32-wasi": "npm:1.0.3"
+    "@rolldown/binding-win32-arm64-msvc": "npm:1.0.3"
+    "@rolldown/binding-win32-x64-msvc": "npm:1.0.3"
+    "@rolldown/pluginutils": "npm:^1.0.0"
+  dependenciesMeta:
+    "@rolldown/binding-android-arm64":
+      optional: true
+    "@rolldown/binding-darwin-arm64":
+      optional: true
+    "@rolldown/binding-darwin-x64":
+      optional: true
+    "@rolldown/binding-freebsd-x64":
+      optional: true
+    "@rolldown/binding-linux-arm-gnueabihf":
+      optional: true
+    "@rolldown/binding-linux-arm64-gnu":
+      optional: true
+    "@rolldown/binding-linux-arm64-musl":
+      optional: true
+    "@rolldown/binding-linux-ppc64-gnu":
+      optional: true
+    "@rolldown/binding-linux-s390x-gnu":
+      optional: true
+    "@rolldown/binding-linux-x64-gnu":
+      optional: true
+    "@rolldown/binding-linux-x64-musl":
+      optional: true
+    "@rolldown/binding-openharmony-arm64":
+      optional: true
+    "@rolldown/binding-wasm32-wasi":
+      optional: true
+    "@rolldown/binding-win32-arm64-msvc":
+      optional: true
+    "@rolldown/binding-win32-x64-msvc":
+      optional: true
+  bin:
+    rolldown: ./bin/cli.mjs
+  checksum: 10c0/5f9dd47b7abf203b16bc600db68542f245e974c800e59ff50b76157d1dada1403657690435b036fabca88e93d13a67c31abe5cfaa6f61ce33717f61720204cdf
   languageName: node
   linkType: hard
 

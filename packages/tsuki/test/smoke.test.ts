@@ -143,19 +143,19 @@ describe("smoke", () => {
     )
 
     it(
-        "esbuild fixture (esbuild preset)",
+        "tsdown fixture (tsdown preset)",
         async () => {
-            await copyFixture("esbuild", tmpDir)
-            await runTsuki(tmpDir, ["--no-interactive", "--preset", "esbuild"])
+            await copyFixture("tsdown", tmpDir)
+            await runTsuki(tmpDir, ["--no-interactive", "--preset", "tsdown"])
 
-            const build = await fs.readFile(path.join(tmpDir, "build.mjs"), "utf-8")
-            expect(build).toContain("mochiCss()")
-            expect(build).toContain("@mochi-css/esbuild")
+            const config = await fs.readFile(path.join(tmpDir, "tsdown.config.mts"), "utf-8")
+            expect(config).toContain("mochiCss()")
+            expect(config).toContain("@mochi-css/rolldown")
 
             const mochi = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
             expect(mochi).toContain(".mochi")
 
-            await applyOverlay("esbuild", tmpDir)
+            await applyOverlay("tsdown", tmpDir)
             await runCommand("npm", ["install"], tmpDir)
             await runCommand("npm", ["run", "build"], tmpDir)
         },
@@ -163,11 +163,11 @@ describe("smoke", () => {
     )
 
     it(
-        "esbuild-css fixture — single combined CSS file (splitCss: false)",
+        "tsdown-css fixture — single combined CSS file (splitCss: false)",
         async () => {
-            await copyFixture("esbuild-css", tmpDir)
-            await runTsuki(tmpDir, ["--no-interactive", "--preset", "esbuild"])
-            await applyOverlay("esbuild-single", tmpDir)
+            await copyFixture("tsdown-css", tmpDir)
+            await runTsuki(tmpDir, ["--no-interactive", "--preset", "tsdown"])
+            await applyOverlay("tsdown-single", tmpDir)
             await runCommand("npm", ["install"], tmpDir)
             await runCommand("npm", ["run", "build"], tmpDir)
 
@@ -179,11 +179,11 @@ describe("smoke", () => {
     )
 
     it(
-        "esbuild-css fixture — split CSS per file (splitCss: true)",
+        "tsdown-css fixture — split CSS per file (splitCss: true)",
         async () => {
-            await copyFixture("esbuild-css", tmpDir)
-            await runTsuki(tmpDir, ["--no-interactive", "--preset", "esbuild"])
-            await applyOverlay("esbuild-split", tmpDir)
+            await copyFixture("tsdown-css", tmpDir)
+            await runTsuki(tmpDir, ["--no-interactive", "--preset", "tsdown"])
+            await applyOverlay("tsdown-split", tmpDir)
             await runCommand("npm", ["install"], tmpDir)
             await runCommand("npm", ["run", "build"], tmpDir)
 

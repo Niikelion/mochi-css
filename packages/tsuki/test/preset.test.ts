@@ -20,7 +20,7 @@ vi.mock("../src/install", () => ({
 import * as p from "@clack/prompts"
 import { installPackages } from "@/install"
 import { ModuleRunner } from "@/runner"
-import { vitePreset, nextjsPreset, esbuildPreset } from "@/presets"
+import { vitePreset, nextjsPreset, tsdownPreset } from "@/presets"
 
 let tmpDir: string
 let origCwd: string
@@ -64,15 +64,15 @@ describe("vite preset integration", () => {
     })
 })
 
-describe("esbuild preset integration", () => {
-    it("creates default build.mjs and mochi config when neither exists", async () => {
+describe("tsdown preset integration", () => {
+    it("creates default tsdown.config.mts and mochi config when neither exists", async () => {
         const runner = new ModuleRunner()
-        esbuildPreset.setup(runner)
-        await runner.run({ moduleOptions: { esbuild: true } })
+        tsdownPreset.setup(runner)
+        await runner.run({ moduleOptions: { tsdown: true } })
 
-        const buildContent = await fs.readFile(path.join(tmpDir, "build.mjs"), "utf-8")
-        expect(buildContent).toContain("mochiCss()")
-        expect(buildContent).toContain("@mochi-css/esbuild")
+        const configContent = await fs.readFile(path.join(tmpDir, "tsdown.config.mts"), "utf-8")
+        expect(configContent).toContain("mochiCss()")
+        expect(configContent).toContain("@mochi-css/rolldown")
 
         const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
         expect(mochiContent).toContain("tmpDir")
@@ -81,19 +81,19 @@ describe("esbuild preset integration", () => {
         expect(installPackages).toHaveBeenCalled()
     })
 
-    it("patches existing build.mjs to add mochiCss()", async () => {
+    it("patches existing tsdown.config.mts to add mochiCss()", async () => {
         await fs.writeFile(
-            path.join(tmpDir, "build.mjs"),
-            `import { build } from "esbuild"\nawait build({ entryPoints: ["src/index.ts"], outdir: "dist", bundle: true, plugins: [] })\n`,
+            path.join(tmpDir, "tsdown.config.mts"),
+            `import { defineConfig } from "tsdown"\nexport default defineConfig({ entry: ["src/index.ts"], format: ["esm", "cjs"], plugins: [] })\n`,
         )
 
         const runner = new ModuleRunner()
-        esbuildPreset.setup(runner)
-        await runner.run({ moduleOptions: { esbuild: true } })
+        tsdownPreset.setup(runner)
+        await runner.run({ moduleOptions: { tsdown: true } })
 
-        const buildContent = await fs.readFile(path.join(tmpDir, "build.mjs"), "utf-8")
-        expect(buildContent).toContain("mochiCss()")
-        expect(buildContent).toContain("@mochi-css/esbuild")
+        const configContent = await fs.readFile(path.join(tmpDir, "tsdown.config.mts"), "utf-8")
+        expect(configContent).toContain("mochiCss()")
+        expect(configContent).toContain("@mochi-css/rolldown")
 
         expect(installPackages).toHaveBeenCalled()
     })

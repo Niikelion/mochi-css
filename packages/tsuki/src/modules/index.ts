@@ -1,7 +1,7 @@
 export { postcssModule, createPostcssModule } from "./postcss"
 export { viteModule } from "./vite"
 export { nextModule } from "./next"
-export { esbuildModule } from "./esbuild"
+export { tsdownModule } from "./tsdown"
 export { createMochiConfigModule, findMochiConfig } from "./mochiConfig"
 export { createUiFrameworkModule } from "./uiFramework"
 export { createGitignoreModule } from "./gitignore"
