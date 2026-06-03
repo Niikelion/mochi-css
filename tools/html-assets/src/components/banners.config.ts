@@ -24,4 +24,12 @@ export const BANNERS: BannerMeta[] = [
         width: 2560,
         height: 640,
     },
+    {
+        id: 'bento-standard',
+        title: 'Bento Standard Banner',
+        description: '2:1 — @mochi-css/bento package page',
+        route: '/banners/bento-standard',
+        width: 1280,
+        height: 640,
+    },
 ]
