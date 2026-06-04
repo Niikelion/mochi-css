@@ -4,6 +4,7 @@ import type {
     PostEvalTransformHookProvider,
     StageHookProvider,
     EmitHookProvider,
+    PostProcessHookProvider,
     CleanupHookProvider,
     InitializeStagesHookProvider,
     PrepareAnalysisHookProvider,
@@ -12,7 +13,14 @@ import type {
     ResetCrossFileStateHookProvider,
     GetFilesToBundleHookProvider,
 } from "@mochi-css/config"
-import type { AstPostProcessor, EmitHook, StageDefinition, MutableFileEntry, StageRunner } from "@mochi-css/builder"
+import type {
+    AstPostProcessor,
+    EmitHook,
+    PostProcessHook,
+    StageDefinition,
+    MutableFileEntry,
+    StageRunner,
+} from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type * as SWC from "@swc/core"
 
@@ -27,6 +35,7 @@ export class PluginContextCollector implements PluginContext {
     private readonly _sourceTransforms: AstPostProcessor[] = []
     private readonly _postEvalTransforms: AstPostProcessor[] = []
     private readonly _emitHooks: EmitHook[] = []
+    private readonly _postProcessHooks: PostProcessHook[] = []
     private readonly _cleanupFns: (() => void)[] = []
     private readonly _initializeStages: ((runner: StageRunner) => void)[] = []
     private readonly _prepareAnalysis: ((
@@ -68,6 +77,12 @@ export class PluginContextCollector implements PluginContext {
     readonly emitHooks: EmitHookProvider = {
         register: (h: EmitHook) => {
             this._emitHooks.push(h)
+        },
+    }
+
+    readonly postProcessHooks: PostProcessHookProvider = {
+        register: (h: PostProcessHook) => {
+            this._postProcessHooks.push(h)
         },
     }
 
@@ -135,6 +150,10 @@ export class PluginContextCollector implements PluginContext {
 
     getEmitHooks(): EmitHook[] {
         return [...this._emitHooks]
+    }
+
+    getPostProcessHooks(): PostProcessHook[] {
+        return [...this._postProcessHooks]
     }
 
     runCleanup(): void {

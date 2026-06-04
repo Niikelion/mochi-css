@@ -9,6 +9,7 @@ export const Button = styled("button", {
     justifyContent: "center",
     fontFamily: font,
     fontWeight: "600",
+    lineHeight: "normal",
     cursor: "pointer",
     border: "1px solid transparent",
     borderRadius: radii.sm,

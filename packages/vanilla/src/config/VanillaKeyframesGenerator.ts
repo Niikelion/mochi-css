@@ -61,7 +61,7 @@ export class VanillaKeyframesGenerator extends StyleGenerator {
         return this.currentSubstitution
     }
 
-    async generateStyles(): Promise<{ files: Record<string, string> }> {
+    override async generateStyles(): Promise<{ files: Record<string, string> }> {
         const files: Record<string, string> = {}
         for (const [source, css] of this.filesCss) {
             const sortedCss = [...css.values()].sort()

@@ -2,8 +2,18 @@ import { describe, it, expect } from "vitest"
 import { styledIdPlugin } from "./styledIdPlugin"
 import { FullContext } from "@mochi-css/config"
 import { parseSource, StageRunner } from "@mochi-css/builder"
+import { StyleGenerator } from "./types"
 import type { StyleExtractor } from "./types"
 import type * as SWC from "@swc/core"
+
+class MinimalGenerator extends StyleGenerator {
+    override mockFunction(): unknown {
+        return undefined
+    }
+    collectArgs(): void {
+        /* empty */
+    }
+}
 
 const mockStyledExtractor: StyleExtractor = {
     importPath: "@mochi-css/vanilla-react",
@@ -12,20 +22,7 @@ const mockStyledExtractor: StyleExtractor = {
         return call.arguments.map((a) => a.expression).slice(1)
     },
     startGeneration() {
-        return {
-            mockFunction() {
-                /* empty */
-            },
-            collectArgs() {
-                /* empty */
-            },
-            extractSubstitution() {
-                return null
-            },
-            async generateStyles() {
-                return {}
-            },
-        }
+        return new MinimalGenerator()
     },
 }
 
@@ -97,6 +94,10 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
             markForEval: () => {},
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             emitModifiedSource: () => {},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            emitCssAst: () => {},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            markJsMutated: () => {},
         }
         for (const transform of transforms) {
             await transform(runner, fakeCtx)
@@ -152,6 +153,10 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
             markForEval: () => {},
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             emitModifiedSource: () => {},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            emitCssAst: () => {},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            markJsMutated: () => {},
         }
         const [hook] = context.sourceTransforms.getAll()
         await hook?.(runner, fakeCtx)

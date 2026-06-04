@@ -1,4 +1,5 @@
 export { createExtractorsPlugin, getExtractorId } from "./ExtractorsPlugin"
+export { createClassRemapPlugin } from "./classRemapPlugin"
 export { styledIdPlugin } from "./styledIdPlugin"
 export { PluginContextCollector } from "./PluginContextCollector"
 
@@ -22,4 +23,12 @@ export { propagateUsagesFromRef, propagateUsagesFromExpr } from "./propagation"
 export type { ReexportResolver } from "./propagation"
 
 // Re-export commonly needed builder types for plugin authors
-export type { AstPostProcessor, EmitHook, BuilderOptions, RootEntry, StageDefinition } from "@mochi-css/builder"
+export type {
+    AstPostProcessor,
+    EmitHook,
+    PostProcessHook,
+    PostProcessContext,
+    BuilderOptions,
+    RootEntry,
+    StageDefinition,
+} from "@mochi-css/builder"

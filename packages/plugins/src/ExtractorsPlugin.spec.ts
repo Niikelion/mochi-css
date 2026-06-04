@@ -43,7 +43,7 @@ class SimpleCssGenerator extends StyleGenerator {
         this.entries.push({ source, css: flattenProps(obj) })
     }
 
-    async generateStyles() {
+    override async generateStyles() {
         const files: Record<string, string> = {}
         for (const { source, css } of this.entries) {
             files[source] = files[source] ? `${files[source]}\n${css}` : css
@@ -69,7 +69,7 @@ class SimpleGlobalCssGenerator extends StyleGenerator {
         }
     }
 
-    async generateStyles() {
+    override async generateStyles() {
         return this.blocks.length > 0 ? { global: this.blocks.join("\n\n") } : {}
     }
 }
@@ -94,7 +94,7 @@ class SimpleKeyframesGenerator extends StyleGenerator {
         this.entries.push({ source, css: `@keyframes {\n${stops}\n}` })
     }
 
-    async generateStyles() {
+    override async generateStyles() {
         const files: Record<string, string> = {}
         for (const { source, css } of this.entries) {
             files[source] = files[source] ? `${files[source]}\n${css}` : css
@@ -179,9 +179,9 @@ function getAllCss(chunks: Map<string, Set<string>>): string {
 
 class MockGenerator extends StyleGenerator {
     constructor(
-        public readonly mockFunction: (...args: unknown[]) => unknown,
+        public override readonly mockFunction: (...args: unknown[]) => unknown,
         public readonly collectArgs: (path: string, args: unknown[]) => void | Record<string, StyleGenerator>,
-        public readonly generateStyles: () => Promise<{
+        public override readonly generateStyles: () => Promise<{
             global?: string
             files?: Record<string, string>
         }>,
@@ -471,7 +471,7 @@ describe("Builder", () => {
             collectArgs(_source: string, _args: unknown[]): void {
                 /* empty */
             }
-            async generateStyles() {
+            override async generateStyles() {
                 return {}
             }
         }
@@ -487,7 +487,7 @@ describe("Builder", () => {
                     this.receivedKeys.push(key)
                 }
             }
-            async generateStyles() {
+            override async generateStyles() {
                 return {}
             }
         }

@@ -10,6 +10,7 @@ export type {
     PostEvalTransformHookProvider,
     StageHookProvider,
     EmitHookProvider,
+    PostProcessHookProvider,
     CleanupHookProvider,
     InitializeStagesHookProvider,
     PrepareAnalysisHookProvider,

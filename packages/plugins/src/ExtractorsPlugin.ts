@@ -250,13 +250,15 @@ function ensureNamedImport(ast: SWC.Module, importPath: string, name: string): v
     }
 }
 
-export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugin {
+export function createExtractorsPlugin(
+    extractors: StyleExtractor[],
+): MochiPlugin & { readonly classNameLiterals: Map<string, SWC.StringLiteral[]> | null } {
     const extractorLookup = buildExtractorLookup(extractors)
+    let capturedGenerators: Map<string, StyleGenerator> | null = null
 
-    return {
+    const plugin: MochiPlugin = {
         name: "mochi-extractor-plugin",
         onLoad(ctx) {
-            let capturedGenerators: Map<string, StyleGenerator> | null = null
             let substitutionByMockResult: Map<unknown, SWC.Expression | null> | null = null
             let pendingCallsByWrappedNode: Map<
                 SWC.CallExpression,
@@ -467,9 +469,7 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 }
 
                 for (const source of filesToSerialize) {
-                    const { ast } = runner.engine.fileData.for(source).get()
-                    const { code } = SWC.printSync(ast)
-                    context.emitModifiedSource(source, code)
+                    context.markJsMutated(source)
                 }
             })
 
@@ -477,16 +477,9 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 if (!capturedGenerators) return
 
                 for (const [, generator] of capturedGenerators) {
-                    const styles = await generator.generateStyles()
-
-                    if (styles.files) {
-                        for (const [source, css] of Object.entries(styles.files)) {
-                            context.emitChunk(source, css)
-                        }
-                    }
-                    if (styles.global) {
-                        context.emitChunk("global.css", styles.global)
-                    }
+                    await generator.emitCssChunks((source, originalCss, ast) => {
+                        context.emitCssAst(source, originalCss, ast)
+                    })
                 }
             }
 
@@ -499,4 +492,19 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
             })
         },
     }
+
+    return Object.assign(plugin, {
+        get classNameLiterals(): Map<string, SWC.StringLiteral[]> | null {
+            if (!capturedGenerators) return null
+            const result = new Map<string, SWC.StringLiteral[]>()
+            for (const [, gen] of capturedGenerators) {
+                for (const [name, lits] of gen.getIdentifierLiterals()) {
+                    const existing = result.get(name)
+                    if (existing) existing.push(...lits)
+                    else result.set(name, [...lits])
+                }
+            }
+            return result
+        },
+    })
 }

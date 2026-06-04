@@ -56,7 +56,7 @@ export class VanillaGlobalCssGenerator extends StyleGenerator {
         return this.currentSubstitution
     }
 
-    async generateStyles(): Promise<{ global: string }> {
+    override async generateStyles(): Promise<{ global: string }> {
         const sortedCss = [...this.allCss].sort()
         return { global: sortedCss.join("\n\n") }
     }

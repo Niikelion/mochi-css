@@ -1,4 +1,4 @@
-import { createExtractorsPlugin } from "@mochi-css/plugins"
+import { createExtractorsPlugin, createClassRemapPlugin } from "@mochi-css/plugins"
 import type { StyleExtractor } from "@mochi-css/plugins"
 import type { Config } from "@mochi-css/config"
 import { mochiCssFunctionExtractor } from "./VanillaCssExtractor"
@@ -20,8 +20,9 @@ const defaultVanillaExtractors: StyleExtractor[] = [
 
 export function defineConfig(config: Partial<Config> & { extractors?: StyleExtractor[] }): Partial<Config> {
     const { extractors = [], ...rest } = config
+    const extractorsPlugin = createExtractorsPlugin([...defaultVanillaExtractors, ...extractors])
     return {
         ...rest,
-        plugins: [createExtractorsPlugin([...defaultVanillaExtractors, ...extractors]), ...(rest.plugins ?? [])],
+        plugins: [extractorsPlugin, createClassRemapPlugin(extractorsPlugin), ...(rest.plugins ?? [])],
     }
 }
