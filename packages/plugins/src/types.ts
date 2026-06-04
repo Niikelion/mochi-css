@@ -6,67 +6,41 @@ import type { BindingInfo, LocalImport, RefMap, Ref } from "@mochi-css/builder"
 
 export type CssAstChunk = { originalCss: string; ast: CssTree.StyleSheet }
 
+function parseCss(css: string): CssTree.StyleSheet {
+    try {
+        return csstree.parse(css) as CssTree.StyleSheet
+    } catch {
+        return csstree.parse("") as CssTree.StyleSheet
+    }
+}
+
 export abstract class StyleGenerator {
     abstract mockFunction(...args: unknown[]): unknown
 
     abstract collectArgs(source: string, args: unknown[]): void
 
-    async generateStyles(): Promise<{
+    abstract generateStyles(): Promise<{
         global?: string
         files?: Record<string, string>
-    }> {
-        const chunks = await this.generateCssAst()
-        const result: { global?: string; files?: Record<string, string> } = {}
-        if (chunks.global) result.global = csstree.generate(chunks.global.ast)
-        if (chunks.files) {
-            const files: Record<string, string> = {}
-            for (const [source, { ast }] of Object.entries(chunks.files)) {
-                files[source] = csstree.generate(ast)
-            }
-            result.files = files
-        }
-        return result
-    }
-
-    private _inGenerateCssAst = false
+    }>
 
     async generateCssAst(): Promise<{
         global?: CssAstChunk
         files?: Record<string, CssAstChunk>
     }> {
-        if (this._inGenerateCssAst) {
-            throw new Error(`${this.constructor.name} must override either generateStyles() or generateCssAst()`)
+        const styles = await this.generateStyles()
+        const result: { global?: CssAstChunk; files?: Record<string, CssAstChunk> } = {}
+        if (styles.global) {
+            result.global = { originalCss: styles.global, ast: parseCss(styles.global) }
         }
-        this._inGenerateCssAst = true
-        try {
-            const styles = await this.generateStyles()
-            const result: { global?: CssAstChunk; files?: Record<string, CssAstChunk> } = {}
-            if (styles.global) {
-                let ast: CssTree.StyleSheet
-                try {
-                    ast = csstree.parse(styles.global) as CssTree.StyleSheet
-                } catch {
-                    ast = csstree.parse("") as CssTree.StyleSheet
-                }
-                result.global = { originalCss: styles.global, ast }
+        if (styles.files) {
+            const files: Record<string, CssAstChunk> = {}
+            for (const [source, css] of Object.entries(styles.files)) {
+                files[source] = { originalCss: css, ast: parseCss(css) }
             }
-            if (styles.files) {
-                const files: Record<string, CssAstChunk> = {}
-                for (const [source, css] of Object.entries(styles.files)) {
-                    let ast: CssTree.StyleSheet
-                    try {
-                        ast = csstree.parse(css) as CssTree.StyleSheet
-                    } catch {
-                        ast = csstree.parse("") as CssTree.StyleSheet
-                    }
-                    files[source] = { originalCss: css, ast }
-                }
-                result.files = files
-            }
-            return result
-        } finally {
-            this._inGenerateCssAst = false
+            result.files = files
         }
+        return result
     }
 
     async emitCssChunks(emit: (source: string, originalCss: string, ast: CssTree.StyleSheet) => void): Promise<void> {
@@ -85,6 +59,35 @@ export abstract class StyleGenerator {
 
     extractSubstitution(): SWC.Expression | null {
         return null
+    }
+}
+
+/**
+ * Alternative base class for generators that produce CSS ASTs directly.
+ * Override generateCssAst() instead of generateStyles(); the string-based
+ * generateStyles() is derived automatically by serializing the ASTs.
+ */
+export abstract class AstStyleGenerator extends StyleGenerator {
+    abstract override generateCssAst(): Promise<{
+        global?: CssAstChunk
+        files?: Record<string, CssAstChunk>
+    }>
+
+    override async generateStyles(): Promise<{
+        global?: string
+        files?: Record<string, string>
+    }> {
+        const chunks = await this.generateCssAst()
+        const result: { global?: string; files?: Record<string, string> } = {}
+        if (chunks.global) result.global = csstree.generate(chunks.global.ast)
+        if (chunks.files) {
+            const files: Record<string, string> = {}
+            for (const [source, { ast }] of Object.entries(chunks.files)) {
+                files[source] = csstree.generate(ast)
+            }
+            result.files = files
+        }
+        return result
     }
 }
 

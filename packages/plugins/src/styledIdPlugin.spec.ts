@@ -13,6 +13,9 @@ class MinimalGenerator extends StyleGenerator {
     collectArgs(): void {
         /* empty */
     }
+    override async generateStyles() {
+        return {}
+    }
 }
 
 const mockStyledExtractor: StyleExtractor = {
