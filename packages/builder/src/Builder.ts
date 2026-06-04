@@ -376,7 +376,7 @@ export class Builder {
             try {
                 const { ast } = runner.engine.fileData.for(fp).get()
                 const { code } = SWC.printSync(ast)
-                context.emitModifiedSource(fp, code)
+                modifiedSources.set(fp, code)
             } catch {
                 // file not in engine (e.g. non-JS paths)
             }
