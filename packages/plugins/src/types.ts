@@ -6,7 +6,7 @@ import type { BindingInfo, LocalImport, RefMap, Ref } from "@mochi-css/builder"
 
 export type CssAstChunk = { originalCss: string; ast: CssTree.StyleSheet }
 
-function parseCss(css: string): CssTree.StyleSheet {
+export function parseCss(css: string): CssTree.StyleSheet {
     try {
         return csstree.parse(css) as CssTree.StyleSheet
     } catch {

@@ -1,5 +1,5 @@
 import type * as SWC from "@swc/core"
-import { StyleGenerator } from "@mochi-css/plugins"
+import { AstStyleGenerator, type CssAstChunk, parseCss } from "@mochi-css/plugins"
 import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { globalCss, GlobalCssObject, GlobalCssStyles } from "../index"
 
@@ -12,7 +12,7 @@ const voidZero: SWC.UnaryExpression = {
     argument: { type: "NumericLiteral", span: emptySpan, value: 0, raw: "0" },
 }
 
-export class VanillaGlobalCssGenerator extends StyleGenerator {
+export class VanillaGlobalCssGenerator extends AstStyleGenerator {
     private readonly allCss = new Set<string>()
     private currentSubstitution: SWC.Expression | null = null
 
@@ -56,8 +56,8 @@ export class VanillaGlobalCssGenerator extends StyleGenerator {
         return this.currentSubstitution
     }
 
-    override async generateStyles(): Promise<{ global: string }> {
-        const sortedCss = [...this.allCss].sort()
-        return { global: sortedCss.join("\n\n") }
+    override async generateCssAst(): Promise<{ global: CssAstChunk }> {
+        const cssString = [...this.allCss].sort().join("\n\n")
+        return { global: { originalCss: cssString, ast: parseCss(cssString) } }
     }
 }

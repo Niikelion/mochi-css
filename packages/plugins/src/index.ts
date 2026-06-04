@@ -4,7 +4,7 @@ export { styledIdPlugin } from "./styledIdPlugin"
 export { PluginContextCollector } from "./PluginContextCollector"
 
 export type { StyleExtractor, DerivedExtractorBinding, FileInfo, CssAstChunk } from "./types"
-export { StyleGenerator, AstStyleGenerator } from "./types"
+export { StyleGenerator, AstStyleGenerator, parseCss } from "./types"
 export type { ImportSpecStageOut, ExtractorLookup } from "./stages/ImportSpecStage"
 export { importStageDef } from "./stages/ImportSpecStage"
 export type { DerivedExtractorStageOut } from "./stages/DerivedExtractorStage"

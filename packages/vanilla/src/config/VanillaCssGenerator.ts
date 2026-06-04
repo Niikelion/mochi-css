@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import { StyleGenerator, getOrInsert } from "@mochi-css/plugins"
+import { AstStyleGenerator, type CssAstChunk, parseCss, getOrInsert } from "@mochi-css/plugins"
 import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { CSSObject, MochiCSS, StyleProps, isMochiCSS, mergeMochiCss, AllVariants } from "../index"
 
@@ -52,7 +52,7 @@ function mochiPrebuiltCallNode(instance: MochiCSS<AllVariants>): SWC.CallExpress
     }
 }
 
-export class VanillaCssGenerator extends StyleGenerator {
+export class VanillaCssGenerator extends AstStyleGenerator {
     private readonly filesCss = new Map<string, Set<string>>()
     private readonly classNameLiterals = new Map<string, SWC.StringLiteral[]>()
     private currentSubstitution: SWC.Expression | null = null
@@ -139,7 +139,7 @@ export class VanillaCssGenerator extends StyleGenerator {
         this.currentSubstitution = mochiPrebuiltCallNode(merged)
 
         // Collect StringLiteral refs for the class remap pass
-        const callNode = this.currentSubstitution as SWC.CallExpression
+        const callNode = this.currentSubstitution
         const classNamesArr = callNode.arguments[0]?.expression as SWC.ArrayExpression | undefined
         if (classNamesArr) {
             for (const el of classNamesArr.elements) {
@@ -170,11 +170,11 @@ export class VanillaCssGenerator extends StyleGenerator {
         return this.currentSubstitution
     }
 
-    override async generateStyles(): Promise<{ files: Record<string, string> }> {
-        const files: Record<string, string> = {}
+    override async generateCssAst(): Promise<{ files: Record<string, CssAstChunk> }> {
+        const files: Record<string, CssAstChunk> = {}
         for (const [source, css] of this.filesCss) {
-            const sortedCss = [...css.values()].sort()
-            files[source] = sortedCss.join("\n\n")
+            const cssString = [...css.values()].sort().join("\n\n")
+            files[source] = { originalCss: cssString, ast: parseCss(cssString) }
         }
         return { files }
     }
