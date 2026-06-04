@@ -38,7 +38,7 @@ export class StitchesKeyframesGenerator extends StyleGenerator {
         }
     }
 
-    async generateStyles(): Promise<{ files: Record<string, string> }> {
+    override async generateStyles(): Promise<{ files: Record<string, string> }> {
         const filesCss = new Map<string, Set<string>>();
         for (const { source, args } of this.collectedKeyframes) {
             let css = filesCss.get(source);

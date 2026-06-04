@@ -46,7 +46,7 @@ export class StitchesGlobalCssGenerator extends StyleGenerator {
         }
     }
 
-    async generateStyles(): Promise<{ global?: string }> {
+    override async generateStyles(): Promise<{ global?: string }> {
         const css = new Set<string>();
         for (const { source, args } of this.collectedStyles) {
             for (const styles of args) {
