@@ -82,7 +82,7 @@ export class StitchesGenerator extends StyleGenerator {
         this.lastSubGenGroup = subGens;
     }
 
-    override async generateStyles(): Promise<{
+    async generateStyles(): Promise<{
         global?: string;
         files?: Record<string, string>;
     }> {

@@ -57,7 +57,7 @@ export class StitchesCssGenerator extends StyleGenerator {
         }
     }
 
-    override async generateStyles(): Promise<{ files: Record<string, string> }> {
+    async generateStyles(): Promise<{ files: Record<string, string> }> {
         const filesCss = new Map<string, Set<string>>();
         for (const { source, args } of this.collectedStyles) {
             let css = filesCss.get(source);

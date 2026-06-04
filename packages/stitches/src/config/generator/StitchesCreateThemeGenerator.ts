@@ -59,7 +59,7 @@ export class StitchesCreateThemeGenerator extends StyleGenerator {
         this.collectedThemes.push({ source, tokens: tokens as StitchesTheme });
     }
 
-    override async generateStyles(): Promise<{ global?: string }> {
+    async generateStyles(): Promise<{ global?: string }> {
         const prefix = this.config.prefix ? `${this.config.prefix}-` : "";
         const css = new Set<string>();
 
