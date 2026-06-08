@@ -1,19 +1,19 @@
 # CSS-in-JS Benchmark
 
-**Date**: 2026-05-14
+**Date**: 2026-06-08
 **Fixture**: Mock Mochi homepage — Navbar, Hero, Stats, Features, CodeShowcase, ApiCarousel, ComponentExplorer, Cta, Footer
 **Machine**: Intel(R) Core(TM) i7-14700K (28 cores, 68GB RAM)
 
 ## Results
 
-| Library | Build Time | JS Bundle (gz) | CSS Output (gz) | FCP | TBT | CLS | Notes |
-|---|---|---|---|---|---|---|---|
-| `mochi-vanilla-react` | 1.6 s | 61.4 kB | 2.1 kB | 1.9 s | 0 ms | 0.000 |  |
-| `mochi-stitches` | 1.6 s | 69.6 kB | 1.8 kB | 2.2 s | 0 ms | 0.000 |  |
-| `stitches` | 1.5 s | 67.4 kB | 0 kB | 2.0 s | 0 ms | 0.000 |  |
-| `vanilla-extract` | 2.3 s | 60.9 kB | 1.6 kB | 1.9 s | 0 ms | 0.000 |  |
-| `panda` | 2.4 s | 72.0 kB | 6.1 kB | 2.3 s | 0 ms | 0.000 |  |
-| `tailwind` | 1.6 s | 60.6 kB | 3.4 kB | 1.9 s | 0 ms | 0.000 |  |
+| Library               | Build Time | JS Bundle (gz) | CSS Output (gz) | FCP   | TBT  | CLS   | Notes |
+|-----------------------|------------|----------------|-----------------|-------|------|-------|-------|
+| `mochi-vanilla-react` | 1.7 s      | 61.1 kB        | 1.9 kB          | 1.9 s | 0 ms | 0.000 |       |
+| `mochi-stitches`      | 1.7 s      | 70.0 kB        | 2.2 kB          | 2.1 s | 0 ms | 0.000 |       |
+| `stitches`            | 1.5 s      | 67.8 kB        | 0 kB            | 2.0 s | 0 ms | 0.000 |       |
+| `vanilla-extract`     | 1.9 s      | 61.6 kB        | 1.9 kB          | 1.9 s | 0 ms | 0.000 |       |
+| `panda`               | 2.4 s      | 67.5 kB        | 6.4 kB          | 2.2 s | 0 ms | 0.000 |       |
+| `css-modules`         | 1.5 s      | 61.5 kB        | 2.3 kB          | 1.9 s | 0 ms | 0.000 |       |
 
 ## Notes
 

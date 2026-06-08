@@ -1,5 +1,6 @@
 export { createExtractorsPlugin, getExtractorId } from "./ExtractorsPlugin"
 export { createClassRemapPlugin } from "./classRemapPlugin"
+export type { ClassRemapOptions, ClassRemapContext } from "./classRemapPlugin"
 export { styledIdPlugin } from "./styledIdPlugin"
 export { PluginContextCollector } from "./PluginContextCollector"
 
@@ -17,12 +18,14 @@ export type { CrossFileDerivedStageOut, CrossFileExtra, CrossFileResult } from "
 export { crossFileDerivedStageDef } from "./stages/CrossFileDerivedStage"
 export type { ExportsStageOut, ExportsStageResult, ReexportEntry } from "./stages/Exports"
 export { exportsStage } from "./stages/Exports"
+export type { GeneratorsStageOut } from "./stages/GeneratorsStage"
+export { generatorsStageDef } from "./stages/GeneratorsStage"
 export { extractRelevantSymbols } from "./extractRelevantSymbols"
 export { getOrInsert, isLocalImport } from "./utils"
 export { propagateUsagesFromRef, propagateUsagesFromExpr } from "./propagation"
 export type { ReexportResolver } from "./propagation"
 
-// Re-export commonly needed builder types for plugin authors
+// Re-export commonly used builder types for plugin authors
 export type {
     AstPostProcessor,
     EmitHook,

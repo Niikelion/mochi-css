@@ -21,6 +21,7 @@ import {
     styleExprStageDef,
     bindingStageDef,
     crossFileDerivedStageDef,
+    generatorsStageDef,
     type ExtractorLookup,
     type DerivedExtractorStageOut,
     type StyleExprStageOut,
@@ -250,13 +251,10 @@ function ensureNamedImport(ast: SWC.Module, importPath: string, name: string): v
     }
 }
 
-export function createExtractorsPlugin(
-    extractors: StyleExtractor[],
-): MochiPlugin & { readonly classNameLiterals: Map<string, SWC.StringLiteral[]> | null } {
+export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugin {
     const extractorLookup = buildExtractorLookup(extractors)
-    let capturedGenerators: Map<string, StyleGenerator> | null = null
 
-    const plugin: MochiPlugin = {
+    return {
         name: "mochi-extractor-plugin",
         onLoad(ctx) {
             let substitutionByMockResult: Map<unknown, SWC.Expression | null> | null = null
@@ -274,6 +272,7 @@ export function createExtractorsPlugin(
                 styleExprStageDef,
                 bindingStageDef,
                 crossFileDerivedStageDef,
+                generatorsStageDef,
             ]) {
                 ctx.stages.register(stage)
             }
@@ -415,13 +414,13 @@ export function createExtractorsPlugin(
             })
 
             // sourceTransform: sets up generators and extractors global
-            ctx.sourceTransforms.register((_runner, context) => {
+            ctx.sourceTransforms.register((runner, context) => {
                 const generators = new Map<string, StyleGenerator>()
                 for (const extractor of extractors) {
                     const id = getExtractorId(extractor)
                     generators.set(id, extractor.startGeneration(ctx.onDiagnostic))
                 }
-                capturedGenerators = generators
+                runner.getInstance(generatorsStageDef).generators = generators
                 substitutionByMockResult = new Map()
                 pendingCallsByWrappedNode = new Map()
                 capturedEvaluator = context.evaluator
@@ -473,10 +472,11 @@ export function createExtractorsPlugin(
                 }
             })
 
-            const emitHook: EmitHook = async (_runner, context) => {
-                if (!capturedGenerators) return
+            const emitHook: EmitHook = async (runner, context) => {
+                const generators = runner.getInstance(generatorsStageDef).generators
+                if (!generators) return
 
-                for (const [, generator] of capturedGenerators) {
+                for (const [, generator] of generators) {
                     await generator.emitCssChunks((source, originalCss, ast) => {
                         context.emitCssAst(source, originalCss, ast)
                     })
@@ -485,26 +485,10 @@ export function createExtractorsPlugin(
 
             ctx.emitHooks.register(emitHook)
             ctx.cleanup.register(() => {
-                capturedGenerators = null
                 substitutionByMockResult = null
                 pendingCallsByWrappedNode = null
                 capturedEvaluator = null
             })
         },
     }
-
-    return Object.assign(plugin, {
-        get classNameLiterals(): Map<string, SWC.StringLiteral[]> | null {
-            if (!capturedGenerators) return null
-            const result = new Map<string, SWC.StringLiteral[]>()
-            for (const [, gen] of capturedGenerators) {
-                for (const [name, lits] of gen.getIdentifierLiterals()) {
-                    const existing = result.get(name)
-                    if (existing) existing.push(...lits)
-                    else result.set(name, [...lits])
-                }
-            }
-            return result
-        },
-    })
 }

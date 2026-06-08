@@ -9,3 +9,4 @@ export {
     type CrossFileExtra,
 } from "./CrossFileDerivedStage"
 export { exportsStage, type ExportsStageOut, type ExportsStageResult, type ReexportEntry } from "./Exports"
+export { generatorsStageDef, type GeneratorsStageOut } from "./GeneratorsStage"

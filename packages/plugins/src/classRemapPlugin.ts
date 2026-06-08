@@ -3,8 +3,18 @@ import type * as CssTree from "css-tree"
 import type * as SWC from "@swc/core"
 import { shortHash } from "@mochi-css/core"
 import type { MochiPlugin } from "@mochi-css/config"
+import { generatorsStageDef } from "./stages"
 
-type ExtractorsPluginOutput = { readonly classNameLiterals: Map<string, SWC.StringLiteral[]> | null }
+export interface ClassRemapContext {
+    source: string
+    isVariant: boolean
+    /** Already-mapped parent class name; only present when `isVariant` is true */
+    parentName?: string
+}
+
+export interface ClassRemapOptions {
+    remapFn?: (originalName: string, context: ClassRemapContext) => string
+}
 
 function toBase26(n: number): string {
     let result = ""
@@ -15,20 +25,30 @@ function toBase26(n: number): string {
     return result
 }
 
-export function createClassRemapPlugin(extractorsPlugin: ExtractorsPluginOutput): MochiPlugin {
+export function createClassRemapPlugin(options: ClassRemapOptions = {}): MochiPlugin {
     return {
         name: "mochi-class-remap",
         onLoad(ctx) {
-            ctx.postProcessHooks.register(async (_runner, ppCtx) => {
-                const classNameLiterals = extractorsPlugin.classNameLiterals
-                if (!classNameLiterals || classNameLiterals.size === 0) return
+            ctx.postProcessHooks.register(async (runner, ppCtx) => {
+                const { generators } = runner.getInstance(generatorsStageDef)
+                if (!generators || generators.size === 0) return
+
+                const classNameLiterals = new Map<string, SWC.StringLiteral[]>()
+                for (const [, gen] of generators) {
+                    for (const [name, literals] of gen.getIdentifierLiterals()) {
+                        const existing = classNameLiterals.get(name)
+                        if (existing) existing.push(...literals)
+                        else classNameLiterals.set(name, [...literals])
+                    }
+                }
+                if (classNameLiterals.size === 0) return
 
                 // Phase 1: build remap table by walking CSS ASTs
                 const remap = new Map<string, string>()
                 const variantLetterIdx = new Map<string, number>()
+                const { remapFn } = options
 
                 for (const [source, { ast }] of ppCtx.cssAstChunks) {
-                    if (source === "global.css") continue
                     const prefix = "m" + shortHash(source, 4)
                     let mainIdx = 0
 
@@ -49,7 +69,9 @@ export function createClassRemapPlugin(extractorsPlugin: ExtractorsPluginOutput)
                             if (classNodes.length === 1) {
                                 const name = first.name
                                 if (!remap.has(name)) {
-                                    const newName = prefix + mainIdx.toString(36).toUpperCase()
+                                    const newName = remapFn
+                                        ? remapFn(name, { source, isVariant: false })
+                                        : prefix + mainIdx.toString(36).toUpperCase()
                                     remap.set(name, newName)
                                     variantLetterIdx.set(newName, 0)
                                     mainIdx++
@@ -61,7 +83,10 @@ export function createClassRemapPlugin(extractorsPlugin: ExtractorsPluginOutput)
                                     const varNode = classNodes[i]
                                     if (!varNode || remap.has(varNode.name)) continue
                                     const li = variantLetterIdx.get(mainMapped) ?? 0
-                                    remap.set(varNode.name, mainMapped + toBase26(li))
+                                    const newName = remapFn
+                                        ? remapFn(varNode.name, { source, isVariant: true, parentName: mainMapped })
+                                        : mainMapped + toBase26(li)
+                                    remap.set(varNode.name, newName)
                                     variantLetterIdx.set(mainMapped, li + 1)
                                 }
                             }

@@ -23,6 +23,6 @@ export function defineConfig(config: Partial<Config> & { extractors?: StyleExtra
     const extractorsPlugin = createExtractorsPlugin([...defaultVanillaExtractors, ...extractors])
     return {
         ...rest,
-        plugins: [extractorsPlugin, createClassRemapPlugin(extractorsPlugin), ...(rest.plugins ?? [])],
+        plugins: [extractorsPlugin, createClassRemapPlugin(), ...(rest.plugins ?? [])],
     }
 }
