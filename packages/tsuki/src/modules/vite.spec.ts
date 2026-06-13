@@ -3,6 +3,7 @@ import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { viteModule } from "./vite"
+import { noop } from "@mochi-css/core"
 
 vi.mock("@clack/prompts", () => ({
     text: vi.fn(),
@@ -28,9 +29,6 @@ afterEach(async () => {
     vi.clearAllMocks()
 })
 
-const noop = () => {
-    // no-op
-}
 const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
 describe("viteModule.run", () => {

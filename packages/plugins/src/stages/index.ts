@@ -1,12 +1,8 @@
-export { importStageDef, type ImportSpecStageOut, type ExtractorLookup } from "./ImportSpecStage"
-export { derivedStageDef, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
-export { styleExprStageDef, type StyleExprStageOut } from "./StyleExprStage"
-export { bindingStageDef, type BindingStageOut } from "./BindingStage"
-export {
-    crossFileDerivedStageDef,
-    type CrossFileDerivedStageOut,
-    type CrossFileResult,
-    type CrossFileExtra,
-} from "./CrossFileDerivedStage"
-export { exportsStage, type ExportsStageOut, type ExportsStageResult, type ReexportEntry } from "./Exports"
-export { generatorsStageDef, type GeneratorsStageOut } from "./GeneratorsStage"
+export { ImportStage, type ImportSpecStageOut, type ExtractorLookup } from "./ImportSpecStage"
+export { DerivedStage, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
+export { StyleExprStage, type StyleExprStageOut } from "./StyleExprStage"
+export { BindingStage, type BindingStageOut } from "./BindingStage"
+export * from "./CrossFileDerivedStage"
+export * from "./Exports"
+export * from "./GeneratorsCollectionStage"
+export * from "./ClassnameLiteralsStage"

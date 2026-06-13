@@ -5,8 +5,8 @@ import { defineStage } from "@mochi-css/builder"
 import type { StageContext } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import { idToRef, type Ref } from "@mochi-css/builder"
-import { derivedStageDef, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
-import { bindingStageDef, type BindingStageOut } from "./BindingStage"
+import { DerivedStage, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
+import { BindingStage, type BindingStageOut } from "./BindingStage"
 
 /**
  * Cross-file derived extractor data accumulated for a single file.
@@ -70,7 +70,7 @@ function scanForDerivedCalls(ast: SWC.Module, ref: Ref, binding: DerivedExtracto
 export type CrossFileResult = Map<string, CrossFileExtra>
 
 /**
- * Output of {@link crossFileDerivedStageDef}.
+ * Output of {@link CrossFileDerivedStage}.
  *
  * - `crossFileResult` — project-level cache mapping each file path to its {@link CrossFileExtra}
  */
@@ -89,10 +89,10 @@ export type CrossFileDerivedStageOut = {
  * The propagation loop repeats until no new bindings are discovered, handling transitive
  * imports (A imports from B which imports from C).
  *
- * Depends on {@link derivedStageDef} and {@link bindingStageDef}.
+ * Depends on {@link DerivedStage} and {@link BindingStage}.
  */
-export const crossFileDerivedStageDef = defineStage({
-    dependsOn: [derivedStageDef, bindingStageDef] as const,
+export const CrossFileDerivedStage = defineStage({
+    dependsOn: [DerivedStage, BindingStage] as const,
     init(
         context: StageContext,
         derivedInst: DerivedExtractorStageOut,

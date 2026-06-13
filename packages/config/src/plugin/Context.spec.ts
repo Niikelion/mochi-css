@@ -1,9 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 import { FullContext } from "./Context"
 import type { AstPostProcessor } from "@mochi-css/builder"
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = () => {}
+import { noop } from "@mochi-css/core"
 
 describe("FullContext", () => {
     it("exposes a filePreProcess pipeline", () => {

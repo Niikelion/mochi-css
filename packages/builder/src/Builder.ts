@@ -354,6 +354,7 @@ export class Builder {
 
         const code = await this.bundleFiles(resultingFiles)
         await this.executeCode(code, evaluator)
+        runner.markEvaluated()
 
         for (const handler of this.options.postEvalTransforms ?? []) {
             await handler(runner, context)

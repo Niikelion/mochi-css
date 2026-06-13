@@ -7,7 +7,7 @@ import { RefMap } from "@mochi-css/builder"
 import type { BindingInfo, BindingDeclarator, LocalImport } from "@mochi-css/builder"
 import { idToRef, type Ref } from "@mochi-css/builder"
 import { isLocalImport } from "@/utils"
-import { styleExprStageDef, type StyleExprStageOut } from "./StyleExprStage"
+import { StyleExprStage, type StyleExprStageOut } from "./StyleExprStage"
 
 function collectBindingsFromPattern(
     pattern: SWC.Pattern,
@@ -86,11 +86,11 @@ type BindingStageResult = {
 }
 
 /**
- * Output of {@link bindingStageDef}.
+ * Output of {@link BindingStage}.
  *
  * - `fileBindings` — per-file cache of bindings, imports, references, and exports
- * - `derived` — forwarded from {@link styleExprStageDef} for downstream stages
- * - `styleExprs` — forwarded from {@link styleExprStageDef} for downstream stages
+ * - `derived` — forwarded from {@link StyleExprStage} for downstream stages
+ * - `styleExprs` — forwarded from {@link StyleExprStage} for downstream stages
  */
 export type BindingStageOut = {
     fileBindings: FileCache<BindingStageResult>
@@ -108,14 +108,14 @@ export type BindingStageOut = {
  *    References at scope depth > 0 (inside functions/classes) are excluded — only
  *    module-scope references matter for bundling decisions.
  *
- * Also populates `exportedDerivedExtractors` by intersecting the exports map with
- * derived extractor bindings, enabling {@link crossFileDerivedStageDef} to propagate
+ * Also populates `exportedDerivedExtractors` by intersecting the exports' map with
+ * derived extractor bindings, enabling {@link CrossFileDerivedStage} to propagate
  * derived extractors across file boundaries.
  *
- * Depends on {@link styleExprStageDef} and {@link importStageDef}.
+ * Depends on {@link StyleExprStage} and {@link ImportStage}.
  */
-export const bindingStageDef = defineStage({
-    dependsOn: [styleExprStageDef] as const,
+export const BindingStage = defineStage({
+    dependsOn: [StyleExprStage] as const,
     init(context: StageContext, styleExprInst: StyleExprStageOut): BindingStageOut {
         const { registry, resolveImport, log: onDiagnostic } = context
         const fileBindings = registry.fileCache(

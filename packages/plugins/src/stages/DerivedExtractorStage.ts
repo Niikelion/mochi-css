@@ -1,11 +1,11 @@
 import * as SWC from "@swc/core"
-import type { StyleExtractor, DerivedExtractorBinding } from "../types"
+import type { StyleExtractor, DerivedExtractorBinding } from "@/types"
 import type { Diagnostic } from "@mochi-css/core"
 import { defineStage } from "@mochi-css/builder"
 import type { FileCache, StageContext } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import { idToRef } from "@mochi-css/builder"
-import { importStageDef, type ImportSpecStageOut } from "./ImportSpecStage"
+import { ImportStage, type ImportSpecStageOut } from "./ImportSpecStage"
 
 type DerivedStageResult = {
     /** Refs of identifiers bound to a derived extractor (e.g. `css` in `const { css } = createStitches(...)`). */
@@ -17,7 +17,7 @@ type DerivedStageResult = {
 }
 
 /**
- * Output of {@link derivedStageDef}.
+ * Output of {@link DerivedStage}.
  *
  * - `derived` — per-file cache with derived extractor bindings and the merged extractor map
  */
@@ -111,10 +111,10 @@ function discoverDerivedFromDeclarator(
  *
  * Emits diagnostics when the return value is not destructured or uses rest spread.
  *
- * Depends on {@link importStageDef}.
+ * Depends on {@link ImportStage}.
  */
-export const derivedStageDef = defineStage({
-    dependsOn: [importStageDef] as const,
+export const DerivedStage = defineStage({
+    dependsOn: [ImportStage] as const,
     init(context: StageContext, importInst: ImportSpecStageOut): DerivedExtractorStageOut {
         const { registry, log: onDiagnostic } = context
         const derived = registry.fileCache(

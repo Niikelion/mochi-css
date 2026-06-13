@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest"
 import { parseSource, StageRunner } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
-import { importStageDef } from "./ImportSpecStage"
-import { exportsStage } from "./Exports"
+import { ImportStage } from "./ImportSpecStage"
+import { ExportsStage } from "./Exports"
 
 async function buildExportsInfo(
     source: string,
@@ -11,10 +11,10 @@ async function buildExportsInfo(
     onDiagnostic: OnDiagnostic = () => {},
 ) {
     const module = await parseSource(source, "test.ts")
-    const runner = new StageRunner([module], [importStageDef, exportsStage], onDiagnostic, resolveImport)
-    const importOut = runner.getInstance(importStageDef)
+    const runner = new StageRunner([module], [ImportStage, ExportsStage], onDiagnostic, resolveImport)
+    const importOut = runner.getInstance(ImportStage)
     importOut.extractors.set(new Map())
-    return runner.getInstance(exportsStage).fileExports.for(module.filePath).get()
+    return runner.getInstance(ExportsStage).fileExports.for(module.filePath).get()
 }
 
 describe("ExportsStage — named reexports", () => {

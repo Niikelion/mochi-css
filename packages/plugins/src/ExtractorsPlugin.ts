@@ -1,4 +1,4 @@
-import type { AnalysisContext, EmitHook, MutableFileEntry, Ref } from "@mochi-css/builder"
+import type { AnalysisContext, MutableFileEntry, Ref } from "@mochi-css/builder"
 import { propagateUsagesFromExpr, type ReexportResolver } from "./propagation"
 import { getOrInsert } from "./utils"
 import {
@@ -15,13 +15,14 @@ import * as SWC from "@swc/core"
 import { RefMap } from "@mochi-css/builder"
 import type { BindingInfo } from "@mochi-css/builder"
 import {
-    importStageDef,
-    exportsStage,
-    derivedStageDef,
-    styleExprStageDef,
-    bindingStageDef,
-    crossFileDerivedStageDef,
-    generatorsStageDef,
+    ImportStage,
+    ExportsStage,
+    DerivedStage,
+    StyleExprStage,
+    BindingStage,
+    CrossFileDerivedStage,
+    GeneratorsCollectionStage,
+    ClassnameLiteralsStage,
     type ExtractorLookup,
     type DerivedExtractorStageOut,
     type StyleExprStageOut,
@@ -55,9 +56,11 @@ function isStyleGeneratorLike(v: unknown): v is StyleGenerator {
 
 function wrapGenerator(
     generator: StyleGenerator,
+    onRegister: (gen: StyleGenerator) => void,
     substitutionByMockResult: Map<unknown, SWC.Expression | null>,
     onDiagnostic: OnDiagnostic | undefined,
 ): (source: string, ...args: unknown[]) => unknown {
+    onRegister(generator)
     return (source: string, ...args: unknown[]) => {
         try {
             generator.collectArgs(source, args)
@@ -76,7 +79,7 @@ function wrapGenerator(
                 const v = ret[key]
                 if (!isStyleGeneratorLike(v)) continue
 
-                ret[key] = wrapGenerator(v, substitutionByMockResult, onDiagnostic)
+                ret[key] = wrapGenerator(v, onRegister, substitutionByMockResult, onDiagnostic)
             }
             substitutionByMockResult.set(ret, generator.extractSubstitution())
             return ret
@@ -266,28 +269,29 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
 
             // Register all analysis stages
             for (const stage of [
-                importStageDef,
-                exportsStage,
-                derivedStageDef,
-                styleExprStageDef,
-                bindingStageDef,
-                crossFileDerivedStageDef,
-                generatorsStageDef,
+                ImportStage,
+                ExportsStage,
+                DerivedStage,
+                StyleExprStage,
+                BindingStage,
+                CrossFileDerivedStage,
+                GeneratorsCollectionStage,
+                ClassnameLiteralsStage,
             ]) {
                 ctx.stages.register(stage)
             }
 
             ctx.initializeStages.register((runner) => {
-                const importOut = runner.getInstance(importStageDef)
+                const importOut = runner.getInstance(ImportStage)
                 importOut.extractors.set(extractorLookup)
             })
 
             ctx.prepareAnalysis.register((runner, markedForEval) => {
-                const crossFileOut = runner.getInstance(crossFileDerivedStageDef)
-                const bindingOut = runner.getInstance(bindingStageDef)
-                const styleExprOut = runner.getInstance(styleExprStageDef)
-                const derivedOut = runner.getInstance(derivedStageDef)
-                const exportsOut = runner.getInstance(exportsStage)
+                const crossFileOut = runner.getInstance(CrossFileDerivedStage)
+                const bindingOut = runner.getInstance(BindingStage)
+                const styleExprOut = runner.getInstance(StyleExprStage)
+                const derivedOut = runner.getInstance(DerivedStage)
+                const exportsOut = runner.getInstance(ExportsStage)
 
                 const crossFileMap = crossFileOut.crossFileResult.get()
 
@@ -341,16 +345,16 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
             })
 
             ctx.resetCrossFileState.register((runner) => {
-                const crossFileOut = runner.getInstance(crossFileDerivedStageDef)
+                const crossFileOut = runner.getInstance(CrossFileDerivedStage)
                 crossFileOut.crossFileResult.invalidate()
             })
 
             ctx.getFilesToBundle.register((runner, markedForEval) => {
-                const crossFileOut = runner.getInstance(crossFileDerivedStageDef)
-                const bindingOut = runner.getInstance(bindingStageDef)
-                const styleExprOut = runner.getInstance(styleExprStageDef)
-                const derivedOut = runner.getInstance(derivedStageDef)
-                const exportsOut = runner.getInstance(exportsStage)
+                const crossFileOut = runner.getInstance(CrossFileDerivedStage)
+                const bindingOut = runner.getInstance(BindingStage)
+                const styleExprOut = runner.getInstance(StyleExprStage)
+                const derivedOut = runner.getInstance(DerivedStage)
+                const exportsOut = runner.getInstance(ExportsStage)
 
                 const crossFileMap = crossFileOut.crossFileResult.get()
 
@@ -415,12 +419,8 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
 
             // sourceTransform: sets up generators and extractors global
             ctx.sourceTransforms.register((runner, context) => {
-                const generators = new Map<string, StyleGenerator>()
-                for (const extractor of extractors) {
-                    const id = getExtractorId(extractor)
-                    generators.set(id, extractor.startGeneration(ctx.onDiagnostic))
-                }
-                runner.getInstance(generatorsStageDef).generators = generators
+                const genCollection = runner.getInstance(GeneratorsCollectionStage)
+                genCollection.reset()
                 substitutionByMockResult = new Map()
                 pendingCallsByWrappedNode = new Map()
                 capturedEvaluator = context.evaluator
@@ -428,8 +428,15 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 const localSubstitutionByMockResult = substitutionByMockResult
 
                 const extractorsObj: Record<string, (source: string, ...args: unknown[]) => unknown> = {}
-                for (const [id, gen] of generators) {
-                    extractorsObj[id] = wrapGenerator(gen, localSubstitutionByMockResult, ctx.onDiagnostic)
+                for (const extractor of extractors) {
+                    const gen = extractor.startGeneration(ctx.onDiagnostic)
+                    const id = getExtractorId(extractor)
+                    extractorsObj[id] = wrapGenerator(
+                        gen,
+                        genCollection.register.bind(genCollection),
+                        localSubstitutionByMockResult,
+                        ctx.onDiagnostic,
+                    )
                 }
                 context.evaluator.setGlobal("extractors", extractorsObj)
             })
@@ -472,18 +479,15 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                 }
             })
 
-            const emitHook: EmitHook = async (runner, context) => {
-                const generators = runner.getInstance(generatorsStageDef).generators
-                if (!generators) return
-
-                for (const [, generator] of generators) {
+            ctx.emitHooks.register(async (runner, context) => {
+                const { generators: allGenerators } = runner.getInstance(GeneratorsCollectionStage)
+                for (const generator of allGenerators.get()) {
                     await generator.emitCssChunks((source, originalCss, ast) => {
                         context.emitCssAst(source, originalCss, ast)
                     })
                 }
-            }
+            })
 
-            ctx.emitHooks.register(emitHook)
             ctx.cleanup.register(() => {
                 substitutionByMockResult = null
                 pendingCallsByWrappedNode = null

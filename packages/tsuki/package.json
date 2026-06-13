@@ -18,6 +18,7 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
+        "@mochi-css/core": "workspace:^",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
         "@types/cross-spawn": "^6.0.6",

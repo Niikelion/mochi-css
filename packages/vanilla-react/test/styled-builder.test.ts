@@ -71,13 +71,9 @@ describe("styled builder pipeline", () => {
         expect(sourcemod).not.toContain('"height"')
 
         // Sourcemod should have the variant class names in _mochiPrebuilt (non-empty)
-        // Extract the _mochiPrebuilt call
-        console.log("Sourcemod:\n", sourcemod)
-
         // Check CSS output has variant selectors
         const cssChunks = [...chunks.entries()].flatMap(([, v]) => [...v])
         const css = cssChunks.join("\n")
-        console.log("CSS:\n", css)
 
         // CSS should have variant rules
         expect(css).toMatch(/\.s-[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/)
@@ -102,8 +98,6 @@ describe("styled builder pipeline", () => {
 
         expect(modifiedSources.has(filePath)).toBe(true)
         const sourcemod = modifiedSources.get(filePath)!
-
-        console.log("Sourcemod:\n", sourcemod)
 
         // The _mochiPrebuilt call should have a non-empty second arg (variantClassNames)
         // Parse out the call: _mochiPrebuilt([...], {...}, {...})
@@ -169,8 +163,6 @@ describe("styled builder pipeline", () => {
 
         expect(modifiedSources.has(filePath)).toBe(true)
         const sourcemod = modifiedSources.get(filePath)!
-
-        console.log("Sourcemod:\n", sourcemod)
 
         // EN should be substituted with _mochiPrebuilt containing color variants
         expect(sourcemod).toContain('"dim"')

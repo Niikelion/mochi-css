@@ -1,9 +1,8 @@
 import * as csstree from "css-tree"
 import type * as CssTree from "css-tree"
-import type * as SWC from "@swc/core"
 import { shortHash } from "@mochi-css/core"
 import type { MochiPlugin } from "@mochi-css/config"
-import { generatorsStageDef } from "./stages"
+import { ClassnameLiteralsStage } from "./stages"
 
 export interface ClassRemapContext {
     source: string
@@ -30,17 +29,7 @@ export function createClassRemapPlugin(options: ClassRemapOptions = {}): MochiPl
         name: "mochi-class-remap",
         onLoad(ctx) {
             ctx.postProcessHooks.register(async (runner, ppCtx) => {
-                const { generators } = runner.getInstance(generatorsStageDef)
-                if (!generators || generators.size === 0) return
-
-                const classNameLiterals = new Map<string, SWC.StringLiteral[]>()
-                for (const [, gen] of generators) {
-                    for (const [name, literals] of gen.getIdentifierLiterals()) {
-                        const existing = classNameLiterals.get(name)
-                        if (existing) existing.push(...literals)
-                        else classNameLiterals.set(name, [...literals])
-                    }
-                }
+                const classNameLiterals = runner.getInstance(ClassnameLiteralsStage).classNameLiterals.get()
                 if (classNameLiterals.size === 0) return
 
                 // Phase 1: build remap table by walking CSS ASTs

@@ -1,11 +1,16 @@
-import type { CacheRegistry } from "./CacheEngine"
+import type { CacheRegistry, Signal } from "./CacheEngine"
 import { OnDiagnostic } from "@mochi-css/core"
 import type { ResolveImport } from "./types"
+
+export type StageSteps = {
+    evaluation: Signal
+}
 
 export type StageContext = {
     registry: CacheRegistry
     log: OnDiagnostic
     resolveImport: ResolveImport
+    steps: StageSteps
 }
 
 /** Structural base type used to constrain stage dependency arrays without recursive expansion. */

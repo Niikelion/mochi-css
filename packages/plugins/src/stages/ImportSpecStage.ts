@@ -1,4 +1,4 @@
-import type { StyleExtractor } from "../types"
+import type { StyleExtractor } from "@/types"
 import { RefMap } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
 import type { FileCache, ProjectInput, StageContext } from "@mochi-css/builder"
@@ -11,7 +11,7 @@ import { idToRef } from "@mochi-css/builder"
 export type ExtractorLookup = Map<string, Map<string, StyleExtractor>>
 
 /**
- * Output of {@link importStageDef}.
+ * Output of {@link ImportStage}.
  *
  * - `extractors` — writable project-level input; set the extractor lookup before running analysis
  * - `importSpecs` — computed cache: for each file, maps imported identifier refs to their {@link StyleExtractor}
@@ -26,22 +26,24 @@ export type ImportSpecStageOut = {
  *
  * Reads each file's import declarations and maps every imported identifier that matches a
  * registered extractor to its {@link StyleExtractor}. Result is consumed by
- * {@link derivedStageDef} and {@link bindingStageDef}.
+ * {@link DerivedStage} and {@link BindingStage}.
  *
  * External inputs that must be set before analysis:
  * - `out.extractors.set(lookup)` — the extractor lookup table (project-wide)
  */
-export const importStageDef = defineStage({
+export const ImportStage = defineStage({
     dependsOn: [],
     init(context: StageContext): ImportSpecStageOut {
         const { registry } = context
-        const extractors = registry.projectInput<ExtractorLookup>()
+        const extractors = registry.projectInput(
+            new Map<string, Map<string, StyleExtractor>>() satisfies ExtractorLookup,
+        )
 
         const importSpecs = registry.fileCache(
-            (file) => [registry.fileData.for(file), extractors.value],
+            (file) => [registry.fileData.for(file), extractors],
             (file): RefMap<StyleExtractor> => {
                 const { ast } = registry.fileData.for(file).get()
-                const extractorLookup = extractors.value.get()
+                const extractorLookup = extractors.get()
                 const result = new RefMap<StyleExtractor>()
                 for (const item of ast.body) {
                     if (item.type !== "ImportDeclaration") continue
