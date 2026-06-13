@@ -1,12 +1,10 @@
-import { describe, it, expect } from "vitest"
-import { parseSource } from "@mochi-css/builder"
-import { Builder, RolldownBundler, VmRunner } from "@mochi-css/builder"
+import { describe, expect, it } from "vitest"
+import { Builder, parseSource, RolldownBundler, VmRunner } from "@mochi-css/builder"
 import { PluginContextCollector } from "@mochi-css/plugins"
-import { styledIdPlugin } from "@mochi-css/plugins"
-import { createExtractorsPlugin } from "@mochi-css/plugins"
 import dedent from "dedent"
 import path from "path"
-import { defineConfig } from "../src/config"
+import { defineConfig } from "@/config"
+import { noop } from "@mochi-css/core"
 
 async function runDefineConfig(sourceCode: string, filePath: string) {
     const config = defineConfig({})
@@ -19,7 +17,8 @@ async function runDefineConfig(sourceCode: string, filePath: string) {
         plugin.onLoad?.(ctx)
     }
 
-    const result = await new Builder({
+    return await new Builder({
+        onDiagnostic: noop,
         roots: ["./"],
         bundler: new RolldownBundler(),
         runner: new VmRunner(),
@@ -27,8 +26,9 @@ async function runDefineConfig(sourceCode: string, filePath: string) {
         sourceTransforms: [...ctx.getSourceTransforms()],
         postEvalTransforms: [...ctx.getPostEvalTransforms()],
         emitHooks: [...ctx.getEmitHooks()],
-        filePreProcess: config.filePreProcess,
-        cleanup: () => ctx.runCleanup(),
+        cleanup: () => {
+            ctx.runCleanup()
+        },
         initializeStages: ctx.getInitializeStages(),
         prepareAnalysis: ctx.getPrepareAnalysis(),
         getFileData: ctx.getGetFileData(),
@@ -36,8 +36,6 @@ async function runDefineConfig(sourceCode: string, filePath: string) {
         resetCrossFileState: ctx.getResetCrossFileState(),
         getFilesToBundle: ctx.getGetFilesToBundle(),
     }).collectStylesFromModules([module])
-
-    return result
 }
 
 describe("styled builder pipeline", () => {
@@ -62,6 +60,7 @@ describe("styled builder pipeline", () => {
 
         // Should have a sourcemod for this file
         expect(modifiedSources.has(filePath)).toBe(true)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sourcemod = modifiedSources.get(filePath)!
 
         // Sourcemod should contain _mochiPrebuilt
@@ -97,6 +96,7 @@ describe("styled builder pipeline", () => {
         const { modifiedSources } = await runDefineConfig(source, filePath)
 
         expect(modifiedSources.has(filePath)).toBe(true)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sourcemod = modifiedSources.get(filePath)!
 
         // The _mochiPrebuilt call should have a non-empty second arg (variantClassNames)
@@ -162,6 +162,7 @@ describe("styled builder pipeline", () => {
         const { modifiedSources } = await runDefineConfig(source, filePath)
 
         expect(modifiedSources.has(filePath)).toBe(true)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const sourcemod = modifiedSources.get(filePath)!
 
         // EN should be substituted with _mochiPrebuilt containing color variants
@@ -174,9 +175,9 @@ describe("styled builder pipeline", () => {
 
         // JP's _mochiPrebuilt should have BOTH color and vertical variants
         // (textStyles color variants merged with styled's vertical variant)
-        const jpMatch = sourcemod.match(/JP = styled\("p", _mochiPrebuilt\(([\s\S]*?)\)\)/)
+        const jpMatch = /JP = styled\("p", _mochiPrebuilt\(([\s\S]*?)\)\)/.exec(sourcemod)
         expect(jpMatch).toBeTruthy()
-        expect(jpMatch![0]).toContain('"color"')
-        expect(jpMatch![0]).toContain('"vertical"')
+        expect(jpMatch?.[0]).toContain('"color"')
+        expect(jpMatch?.[0]).toContain('"vertical"')
     })
 })
