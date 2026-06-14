@@ -7,8 +7,19 @@ import { CellStorage, Cell, SimpleCell, FixpointCell, VariableCell } from "./Cel
 export type Cached<T> = {
     /** Returns the current value, recomputing it if the cell is stale. */
     get(): T
-    /** Marks this value and all downstream dependents as stale. */
+    /** Marks this value and all downstream dependants as stale. */
     invalidate(): void
+}
+
+/** A dependency-tracked signal with no value; useful for triggering invalidation. */
+export type Signal = Cached<void>
+
+/** The parsed source file data stored in `CacheEngine.fileData`. */
+export type FileInfo = {
+    /** Path to the source file. */
+    filePath: string
+    /** Parsed SWC module AST. */
+    ast: SWC.Module
 }
 
 /** A cache keyed by the file path. */
@@ -41,14 +52,13 @@ export type FileInput<T> = {
     invalidate(filePath: string): void
 }
 
+/**
+ * A writable project-level cached value.
+ * @typeParam T - type of the stored value.
+ */
 export interface ProjectInput<T> extends Cached<T> {
+    /** Stores a new value and invalidates all dependants. */
     set(value: T): void
-}
-
-/** The parsed source file data stored in `CacheEngine.fileData`. */
-export type FileInfo = {
-    filePath: string
-    ast: SWC.Module
 }
 
 /**
@@ -62,19 +72,9 @@ export interface CacheRegistry {
     getFilePaths(): string[]
     /** Parsed AST and path for every registered source file. */
     fileData: FileCache<FileInfo>
-    /**
-     * Creates a new writable, file-keyed input slot.
-     *
-     * Use this when a stage needs to feed external data (e.g., resolved imports)
-     * into the cache graph.
-     */
+    /** Creates a writable per-file input that derived caches can declare as a dependency. */
     fileInput<T>(): FileInput<T>
-    /**
-     * Creates a new writable project-level input slot.
-     *
-     * Use this when a stage needs to feed a single project-wide value
-     * (e.g., config) into the cache graph.
-     */
+    /** Project-level input that derived caches can declare as a dependency. */
     projectInput<T>(value: T): ProjectInput<T>
     /**
      * Creates a derived cache whose entries are computed per file.
@@ -104,16 +104,19 @@ export interface CacheRegistry {
      * @param compute - pure function that produces the project-wide value
      */
     projectCache<T>(deps: () => Cached<unknown>[], compute: () => T): ProjectCache<T>
+    /** Creates a new {@link Signal} that can be used to trigger invalidation of dependants. */
     signal(): Signal
 }
 
-export type Signal = Cached<void>
-
+/** Concrete implementation of {@link CacheRegistry}. */
 export class CacheEngine implements CacheRegistry {
     private readonly cellStorage = new CellStorage<Cached<unknown>>()
     private readonly nodeSlots = new WeakMap<object, Map<symbol, Cached<unknown>>>()
+
+    /** File data entrypoint for the analysis engine. */
     public readonly fileData: FileInput<FileInfo>
 
+    /** @param filePaths - source files to register with the engine. */
     constructor(private readonly filePaths: string[]) {
         this.fileData = this.makeFileInput<FileInfo>()
     }

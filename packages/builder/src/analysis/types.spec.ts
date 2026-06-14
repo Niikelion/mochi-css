@@ -76,4 +76,26 @@ describe("RefMap", () => {
         expect(map.find((v) => v > 15)).toBe(20)
         expect(map.find((v) => v > 100)).toBeUndefined()
     })
+
+    it("size reflects total number of entries", () => {
+        const map = new RefMap<string>()
+        expect(map.size).toBe(0)
+        map.set({ name: "a", id: 1 }, "one")
+        expect(map.size).toBe(1)
+        map.set({ name: "a", id: 2 }, "two")
+        map.set({ name: "b", id: 3 }, "three")
+        expect(map.size).toBe(3)
+        map.delete({ name: "a", id: 1 })
+        expect(map.size).toBe(2)
+    })
+
+    it("entries iterates all key-value pairs as [Ref, T]", () => {
+        const map = new RefMap<string>()
+        map.set({ name: "a", id: 1 }, "one")
+        map.set({ name: "b", id: 2 }, "two")
+        const entries = [...map.entries()]
+        expect(entries).toHaveLength(2)
+        expect(entries).toContainEqual([{ name: "a", id: 1 }, "one"])
+        expect(entries).toContainEqual([{ name: "b", id: 2 }, "two"])
+    })
 })

@@ -1,9 +1,9 @@
 import * as SWC from "@swc/core"
-import { AnyStage } from "@/analysis/Stage"
+import { AnyStage } from "./Stage"
 
 /**
  * Unique reference to a binding within a module.
- * Matches SWC's identifier identity: same `name` + `id` means the same binding.
+ * Matches SWC's identifier identity: the same ` name ` + `id` means the same binding.
  * `id` is undefined for unresolved or synthetic identifiers.
  */
 export type Ref = {

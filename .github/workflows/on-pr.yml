@@ -75,10 +75,8 @@ jobs:
                     cache: 'yarn'
             -   name: Install dependencies
                 run: yarn install --immutable
-            -   name: Install Playwright browsers
-                run: yarn workspace @mochi-css/benchmarks exec playwright install chromium --with-deps
             -   name: Run tests
-                run: yarn test
+                run: yarn turbo test --filter="!./tools/benchmarks/**"
     changeset:
         runs-on: ubuntu-latest
         permissions:

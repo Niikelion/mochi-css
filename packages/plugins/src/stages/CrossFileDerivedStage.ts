@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import type { StyleExtractor, DerivedExtractorBinding } from "../types"
+import type { StyleExtractor, DerivedExtractorBinding } from "@/types"
 import { visit } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
 import type { StageContext } from "@mochi-css/builder"
