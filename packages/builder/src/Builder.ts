@@ -1,6 +1,8 @@
 import { path } from "@/utils"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
+import * as csstree from "css-tree"
+import type * as CssTree from "css-tree"
 import { StageRunner, Module, ResolveImport } from "@/StageRunner"
 import type { StageDefinition } from "@/analysis/Stage"
 import { parseFile, parseSource } from "@/parse"
@@ -12,12 +14,25 @@ import { findAllFiles } from "@/findAllFiles"
 import { wrapFilesWithProxies, MutableFileEntry } from "@/AstProxy"
 import { Evaluator } from "@/Evaluator"
 
+type CssAstEntry = { originalCss: string; ast: CssTree.StyleSheet; wasMutated: boolean }
+
+export type PostProcessContext = {
+    readonly cssAstChunks: Map<string, CssAstEntry>
+    markFileDirty(filePath: string): void
+}
+
+export type PostProcessHook = (runner: StageRunner, ctx: PostProcessContext) => void | Promise<void>
+
 export type AnalysisContext = {
     onDiagnostic?: OnDiagnostic
     evaluator: Evaluator
     emitChunk(path: string, content: string): void
     markForEval(filePath: string, expression: SWC.Expression): void
+    /** @deprecated Mutate the file's AST directly and call markJsMutated() instead. */
     emitModifiedSource(filePath: string, code: string): void
+    emitCssAst(path: string, originalCss: string, ast: CssTree.StyleSheet): void
+    /** Mark a JS file whose AST was mutated for serialization after all postProcessHooks have run. */
+    markJsMutated(filePath: string): void
 }
 
 export type AstPostProcessor = (runner: StageRunner, context: AnalysisContext) => void | Promise<void>
@@ -68,8 +83,10 @@ export type BuilderOptions = {
     preEvalTransforms?: AstPostProcessor[]
     /** Handlers that run after code execution. The evaluator is populated — use evaluator.getTrackedValue() to read back runtime values. Receives the canonical index (unaffected by preEvalTransforms). */
     postEvalTransforms?: AstPostProcessor[]
-    /** Hooks that run after postEvalTransforms. Call context.emitChunk() to emit files into emitDir. */
+    /** Hooks that run after postEvalTransforms. Call context.emitCssAst() to emit CSS ASTs for deferred serialization. */
     emitHooks?: EmitHook[]
+    /** Hooks that run after emitHooks, before JS and CSS serialization. Receives mutable CSS ASTs. Call markFileDirty() to re-serialize additional JS files beyond those already scheduled via deferJsEmit(). */
+    postProcessHooks?: PostProcessHook[]
     /** Base directory for files produced via context.emitChunk(). */
     emitDir?: string
     /** Called once at the end of the pipeline. Use to release any caches built between sourceTransforms and postEvalTransforms. */
@@ -272,6 +289,8 @@ export class Builder {
         const chunks = new Map<string, Set<string>>()
         const modifiedSources = new Map<string, string>()
         const markedForEval = new Map<string, Set<SWC.Expression>>()
+        const cssAstChunks = new Map<string, CssAstEntry>()
+        const deferredJsFiles = new Set<string>()
 
         const context: AnalysisContext = {
             onDiagnostic,
@@ -293,7 +312,27 @@ export class Builder {
                 set.add(expression)
             },
             emitModifiedSource(filePath: string, code: string) {
-                modifiedSources.set(filePath, code)
+                try {
+                    const fileData = runner.engine.fileData.for(filePath).get()
+                    const parsed = SWC.parseSync(code, { syntax: "typescript", tsx: true })
+                    Object.assign(fileData.ast, parsed)
+                    deferredJsFiles.add(filePath)
+                } catch {
+                    modifiedSources.set(filePath, code)
+                }
+            },
+            emitCssAst(filePath: string, originalCss: string, ast: CssTree.StyleSheet) {
+                const existing = cssAstChunks.get(filePath)
+                if (existing) {
+                    const combined = existing.originalCss + "\n" + originalCss
+                    const mergedAst = csstree.parse(combined) as CssTree.StyleSheet
+                    cssAstChunks.set(filePath, { originalCss: combined, ast: mergedAst, wasMutated: false })
+                } else {
+                    cssAstChunks.set(filePath, { originalCss, ast, wasMutated: false })
+                }
+            },
+            markJsMutated(filePath: string) {
+                deferredJsFiles.add(filePath)
             },
         }
 
@@ -315,6 +354,7 @@ export class Builder {
 
         const code = await this.bundleFiles(resultingFiles)
         await this.executeCode(code, evaluator)
+        runner.markEvaluated()
 
         for (const handler of this.options.postEvalTransforms ?? []) {
             await handler(runner, context)
@@ -322,6 +362,29 @@ export class Builder {
 
         for (const hook of this.options.emitHooks ?? []) {
             await hook(runner, context)
+        }
+
+        // postProcessHooks: run after emitHooks, before serialization
+        const ppCtx: PostProcessContext = {
+            cssAstChunks,
+            markFileDirty: (fp) => deferredJsFiles.add(fp),
+        }
+        for (const hook of this.options.postProcessHooks ?? []) {
+            await hook(runner, ppCtx)
+        }
+        // Serialize deferred JS files (after postProcessHooks so AST mutations are captured)
+        for (const fp of deferredJsFiles) {
+            try {
+                const { ast } = runner.engine.fileData.for(fp).get()
+                const { code } = SWC.printSync(ast)
+                modifiedSources.set(fp, code)
+            } catch {
+                // file not in engine (e.g. non-JS paths)
+            }
+        }
+        // Emit CSS from ASTs
+        for (const [source, { originalCss, ast, wasMutated }] of cssAstChunks) {
+            context.emitChunk(source, wasMutated ? csstree.generate(ast) : originalCss)
         }
 
         if (this.options.emitDir) {

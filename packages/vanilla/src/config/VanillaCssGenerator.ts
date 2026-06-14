@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import { StyleGenerator } from "@mochi-css/plugins"
+import { AstStyleGenerator, type CssAstChunk, parseCss, getOrInsert } from "@mochi-css/plugins"
 import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { CSSObject, MochiCSS, StyleProps, isMochiCSS, mergeMochiCss, AllVariants } from "../index"
 
@@ -52,8 +52,9 @@ function mochiPrebuiltCallNode(instance: MochiCSS<AllVariants>): SWC.CallExpress
     }
 }
 
-export class VanillaCssGenerator extends StyleGenerator {
+export class VanillaCssGenerator extends AstStyleGenerator {
     private readonly filesCss = new Map<string, Set<string>>()
+    private readonly classNameLiterals = new Map<string, SWC.StringLiteral[]>()
     private currentSubstitution: SWC.Expression | null = null
     private currentMergedMochi: MochiCSS<AllVariants> | null = null
     private readonly mock: (...args: unknown[]) => unknown
@@ -136,17 +137,44 @@ export class VanillaCssGenerator extends StyleGenerator {
         const merged = mergeMochiCss(mochiInstances)
         this.currentMergedMochi = merged
         this.currentSubstitution = mochiPrebuiltCallNode(merged)
+
+        // Collect StringLiteral refs for the class remap pass
+        const callNode = this.currentSubstitution
+        const classNamesArr = callNode.arguments[0]?.expression as SWC.ArrayExpression | undefined
+        if (classNamesArr) {
+            for (const el of classNamesArr.elements) {
+                if (!el) continue
+                const lit = el.expression as SWC.StringLiteral
+                getOrInsert(this.classNameLiterals, lit.value, () => []).push(lit)
+            }
+        }
+        const variantGroupsObj = callNode.arguments[1]?.expression as SWC.ObjectExpression | undefined
+        if (variantGroupsObj) {
+            for (const groupProp of variantGroupsObj.properties) {
+                if (groupProp.type !== "KeyValueProperty") continue
+                const optsObj = groupProp.value as SWC.ObjectExpression
+                for (const optProp of optsObj.properties) {
+                    if (optProp.type !== "KeyValueProperty") continue
+                    const lit = optProp.value as SWC.StringLiteral
+                    getOrInsert(this.classNameLiterals, lit.value, () => []).push(lit)
+                }
+            }
+        }
+    }
+
+    override getIdentifierLiterals(): Map<string, SWC.StringLiteral[]> {
+        return this.classNameLiterals
     }
 
     override extractSubstitution(): SWC.Expression | null {
         return this.currentSubstitution
     }
 
-    async generateStyles(): Promise<{ files: Record<string, string> }> {
-        const files: Record<string, string> = {}
+    override async generateCssAst(): Promise<{ files: Record<string, CssAstChunk> }> {
+        const files: Record<string, CssAstChunk> = {}
         for (const [source, css] of this.filesCss) {
-            const sortedCss = [...css.values()].sort()
-            files[source] = sortedCss.join("\n\n")
+            const cssString = [...css.values()].sort().join("\n\n")
+            files[source] = { originalCss: cssString, ast: parseCss(cssString) }
         }
         return { files }
     }

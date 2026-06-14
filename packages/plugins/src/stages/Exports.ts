@@ -25,7 +25,7 @@ export type ExportsStageResult = {
 }
 
 /**
- * Output of {@link exportsStage}.
+ * Output of {@link ExportsStage}.
  *
  * - `fileExports` — per-file cache of named and namespace reexport data
  */
@@ -42,7 +42,7 @@ export type ExportsStageOut = {
  * the `.mochi/` bundle with their reexport declarations intact so that Rolldown can resolve
  * them correctly.
  */
-export const exportsStage = defineStage({
+export const ExportsStage = defineStage({
     dependsOn: [],
     init(context: StageContext): ExportsStageOut {
         const { registry, resolveImport, log: onDiagnostic } = context

@@ -1,11 +1,11 @@
 import type * as SWC from "@swc/core"
-import { StyleGenerator } from "@mochi-css/plugins"
+import { AstStyleGenerator, type CssAstChunk, parseCss } from "@mochi-css/plugins"
 import { type OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { keyframes, KeyframesObject, KeyframeStops } from "../index"
 
 const emptySpan: SWC.Span = { start: 0, end: 0, ctxt: 0 }
 
-export class VanillaKeyframesGenerator extends StyleGenerator {
+export class VanillaKeyframesGenerator extends AstStyleGenerator {
     private readonly filesCss = new Map<string, Set<string>>()
     private currentSubstitution: SWC.Expression | null = null
 
@@ -61,11 +61,11 @@ export class VanillaKeyframesGenerator extends StyleGenerator {
         return this.currentSubstitution
     }
 
-    async generateStyles(): Promise<{ files: Record<string, string> }> {
-        const files: Record<string, string> = {}
+    override async generateCssAst(): Promise<{ files: Record<string, CssAstChunk> }> {
+        const files: Record<string, CssAstChunk> = {}
         for (const [source, css] of this.filesCss) {
-            const sortedCss = [...css.values()].sort()
-            files[source] = sortedCss.join("\n\n")
+            const cssString = [...css.values()].sort().join("\n\n")
+            files[source] = { originalCss: cssString, ast: parseCss(cssString) }
         }
         return { files }
     }

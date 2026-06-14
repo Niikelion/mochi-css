@@ -4,7 +4,7 @@ import { visit } from "@mochi-css/builder"
 import { defineStage } from "@mochi-css/builder"
 import type { FileCache, StageContext } from "@mochi-css/builder"
 import { idToRef } from "@mochi-css/builder"
-import { derivedStageDef, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
+import { DerivedStage, type DerivedExtractorStageOut } from "./DerivedExtractorStage"
 
 type StyleExprResult = {
     /** Every AST expression node that is a static argument to any style call in this file. */
@@ -16,10 +16,10 @@ type StyleExprResult = {
 }
 
 /**
- * Output of {@link styleExprStageDef}.
+ * Output of {@link StyleExprStage}.
  *
  * - `styleExprs` — per-file cache of collected style expressions and their call sites
- * - `derived` — forwarded from {@link derivedStageDef} for downstream stages
+ * - `derived` — forwarded from {@link DerivedStage} for downstream stages
  */
 export type StyleExprStageOut = {
     styleExprs: FileCache<StyleExprResult>
@@ -30,17 +30,17 @@ export type StyleExprStageOut = {
  * Style expression collection.
  *
  * Walks the full AST to find every call expression whose callee is a known extractor
- * (from {@link derivedStageDef}'s merged extractor map). For each call, invokes
+ * (from {@link DerivedStage}'s merged extractor map). For each call, invokes
  * `extractor.extractStaticArgs` to collect the argument AST nodes, grouping them by
  * extractor and by call site.
  *
  * Parent-extractor calls (those that produce derived extractors) are tracked but excluded
  * from `extractedExpressions` — their derived children handle extraction instead.
  *
- * Depends on {@link derivedStageDef}.
+ * Depends on {@link DerivedStage}.
  */
-export const styleExprStageDef = defineStage({
-    dependsOn: [derivedStageDef] as const,
+export const StyleExprStage = defineStage({
+    dependsOn: [DerivedStage] as const,
     init(context: StageContext, derivedInst: DerivedExtractorStageOut): StyleExprStageOut {
         const { registry } = context
         const styleExprs = registry.fileCache(

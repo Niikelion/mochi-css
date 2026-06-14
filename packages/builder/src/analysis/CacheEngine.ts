@@ -1,13 +1,25 @@
 // Public interfaces
 
 import * as SWC from "@swc/core"
+import { CellStorage, Cell, SimpleCell, FixpointCell, VariableCell } from "./CellStorage"
 
 /** A handle to a lazily computed, dependency-tracked value. */
 export type Cached<T> = {
     /** Returns the current value, recomputing it if the cell is stale. */
     get(): T
-    /** Marks this value and all downstream dependents as stale. */
+    /** Marks this value and all downstream dependants as stale. */
     invalidate(): void
+}
+
+/** A dependency-tracked signal with no value; useful for triggering invalidation. */
+export type Signal = Cached<void>
+
+/** The parsed source file data stored in `CacheEngine.fileData`. */
+export type FileInfo = {
+    /** Path to the source file. */
+    filePath: string
+    /** Parsed SWC module AST. */
+    ast: SWC.Module
 }
 
 /** A cache keyed by the file path. */
@@ -41,22 +53,12 @@ export type FileInput<T> = {
 }
 
 /**
- * A writable project-level input that feeds downstream caches.
- *
- * Calling `set` stores a new value and propagates invalidation to all
- * derived caches that declared this input as a dependency.
+ * A writable project-level cached value.
+ * @typeParam T - type of the stored value.
  */
-export type ProjectInput<T> = {
-    /** The `Cached` handle backed by this input. */
-    value: Cached<T>
-    /** Stores a new value and invalidates downstream caches. */
+export interface ProjectInput<T> extends Cached<T> {
+    /** Stores a new value and invalidates all dependants. */
     set(value: T): void
-}
-
-/** The parsed source file data stored in `CacheEngine.fileData`. */
-export type FileInfo = {
-    filePath: string
-    ast: SWC.Module
 }
 
 /**
@@ -65,25 +67,15 @@ export type FileInfo = {
  * Stages call the factory methods to create their derived caches; they cannot
  * write source data directly (use `CacheEngine` for that).
  */
-export type CacheRegistry = {
+export interface CacheRegistry {
     /** Returns the list of source file paths registered with the engine. */
     getFilePaths(): string[]
     /** Parsed AST and path for every registered source file. */
     fileData: FileCache<FileInfo>
-    /**
-     * Creates a new writable, file-keyed input slot.
-     *
-     * Use this when a stage needs to feed external data (e.g., resolved imports)
-     * into the cache graph.
-     */
+    /** Creates a writable per-file input that derived caches can declare as a dependency. */
     fileInput<T>(): FileInput<T>
-    /**
-     * Creates a new writable project-level input slot.
-     *
-     * Use this when a stage needs to feed a single project-wide value
-     * (e.g., config) into the cache graph.
-     */
-    projectInput<T>(): ProjectInput<T>
+    /** Project-level input that derived caches can declare as a dependency. */
+    projectInput<T>(value: T): ProjectInput<T>
     /**
      * Creates a derived cache whose entries are computed per file.
      *
@@ -112,134 +104,153 @@ export type CacheRegistry = {
      * @param compute - pure function that produces the project-wide value
      */
     projectCache<T>(deps: () => Cached<unknown>[], compute: () => T): ProjectCache<T>
+    /** Creates a new {@link Signal} that can be used to trigger invalidation of dependants. */
+    signal(): Signal
 }
 
-/**
- * Full cache engine used by the builder to feed source data into the graph.
- *
- * Extends `CacheRegistry` by exposing `fileData` as a writable `FileInput`
- * so the builder can push parsed ASTs before analysis begins.
- */
-export type CacheEngine = CacheRegistry & {
-    fileData: FileInput<FileInfo>
-}
+/** Concrete implementation of {@link CacheRegistry}. */
+export class CacheEngine implements CacheRegistry {
+    private readonly cellStorage = new CellStorage<Cached<unknown>>()
+    private readonly nodeSlots = new WeakMap<object, Map<symbol, Cached<unknown>>>()
 
-// Internal cell type
+    /** File data entrypoint for the analysis engine. */
+    public readonly fileData: FileInput<FileInfo>
 
-/** Internal reactive node that holds a lazily computed value. */
-type Cell<T> = {
-    value: T | undefined
-    stale: boolean
-    readonly dependents: Set<Cell<unknown>>
-    readonly computeFn: () => T
-}
-
-// Module-level WeakMap to resolve Cached<T> → Cell<T>
-const cellRegistry = new WeakMap<object, Cell<unknown>>()
-
-/** Creates a new stale cell backed by the given compute function. */
-function createCell<T>(compute: () => T): Cell<T> {
-    return {
-        value: undefined,
-        stale: true,
-        dependents: new Set(),
-        computeFn: compute,
-    }
-}
-
-/**
- * Returns the cell's value, running `computeFn` first if the cell is stale.
- *
- * @param cell - the cell to read
- * @returns the up-to-date value
- */
-function cellGet<T>(cell: Cell<T>): T {
-    if (cell.stale) {
-        cell.stale = false
-        cell.value = cell.computeFn()
-    }
-    return cell.value as T
-}
-
-/**
- * Marks a cell and all of its transitive dependents as stale.
- *
- * Propagation stops early for cells that are already stale to avoid
- * redundant traversal in diamond-shaped dependency graphs.
- */
-function cellInvalidate(cell: Cell<unknown>): void {
-    if (cell.stale) return
-    cell.stale = true
-    for (const dep of cell.dependents) {
-        cellInvalidate(dep)
-    }
-}
-
-/**
- * Wraps a cell as a public `Cached<T>` handle and registers it in
- * `cellRegistry` so that `wireDepToCell` can resolve it back to its cell.
- *
- * @param cell - the cell to wrap
- * @returns a `Cached<T>` handle backed by `cell`
- */
-function makeCached<T>(cell: Cell<T>): Cached<T> {
-    const cached: Cached<T> = {
-        get: () => cellGet(cell),
-        invalidate: () => {
-            cellInvalidate(cell)
-        },
-    }
-    cellRegistry.set(cached, cell)
-    return cached
-}
-
-/**
- * Registers `child` as a dependent of the cell-backing `dep` so that
- * invalidating `dep` also invalidates `child`.
- */
-function wireDepToCell(child: Cell<unknown>, dep: Cached<unknown>): void {
-    const depCell = cellRegistry.get(dep)
-    if (depCell) {
-        depCell.dependents.add(child)
-    }
-}
-
-/**
- * Creates a standalone writable, file-keyed input.
- *
- * Cells are created lazily on first access and kept alive for the lifetime
- * of the input instance.
- *
- * @returns a new `FileInput<V>` instance
- */
-function createFileInput<V>(): FileInput<V> {
-    const store = new Map<string, V>()
-    const cells = new Map<string, { cell: Cell<V>; cached: Cached<V> }>()
-
-    function getOrCreateEntry(key: string): { cell: Cell<V>; cached: Cached<V> } {
-        const existing = cells.get(key)
-        if (existing) return existing
-        const cell = createCell<V>(() => {
-            const val = store.get(key)
-            if (val === undefined) throw new Error(`Entry for key ${key} not initialized`)
-            return val
-        })
-        const entry = { cell, cached: makeCached(cell) }
-        cells.set(key, entry)
-        return entry
+    /** @param filePaths - source files to register with the engine. */
+    constructor(private readonly filePaths: string[]) {
+        this.fileData = this.makeFileInput<FileInfo>()
     }
 
-    return {
-        for(key: string): Cached<V> {
-            return getOrCreateEntry(key).cached
-        },
-        set(key: string, value: V): void {
-            store.set(key, value)
-            cellInvalidate(getOrCreateEntry(key).cell as Cell<unknown>)
-        },
-        invalidate(key: string): void {
-            cellInvalidate(getOrCreateEntry(key).cell as Cell<unknown>)
-        },
+    public getFilePaths(): string[] {
+        return this.filePaths
+    }
+
+    public fileInput<T>(): FileInput<T> {
+        return this.makeFileInput<T>()
+    }
+
+    public projectInput<T>(value: T): ProjectInput<T> {
+        const cell = new VariableCell(value)
+        const cached: ProjectInput<T> & Cached<T> = {
+            get(): T {
+                return cell.value
+            },
+            set(value: T): void {
+                cell.value = value
+            },
+            invalidate(): void {
+                cell.invalidate()
+            },
+        }
+
+        this.cellStorage.register(cached, cell)
+
+        return cached
+    }
+
+    public fileCache<T>(deps: (filePath: string) => Cached<unknown>[], compute: (filePath: string) => T): FileCache<T> {
+        const caches = new Map<string, Cached<T>>()
+        const makeCached = this.makeCached.bind(this)<T>
+
+        return {
+            for(filePath: string): Cached<T> {
+                const existing = caches.get(filePath)
+                if (existing) return existing
+
+                const cached = makeCached(() => compute(filePath), deps(filePath))
+                caches.set(filePath, cached)
+                return cached
+            },
+        }
+    }
+
+    public nodeCache<N extends object, T>(
+        deps: (node: N) => Cached<unknown>[],
+        compute: (node: N) => T,
+    ): NodeCache<N, T> {
+        const key = Symbol()
+
+        const nodeSlots = this.nodeSlots
+        const makeCached = this.makeCached.bind(this)<T>
+
+        return {
+            for(node: N): Cached<T> {
+                let slots = nodeSlots.get(node)
+                if (!slots) {
+                    slots = new Map<symbol, Cached<unknown>>()
+                    nodeSlots.set(node, slots)
+                }
+                const existingCached = slots.get(key)
+                if (existingCached) return existingCached as Cached<T>
+
+                const cached = makeCached(() => compute(node), deps(node))
+                slots.set(key, cached)
+                return cached
+            },
+        }
+    }
+
+    public projectCache<T>(deps: () => Cached<unknown>[], compute: () => T): ProjectCache<T> {
+        return this.wrapCellWithCached(new FixpointCell(compute), deps())
+    }
+
+    public signal(): Signal {
+        return this.makeCached<void>(() => undefined)
+    }
+
+    private wrapCellWithCached<T>(cell: Cell<T>, deps?: Cached<unknown>[]): Cached<T> {
+        const cached: Cached<T> = {
+            get(): T {
+                return cell.value
+            },
+            invalidate(): void {
+                cell.invalidate()
+            },
+        }
+        this.cellStorage.register(cached, cell)
+        if (deps)
+            deps.forEach((dep) => {
+                this.cellStorage.addDependency(cached, dep)
+            })
+        return cached
+    }
+
+    private makeCached<T>(computeFn: () => T, deps?: Cached<unknown>[]): Cached<T> {
+        const cell = new SimpleCell<T>(computeFn)
+        return this.wrapCellWithCached(cell, deps)
+    }
+
+    private makeFileInput<V>(): FileInput<V> {
+        const store = new Map<string, V>()
+        const cells = new Map<string, { cell: Cell<V>; cached: Cached<V> }>()
+
+        const wrapCellWithCached = this.wrapCellWithCached.bind(this)<V>
+
+        function getOrCreateEntry(key: string): { cell: Cell<V>; cached: Cached<V> } {
+            const existing = cells.get(key)
+            if (existing) return existing
+            const cell = new SimpleCell<V>(() => {
+                const val = store.get(key)
+                if (val === undefined) throw new Error(`Entry for key ${key} not initialized`)
+                return val
+            })
+            const entry = { cell, cached: wrapCellWithCached(cell) }
+            cells.set(key, entry)
+            return entry
+        }
+
+        return {
+            for(key: string): Cached<V> {
+                return getOrCreateEntry(key).cached
+            },
+            set(key: string, value: V): void {
+                store.set(key, value)
+                getOrCreateEntry(key).cell.invalidate()
+            },
+            invalidate(key: string): void {
+                getOrCreateEntry(key).cell.invalidate()
+            },
+        }
     }
 }
 
@@ -253,96 +264,6 @@ function createFileInput<V>(): FileInput<V> {
  * @param filePaths - the source files to register with the engine
  * @returns a fully initialized `CacheEngine`
  */
-export function createCacheEngine(filePaths: string[]): CacheEngine {
-    // node-level WeakMap: node → (symbol → Cell)
-    const nodeSlots = new WeakMap<object, Map<symbol, Cell<unknown>>>()
-
-    const fileData = createFileInput<FileInfo>()
-
-    return {
-        getFilePaths(): string[] {
-            return filePaths
-        },
-
-        fileData,
-
-        fileInput<T>(): FileInput<T> {
-            return createFileInput<T>()
-        },
-
-        projectInput<T>(): ProjectInput<T> {
-            let stored: { value: T } | undefined
-            const cell = createCell<T>(() => {
-                if (stored === undefined) throw new Error("Project input not initialized")
-                return stored.value
-            })
-            const cached = makeCached(cell)
-            return {
-                value: cached,
-                set(value: T): void {
-                    stored = { value }
-                    cellInvalidate(cell as Cell<unknown>)
-                },
-            }
-        },
-
-        fileCache<T>(deps: (filePath: string) => Cached<unknown>[], compute: (filePath: string) => T): FileCache<T> {
-            const caches = new Map<string, Cached<T>>()
-
-            return {
-                for(filePath: string): Cached<T> {
-                    const existing = caches.get(filePath)
-                    if (existing) return existing
-                    const cell = createCell<T>(() => compute(filePath))
-                    for (const dep of deps(filePath)) {
-                        wireDepToCell(cell as Cell<unknown>, dep)
-                    }
-                    const cached = makeCached(cell)
-                    caches.set(filePath, cached)
-                    return cached
-                },
-            }
-        },
-
-        nodeCache<N extends object, T>(deps: (node: N) => Cached<unknown>[], compute: (node: N) => T): NodeCache<N, T> {
-            const key = Symbol()
-
-            return {
-                for(node: N): Cached<T> {
-                    let slots = nodeSlots.get(node)
-                    if (!slots) {
-                        slots = new Map<symbol, Cell<unknown>>()
-                        nodeSlots.set(node, slots)
-                    }
-                    const existingCell = slots.get(key)
-                    if (existingCell) {
-                        return makeCached(existingCell as Cell<T>)
-                    }
-                    const cell = createCell<T>(() => compute(node))
-                    for (const dep of deps(node)) {
-                        wireDepToCell(cell as Cell<unknown>, dep)
-                    }
-                    slots.set(key, cell as Cell<unknown>)
-                    return makeCached(cell)
-                },
-            }
-        },
-
-        projectCache<T>(deps: () => Cached<unknown>[], compute: () => T): ProjectCache<T> {
-            const cell = createCell<T>(() => {
-                let result = compute()
-                // Fixpoint: if this cell was re-invalidated during compute (by a dep being
-                // invalidated from within compute()), recompute until stable.
-                while (cell.stale) {
-                    cell.stale = false
-                    result = compute()
-                }
-                return result
-            })
-            for (const dep of deps()) {
-                wireDepToCell(cell as Cell<unknown>, dep)
-            }
-            return makeCached(cell)
-        },
-    }
+export function createCacheEngine(filePaths: string[]) {
+    return new CacheEngine(filePaths)
 }

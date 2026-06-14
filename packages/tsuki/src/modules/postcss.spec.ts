@@ -3,6 +3,7 @@ import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { findPostcssConfig, addToConfig, postcssModule, createPostcssModule } from "./postcss"
+import { noop } from "@mochi-css/core"
 
 vi.mock("@clack/prompts", () => ({
     confirm: vi.fn(),
@@ -224,9 +225,6 @@ describe("addToConfig with pluginOptions", () => {
 })
 
 describe("createPostcssModule", () => {
-    const noop = () => {
-        // no-op
-    }
     const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
     it("auto mode skips prompts and auto-detects existing config", async () => {
@@ -256,9 +254,6 @@ describe("createPostcssModule", () => {
 })
 
 describe("postcssModule.run", () => {
-    const noop = () => {
-        // no-op
-    }
     const ctx = { requirePackage: noop, requirePackages: noop, nonInteractive: false as const, moduleOptions: {} }
 
     it("returns early when user declines PostCSS", async () => {

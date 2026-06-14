@@ -1,9 +1,23 @@
 import { describe, it, expect } from "vitest"
 import { styledIdPlugin } from "./styledIdPlugin"
 import { FullContext } from "@mochi-css/config"
-import { parseSource, StageRunner } from "@mochi-css/builder"
+import { AnalysisContext, parseSource, StageRunner } from "@mochi-css/builder"
+import { StyleGenerator } from "./types"
+import { noop } from "@mochi-css/core"
 import type { StyleExtractor } from "./types"
 import type * as SWC from "@swc/core"
+
+class MinimalGenerator extends StyleGenerator {
+    override mockFunction(): unknown {
+        return undefined
+    }
+    collectArgs(): void {
+        /* empty */
+    }
+    override async generateStyles() {
+        return {}
+    }
+}
 
 const mockStyledExtractor: StyleExtractor = {
     importPath: "@mochi-css/vanilla-react",
@@ -12,25 +26,9 @@ const mockStyledExtractor: StyleExtractor = {
         return call.arguments.map((a) => a.expression).slice(1)
     },
     startGeneration() {
-        return {
-            mockFunction() {
-                /* empty */
-            },
-            collectArgs() {
-                /* empty */
-            },
-            extractSubstitution() {
-                return null
-            },
-            async generateStyles() {
-                return {}
-            },
-        }
+        return new MinimalGenerator()
     },
 }
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = () => {}
 
 describe("styledIdPlugin — filePreProcess (runtime injection)", () => {
     it("registers a file transformation via onLoad", () => {
@@ -89,14 +87,13 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
         const runner = new StageRunner([module], [], noop, () => null)
 
         const transforms = context.sourceTransforms.getAll()
-        const fakeCtx = {
+        const fakeCtx: AnalysisContext = {
             evaluator: undefined as never,
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            emitChunk: () => {},
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            markForEval: () => {},
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            emitModifiedSource: () => {},
+            emitChunk: noop,
+            markForEval: noop,
+            emitModifiedSource: noop,
+            emitCssAst: noop,
+            markJsMutated: noop,
         }
         for (const transform of transforms) {
             await transform(runner, fakeCtx)
@@ -144,14 +141,13 @@ describe("styledIdPlugin — sourceTransforms (AST mutation)", () => {
         const module = await parseSource(source, "src/Button.ts")
         const runner = new StageRunner([module], [], noop, () => null)
 
-        const fakeCtx = {
+        const fakeCtx: AnalysisContext = {
             evaluator: undefined as never,
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            emitChunk: () => {},
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            markForEval: () => {},
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
-            emitModifiedSource: () => {},
+            emitChunk: noop,
+            markForEval: noop,
+            emitModifiedSource: noop,
+            emitCssAst: noop,
+            markJsMutated: noop,
         }
         const [hook] = context.sourceTransforms.getAll()
         await hook?.(runner, fakeCtx)

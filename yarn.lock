@@ -1833,8 +1833,10 @@ __metadata:
     "@mochi-css/test": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
+    "@types/css-tree": "npm:^2.3.10"
     "@types/diff": "npm:^8.0.0"
     "@types/node": "npm:^24.8.1"
+    css-tree: "npm:^3.1.0"
     dedent: "npm:^1.7.1"
     diff: "npm:^8.0.3"
     eslint: "npm:^9.39.2"
@@ -1867,7 +1869,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/core@npm:^6.0.0, @mochi-css/core@workspace:packages/core":
+"@mochi-css/core@npm:^6.0.0, @mochi-css/core@workspace:^, @mochi-css/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@mochi-css/core@workspace:packages/core"
   dependencies:
@@ -1983,7 +1985,9 @@ __metadata:
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@swc/core": "npm:^1.15.13"
     "@swc/types": "npm:^0.1.25"
+    "@types/css-tree": "npm:^2.3.10"
     "@types/node": "npm:^24.8.1"
+    css-tree: "npm:^3.1.0"
     dedent: "npm:^1.7.1"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -2121,6 +2125,7 @@ __metadata:
   resolution: "@mochi-css/tsuki@workspace:packages/tsuki"
   dependencies:
     "@clack/prompts": "npm:^1.0.1"
+    "@mochi-css/core": "workspace:^"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
     "@types/cross-spawn": "npm:^6.0.6"

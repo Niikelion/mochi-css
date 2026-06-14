@@ -1,23 +1,23 @@
 import { describe, it, expect, vi } from "vitest"
 import { parseSource, StageRunner } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
-import { importStageDef } from "./ImportSpecStage"
-import { derivedStageDef } from "./DerivedExtractorStage"
-import { styleExprStageDef } from "./StyleExprStage"
-import { bindingStageDef } from "./BindingStage"
+import { ImportStage } from "./ImportSpecStage"
+import { DerivedStage } from "./DerivedExtractorStage"
+import { StyleExprStage } from "./StyleExprStage"
+import { BindingStage } from "./BindingStage"
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 async function buildFileInfo(source: string, resolveImport = () => null, onDiagnostic: OnDiagnostic = () => {}) {
     const module = await parseSource(source, "test.ts")
     const runner = new StageRunner(
         [module],
-        [importStageDef, derivedStageDef, styleExprStageDef, bindingStageDef],
+        [ImportStage, DerivedStage, StyleExprStage, BindingStage],
         onDiagnostic,
         resolveImport,
     )
-    const importOut = runner.getInstance(importStageDef)
+    const importOut = runner.getInstance(ImportStage)
     importOut.extractors.set(new Map())
-    const bindingOut = runner.getInstance(bindingStageDef)
+    const bindingOut = runner.getInstance(BindingStage)
     return bindingOut.fileBindings.for(module.filePath).get()
 }
 

@@ -16,6 +16,7 @@ export function createBuilder(config: Config, context: FullContext): Builder {
         sourceTransforms: [...context.sourceTransforms.getAll()],
         postEvalTransforms: [...context.postEvalTransforms.getAll()],
         emitHooks: [...context.emitHooks.getAll()],
+        postProcessHooks: [...context.postProcessHooks.getAll()],
         cleanup: () => {
             context.cleanup.runAll()
         },

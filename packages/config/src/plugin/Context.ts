@@ -4,7 +4,14 @@ import {
     TransformationHookProvider,
 } from "./TransformationPipeline"
 import { globExToRegex } from "./globEx"
-import type { AstPostProcessor, EmitHook, StageDefinition, StageRunner, MutableFileEntry } from "@mochi-css/builder"
+import type {
+    AstPostProcessor,
+    EmitHook,
+    PostProcessHook,
+    StageDefinition,
+    StageRunner,
+    MutableFileEntry,
+} from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type * as SWC from "@swc/core"
 
@@ -50,6 +57,10 @@ export interface StageHookProvider {
 
 export interface EmitHookProvider {
     register(hook: EmitHook): void
+}
+
+export interface PostProcessHookProvider {
+    register(hook: PostProcessHook): void
 }
 
 export interface CleanupHookProvider {
@@ -129,6 +140,18 @@ class EmitHookCollector implements EmitHookProvider {
     }
 
     getAll(): EmitHook[] {
+        return [...this.hooks]
+    }
+}
+
+class PostProcessHookCollector implements PostProcessHookProvider {
+    private readonly hooks: PostProcessHook[] = []
+
+    register(hook: PostProcessHook): void {
+        this.hooks.push(hook)
+    }
+
+    getAll(): PostProcessHook[] {
         return [...this.hooks]
     }
 }
@@ -254,6 +277,7 @@ export interface PluginContext {
     readonly postEvalTransforms: PostEvalTransformHookProvider
     readonly stages: StageHookProvider
     readonly emitHooks: EmitHookProvider
+    readonly postProcessHooks: PostProcessHookProvider
     readonly cleanup: CleanupHookProvider
     readonly onDiagnostic: OnDiagnostic
     readonly initializeStages: InitializeStagesHookProvider
@@ -270,6 +294,7 @@ export class FullContext implements PluginContext {
     readonly postEvalTransforms = new PostEvalTransformCollector()
     readonly stages = new StageCollector()
     readonly emitHooks = new EmitHookCollector()
+    readonly postProcessHooks = new PostProcessHookCollector()
     readonly cleanup = new CleanupCollector()
     readonly onDiagnostic: OnDiagnostic
     readonly initializeStages = new InitializeStagesCollector()

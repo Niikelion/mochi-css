@@ -1,5 +1,5 @@
 import * as SWC from "@swc/core"
-import { createCacheEngine } from "@/analysis/CacheEngine"
+import { createCacheEngine, Signal } from "@/analysis/CacheEngine"
 import type { CacheEngine } from "@/analysis/CacheEngine"
 import type { AnyStage, StageContext, StageDefinition } from "@/analysis/Stage"
 import { topoSort } from "@/analysis/helpers"
@@ -21,6 +21,7 @@ export class StageRunner {
     private readonly instanceMap: Map<AnyStage, unknown>
     private readonly filePaths: string[]
     public readonly engine: CacheEngine
+    private readonly evaluationSignal: Signal
 
     constructor(modules: Module[], stages: readonly AnyStage[], log: OnDiagnostic, resolveImport: ResolveImport) {
         this.filePaths = modules.map((m) => m.filePath)
@@ -30,6 +31,8 @@ export class StageRunner {
             this.engine.fileData.set(module.filePath, module)
         }
 
+        this.evaluationSignal = this.engine.signal()
+
         const sorted = topoSort(stages)
         const instanceMap = new Map<AnyStage, unknown>()
 
@@ -37,6 +40,9 @@ export class StageRunner {
             registry: this.engine,
             log,
             resolveImport,
+            steps: {
+                evaluation: this.evaluationSignal,
+            },
         }
 
         for (const stage of sorted) {
@@ -46,6 +52,10 @@ export class StageRunner {
             instanceMap.set(stage, instance)
         }
         this.instanceMap = instanceMap
+    }
+
+    public markEvaluated(): void {
+        this.evaluationSignal.invalidate()
     }
 
     public getFilePaths(): string[] {
