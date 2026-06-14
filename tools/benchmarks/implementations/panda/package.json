@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "vite",
         "prepare": "panda codegen",
-        "build": "vite build",
+        "build": "panda codegen && vite build",
         "preview": "vite preview"
     },
     "dependencies": {
