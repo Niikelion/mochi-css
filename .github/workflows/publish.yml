@@ -23,7 +23,7 @@ jobs:
             -   name: Install dependencies
                 run: yarn install --immutable
             -   name: Build packages
-                run: yarn turbo build --filter="!./tools/**"
+                run: yarn build
             -   name: Find packages to publish
                 run: |
                     PKGS=""
