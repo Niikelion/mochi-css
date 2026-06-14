@@ -23,7 +23,7 @@
             "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
         },
         "@mochi-css/benchmark-mochi-stitches#build": {
-            "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
+            "dependsOn": [ "@mochi-css/benchmarks#codegen", "^build" ]
         },
         "@mochi-css/benchmark-vanilla-extract#build": {
             "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
