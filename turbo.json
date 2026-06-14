@@ -5,6 +5,35 @@
             "dependsOn": [ "^build" ],
             "outputs": [ "dist/**" ]
         },
+        "@mochi-css/benchmarks#codegen": {
+            "inputs": [
+                "codegen/**",
+                "implementations/mochi-vanilla-react/src/**"
+            ],
+            "outputs": [
+                "implementations/stitches/src/**",
+                "implementations/mochi-stitches/src/**",
+                "implementations/vanilla-extract/src/**",
+                "implementations/panda/src/**",
+                "implementations/panda/panda.config.ts",
+                "implementations/css-modules/src/**"
+            ]
+        },
+        "@mochi-css/benchmark-stitches#build": {
+            "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
+        },
+        "@mochi-css/benchmark-mochi-stitches#build": {
+            "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
+        },
+        "@mochi-css/benchmark-vanilla-extract#build": {
+            "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
+        },
+        "@mochi-css/benchmark-panda#build": {
+            "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
+        },
+        "@mochi-css/benchmark-css-modules#build": {
+            "dependsOn": [ "@mochi-css/benchmarks#codegen" ]
+        },
         "test": {},
         "coverage": {},
         "dev": {
