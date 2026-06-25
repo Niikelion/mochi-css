@@ -1,6 +1,6 @@
-import { styled } from "@mochi-css/vanilla-react"
-import { css } from "@mochi-css/vanilla"
-import { Colors } from "./colors.ts"
+import { styled } from "@mochi-css/vanilla-react";
+import { css } from "@mochi-css/vanilla";
+import { Colors } from "./colors.ts";
 
 const textStyles = css({
     fontFamily: "'IBM Plex Mono', monospace",
@@ -10,16 +10,16 @@ const textStyles = css({
     variants: {
         color: {
             dim: {
-                color: Colors.dim
+                color: Colors.dim,
             },
             bright: {
-                color: Colors.bright
-            }
-        }
-    }
-})
+                color: Colors.bright,
+            },
+        },
+    },
+});
 
-export const EN = styled("p", textStyles)
+export const EN = styled("p", textStyles);
 
 export const JP = styled("p", textStyles, {
     fontFamily: "'Noto Sans JP', sans-serif",
@@ -29,9 +29,9 @@ export const JP = styled("p", textStyles, {
     variants: {
         vertical: {
             true: {
-                letterSpacing: '0.2em',
-                writingMode: 'vertical-rl',
-            }
-        }
-    }
-})
+                letterSpacing: "0.2em",
+                writingMode: "vertical-rl",
+            },
+        },
+    },
+});
