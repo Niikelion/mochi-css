@@ -1,21 +1,24 @@
-import '@fontsource/ibm-plex-mono/300.css'
-import '@fontsource/ibm-plex-mono/400.css'
-import '@fontsource/noto-sans-jp/300.css'
+import "@fontsource/ibm-plex-mono/300.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/noto-sans-jp/300.css";
 
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import { globalCss } from "@mochi-css/vanilla"
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import { globalCss } from "@mochi-css/vanilla";
 
 globalCss({
     body: {
         backgroundColor: "#1e1e1e",
         margin: 0,
     },
-})
+});
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error("Root element not found");
+
+createRoot(rootElement).render(
     <StrictMode>
         <App />
     </StrictMode>,
-)
+);

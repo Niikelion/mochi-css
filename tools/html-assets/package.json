@@ -7,26 +7,26 @@
         "dev": "vite",
         "build": "tsc -b && vite build",
         "preview": "vite preview",
-        "screenshot-banners": "tsx scripts/screenshot-banners.ts"
+        "screenshot-banners": "tsx scripts/screenshot-banners.ts",
+        "lint": "eslint src"
     },
     "dependencies": {
         "@fontsource/ibm-plex-mono": "^5.1.0",
         "@fontsource/noto-sans-jp": "^5.1.0",
         "@mochi-css/vanilla": "^8.0.0",
         "@mochi-css/vanilla-react": "^7.0.2",
-        "eslint-plugin-react-hooks": "^7.1.0",
-        "eslint-plugin-react-refresh": "^0.5.2",
-        "globals": "^17.5.0",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "wouter": "^3.9.0"
     },
     "devDependencies": {
+        "@mochi-css/shared-config": "workspace:^",
         "@mochi-css/vite": "^6.0.1",
         "@types/node": "^24.12.2",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.1",
+        "eslint": "^9.39.2",
         "playwright": "^1.52.0",
         "tsx": "^4.19.4",
         "typescript": "~6.0.2",
