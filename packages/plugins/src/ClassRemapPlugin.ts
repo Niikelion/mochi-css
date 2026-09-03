@@ -57,6 +57,9 @@ export function createClassRemapPlugin(options: ClassRemapOptions = {}): MochiPl
 
                             if (classNodes.length === 1) {
                                 const name = first.name
+                                // Only remap mochi-generated internal class names; leave
+                                // user-authored selectors (e.g. `.ProseMirror`) untouched.
+                                if (!classNameLiterals.has(name)) return
                                 if (!remap.has(name)) {
                                     const newName = remapFn
                                         ? remapFn(name, { source, isVariant: false })
@@ -71,6 +74,8 @@ export function createClassRemapPlugin(options: ClassRemapOptions = {}): MochiPl
                                 for (let i = 1; i < classNodes.length; i++) {
                                     const varNode = classNodes[i]
                                     if (!varNode || remap.has(varNode.name)) continue
+                                    // Skip user-authored classes in compound/descendant selectors.
+                                    if (!classNameLiterals.has(varNode.name)) continue
                                     const li = variantLetterIdx.get(mainMapped) ?? 0
                                     const newName = remapFn
                                         ? remapFn(varNode.name, { source, isVariant: true, parentName: mainMapped })
