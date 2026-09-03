@@ -9,8 +9,8 @@
         "lint": "eslint --config eslint.config.mjs"
     },
     "dependencies": {
-        "@mochi-css/vanilla": "^8.0.1",
-        "@mochi-css/vanilla-react": "^7.0.3",
+        "@mochi-css/vanilla": "^9.0.0",
+        "@mochi-css/vanilla-react": "^7.0.4",
         "next": "^16.1.6",
         "react": "^19",
         "react-dom": "^19"
@@ -18,9 +18,9 @@
     "devDependencies": {
         "@eslint/eslintrc": "^3",
         "@mochi-css/builder": "^7.1.0",
-        "@mochi-css/config": "^7.0.0",
-        "@mochi-css/next": "^6.0.2",
-        "@mochi-css/postcss": "^6.0.1",
+        "@mochi-css/config": "^7.1.0",
+        "@mochi-css/next": "^6.0.3",
+        "@mochi-css/postcss": "^6.0.2",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",

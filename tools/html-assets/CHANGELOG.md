@@ -1,5 +1,12 @@
 # @mochi-css/html-assets
 
+## 0.0.5
+
+### Patch Changes
+
+- @mochi-css/vanilla@9.0.0
+- @mochi-css/vanilla-react@7.0.4
+
 ## 0.0.4
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @mochi-css/next
 
+## 6.0.3
+
+### Patch Changes
+
+- Updated dependencies [fa6f315]
+  - @mochi-css/config@7.1.0
+
 ## 6.0.2
 
 ### Patch Changes

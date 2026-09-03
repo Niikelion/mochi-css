@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/esbuild",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "7.1.0",
+    "version": "7.1.1",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -38,7 +38,7 @@
     },
     "dependencies": {
         "@mochi-css/builder": "7.1.0",
-        "@mochi-css/config": "7.0.0"
+        "@mochi-css/config": "7.1.0"
     },
     "peerDependencies": {
         "esbuild": "^0.25"

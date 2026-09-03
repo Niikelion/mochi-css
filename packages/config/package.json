@@ -1,6 +1,6 @@
 {
     "name": "@mochi-css/config",
-    "version": "7.0.0",
+    "version": "7.1.0",
     "license": "MIT",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "main": "dist/index.js",
