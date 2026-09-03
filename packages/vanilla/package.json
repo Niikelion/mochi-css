@@ -67,9 +67,9 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
-        "@mochi-css/builder": "^7.1.0",
-        "@mochi-css/config": "^7.0.0",
-        "@mochi-css/plugins": "^7.1.0",
+        "@mochi-css/builder": "7.1.0",
+        "@mochi-css/config": "7.0.0",
+        "@mochi-css/plugins": "7.1.1",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
         "@swc/core": "^1.15.13",
@@ -91,14 +91,14 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/core": "^6.0.0",
+        "@mochi-css/core": "6.0.0",
         "clsx": "^2.1.1",
         "csstype": "^3.2.3"
     },
     "peerDependencies": {
-        "@mochi-css/builder": "^7.1.0",
-        "@mochi-css/config": "^7.0.0",
-        "@mochi-css/plugins": "^7.1.0",
+        "@mochi-css/builder": "7.1.0",
+        "@mochi-css/config": "7.0.0",
+        "@mochi-css/plugins": "7.1.1",
         "@swc/core": "^1"
     },
     "peerDependenciesMeta": {

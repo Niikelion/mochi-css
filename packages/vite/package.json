@@ -34,8 +34,8 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/builder": "^7.0.0",
-        "@mochi-css/config": "^7.0.0",
+        "@mochi-css/builder": "7.1.0",
+        "@mochi-css/config": "7.0.0",
         "diff": "^8.0.3"
     },
     "peerDependencies": {
