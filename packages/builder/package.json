@@ -40,7 +40,7 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/core": "^6.0.0",
+        "@mochi-css/core": "6.0.0",
         "@swc/core": "^1.15.13",
         "css-tree": "^3.1.0",
         "dedent": "^1.7.1",
