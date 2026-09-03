@@ -8,5 +8,5 @@
         "skipLibCheck": true,
         "outDir": "dist-scripts"
     },
-    "include": ["scripts/**/*", "tests/**/*", "playwright.config.ts"]
+    "include": ["scripts/**/*", "tests/**/*", "codegen/**/*", "playwright.config.ts"]
 }

@@ -1632,7 +1632,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/gen-mapping@npm:^0.3.12, @jridgewell/gen-mapping@npm:^0.3.5":
+"@jridgewell/gen-mapping@npm:^0.3.12, @jridgewell/gen-mapping@npm:^0.3.13, @jridgewell/gen-mapping@npm:^0.3.5":
   version: 0.3.13
   resolution: "@jridgewell/gen-mapping@npm:0.3.13"
   dependencies:
@@ -1828,6 +1828,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
   dependencies:
+    "@jridgewell/gen-mapping": "npm:^0.3.13"
+    "@jridgewell/trace-mapping": "npm:^0.3.31"
     "@mochi-css/core": "npm:6.0.0"
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
@@ -2151,6 +2153,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla-react@workspace:packages/vanilla-react"
   dependencies:
+    "@jridgewell/gen-mapping": "npm:^0.3.13"
+    "@jridgewell/trace-mapping": "npm:^0.3.31"
     "@mochi-css/builder": "npm:7.1.0"
     "@mochi-css/config": "npm:7.1.0"
     "@mochi-css/plugins": "npm:7.1.2"

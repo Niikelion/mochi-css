@@ -7,6 +7,7 @@ type DiskManifest = {
     global?: string
     files: Record<string, string>
     sourcemods?: Record<string, string>
+    sourcemaps?: Record<string, string>
 }
 
 async function writeIfChanged(filePath: string, content: string): Promise<void> {
@@ -20,7 +21,12 @@ async function writeIfChanged(filePath: string, content: string): Promise<void> 
 }
 
 async function writeCssFiles(
-    css: { global?: string; files?: Record<string, string>; sourcemods?: Record<string, string> },
+    css: {
+        global?: string
+        files?: Record<string, string>
+        sourcemods?: Record<string, string>
+        sourcemaps?: Record<string, string>
+    },
     tmpDir: string,
 ): Promise<void> {
     await fs.promises.mkdir(tmpDir, { recursive: true })
@@ -31,7 +37,7 @@ async function writeCssFiles(
             .map(f => systemPath.resolve(tmpDir, f)),
     )
 
-    const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
+    const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods, sourcemaps: css.sourcemaps }
     const writtenCssPaths = new Set<string>()
 
     if (css.global) {

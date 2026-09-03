@@ -53,6 +53,8 @@
         "format": "prettier --write ."
     },
     "devDependencies": {
+        "@jridgewell/gen-mapping": "^0.3.13",
+        "@jridgewell/trace-mapping": "^0.3.31",
         "@mochi-css/builder": "7.1.0",
         "@mochi-css/shared-config": "^2.0.0",
         "@mochi-css/test": "^2.0.0",
