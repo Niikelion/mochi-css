@@ -1,4 +1,4 @@
-import { path } from "@/utils"
+import { path, resolveCandidates } from "@/utils"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
 import * as csstree from "css-tree"
@@ -142,7 +142,15 @@ export class Builder {
     }
 
     private buildResolveImport(modules: Module[]): ResolveImport {
-        const knownFiles = new Set(modules.map((m) => m.filePath))
+        // Module filePaths may arrive with either separator (tests on Windows using node:path
+        // produce backslashes; the pipeline's own path.resolve produces posix). Look up under a
+        // posix-normalized index but return the module's ORIGINAL filePath — every downstream
+        // stage keys on that shape and must see it unchanged.
+        const knownFilesByPosix = new Map<string, string>()
+        for (const m of modules) {
+            knownFilesByPosix.set(path.fromSystemPath(m.filePath), m.filePath)
+        }
+        const lookup = (resolved: string): string | null => knownFilesByPosix.get(path.fromSystemPath(resolved)) ?? null
 
         const packageMap = new Map<string, string>()
         for (const root of this.options.roots) {
@@ -153,33 +161,32 @@ export class Builder {
 
         return (fromFile, importSource) => {
             const dir = path.dirname(fromFile)
-            // Try common extensions
-            const extensions = ["", ".ts", ".tsx", ".js", ".jsx"]
-            for (const ext of extensions) {
-                const resolved = path.resolve(dir, importSource + ext)
-                if (knownFiles.has(resolved)) {
-                    return resolved
+            for (const candidate of resolveCandidates(importSource)) {
+                // Try common extensions
+                for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
+                    const hit = lookup(path.resolve(dir, candidate + ext))
+                    if (hit !== null) return hit
                 }
-            }
-            // Try index files
-            for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
-                const resolved = path.resolve(dir, importSource, "index" + ext)
-                if (knownFiles.has(resolved)) {
-                    return resolved
+                // Try index files
+                for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                    const hit = lookup(path.resolve(dir, candidate, "index" + ext))
+                    if (hit !== null) return hit
                 }
             }
             // Try package-name resolution for named roots
             for (const [pkgName, sourceDir] of packageMap) {
                 if (importSource === pkgName || importSource.startsWith(pkgName + "/")) {
-                    const subPath = importSource.slice(pkgName.length)
-                    const base = path.resolve(sourceDir, subPath.replace(/^\//, "") || "index")
-                    for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
-                        const resolved = base + ext
-                        if (knownFiles.has(resolved)) return resolved
-                    }
-                    for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
-                        const resolved = path.resolve(sourceDir, subPath.replace(/^\//, ""), "index" + ext)
-                        if (knownFiles.has(resolved)) return resolved
+                    const subPath = importSource.slice(pkgName.length).replace(/^\//, "") || "index"
+                    for (const candidate of resolveCandidates(subPath)) {
+                        const base = path.resolve(sourceDir, candidate)
+                        for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
+                            const hit = lookup(base + ext)
+                            if (hit !== null) return hit
+                        }
+                        for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                            const hit = lookup(path.resolve(sourceDir, candidate, "index" + ext))
+                            if (hit !== null) return hit
+                        }
                     }
                 }
             }
