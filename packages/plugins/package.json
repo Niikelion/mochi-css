@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/plugins",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "7.1.3",
+    "version": "7.1.4",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -28,8 +28,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/builder": "7.2.0",
-        "@mochi-css/config": "7.1.1",
+        "@mochi-css/builder": "7.2.1",
+        "@mochi-css/config": "7.1.2",
         "@mochi-css/core": "6.0.0",
         "@swc/core": "^1.15.13",
         "css-tree": "^3.1.0"

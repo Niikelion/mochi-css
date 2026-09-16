@@ -1,6 +1,6 @@
 {
     "name": "@mochi-css/config",
-    "version": "7.1.1",
+    "version": "7.1.2",
     "license": "MIT",
     "repository": "git@github.com:Niikelion/mochi-css.git",
     "main": "dist/index.js",
@@ -28,7 +28,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/builder": "7.2.0",
+        "@mochi-css/builder": "7.2.1",
         "@mochi-css/core": "6.0.0",
         "@swc/core": "^1.15.13",
         "jiti": "^2.6.1"

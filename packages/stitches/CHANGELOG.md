@@ -1,5 +1,15 @@
 # @mochi-css/stitches
 
+## 5.0.1
+
+### Patch Changes
+
+- Updated dependencies [3ddc344]
+  - @mochi-css/builder@7.2.1
+  - @mochi-css/config@7.1.2
+  - @mochi-css/plugins@7.1.4
+  - @mochi-css/vanilla@10.0.1
+
 ## 5.0.0
 
 ### Patch Changes

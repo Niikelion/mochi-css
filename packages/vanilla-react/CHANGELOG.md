@@ -1,5 +1,13 @@
 # @mochi-css/react
 
+## 7.0.6
+
+### Patch Changes
+
+- @mochi-css/config@7.1.2
+- @mochi-css/plugins@7.1.4
+- @mochi-css/vanilla@10.0.1
+
 ## 7.0.5
 
 ### Patch Changes

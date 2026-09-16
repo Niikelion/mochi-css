@@ -1,5 +1,13 @@
 # @mochi-css/plugins
 
+## 7.1.4
+
+### Patch Changes
+
+- Updated dependencies [3ddc344]
+    - @mochi-css/builder@7.2.1
+    - @mochi-css/config@7.1.2
+
 ## 7.1.3
 
 ### Patch Changes
