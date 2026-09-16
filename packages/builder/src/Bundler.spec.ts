@@ -105,4 +105,19 @@ describe("RolldownBundler", () => {
 
         expect(result).toBeDefined()
     })
+
+    it("resolves .js import specifiers back to .ts source files (NodeNext extension rewrite)", async () => {
+        const bundler = new RolldownBundler()
+
+        const index = path.resolve(process.cwd(), "index.ts")
+        const helper = path.resolve(process.cwd(), "helper.ts")
+
+        const result = await bundler.bundle(index, {
+            // Import specifier uses `.js` (as tsc emits under NodeNext) even though the source is `.ts`.
+            [index]: `import { helper } from "./helper.js"; export const value = helper();`,
+            [helper]: `export const helper = () => 'ok';`,
+        })
+
+        expect(result).toContain("ok")
+    })
 })
