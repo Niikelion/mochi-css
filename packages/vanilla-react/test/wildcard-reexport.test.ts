@@ -142,9 +142,13 @@ describe("wildcard re-exports (#41)", () => {
 
         const barrel = await parseSource(`export * from "./component"`, barrelPath)
 
-        const { chunks } = await runPipeline([component, barrel])
+        const { chunks, diagnostics } = await runPipeline([component, barrel])
 
         expect(cssFromChunks(chunks)).toContain("red")
+        // Sanity: no unresolved-import diagnostic. Path-separator mismatches (module.filePath
+        // constructed via node:path on Windows vs the pipeline's posix-normalized path util)
+        // would otherwise drop the wildcard here even without any extension in the specifier.
+        expect(diagnostics.filter((d) => d.code === "MOCHI_UNRESOLVED_IMPORT")).toEqual([])
     })
 
     it("extracts styles across a multi-hop barrel chain (`export *` -> `export *`)", async () => {
@@ -175,11 +179,12 @@ describe("wildcard re-exports (#41)", () => {
             consumerPath,
         )
 
-        const { chunks } = await runPipeline([component, innerBarrel, outerBarrel, consumer])
+        const { chunks, diagnostics } = await runPipeline([component, innerBarrel, outerBarrel, consumer])
 
         const css = cssFromChunks(chunks)
         expect(css).toContain("purple")
         expect(css).toContain("blue")
+        expect(diagnostics.filter((d) => d.code === "MOCHI_UNRESOLVED_IMPORT")).toEqual([])
     })
 
     it("traces a styled binding back through a wildcard barrel for extends", async () => {
@@ -211,10 +216,11 @@ describe("wildcard re-exports (#41)", () => {
             consumerPath,
         )
 
-        const { chunks } = await runPipeline([component, barrel, consumer])
+        const { chunks, diagnostics } = await runPipeline([component, barrel, consumer])
 
         const css = cssFromChunks(chunks)
         expect(css).toContain("red")
         expect(css).toContain("blue")
+        expect(diagnostics.filter((d) => d.code === "MOCHI_UNRESOLVED_IMPORT")).toEqual([])
     })
 })
