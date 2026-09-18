@@ -254,4 +254,26 @@ describe("css", () => {
         })
         expect(styles.variant({ size: undefined })).toEqual(styles.classNames.join(" "))
     })
+
+    it("explicit className is used verbatim as the class name", () => {
+        const styles = css({ className: "my-button", color: "red" })
+        expect(styles.classNames).toContain("my-button")
+        expect(styles.classNames).toHaveLength(1)
+    })
+
+    it("explicit className works with variants", () => {
+        const styles = css({
+            className: "card",
+            padding: "16px",
+            variants: {
+                size: {
+                    sm: { fontSize: "12px" },
+                    lg: { fontSize: "18px" },
+                },
+            },
+        })
+        expect(styles.classNames).toContain("card")
+        expect(styles.variant({ size: "sm" })).toContain("card")
+        expect(styles.variant({ size: "sm" })).not.toEqual("card")
+    })
 })
