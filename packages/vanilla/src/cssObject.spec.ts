@@ -747,3 +747,40 @@ describe("CssObject", () => {
         expect(rules.find((r) => r.selector === goldCompoundSelector)).toBeUndefined()
     })
 })
+
+describe("explicit className", () => {
+    it("uses the provided className verbatim", () => {
+        const obj = new CSSObject({ color: "red", className: "my-button" })
+        expect(obj.mainBlock.className).toBe("my-button")
+        expect(obj.hasExplicitClassName).toBe(true)
+    })
+
+    it("falls back to hash-based name when className is not provided", () => {
+        const obj = new CSSObject({ color: "red" })
+        expect(obj.mainBlock.className).toMatch(/^c/)
+        expect(obj.hasExplicitClassName).toBe(false)
+    })
+
+    it("className takes priority over stableId", () => {
+        const obj = new CSSObject({ color: "red", className: "explicit" }, "s-stable123")
+        expect(obj.mainBlock.className).toBe("explicit")
+        expect(obj.hasExplicitClassName).toBe(true)
+    })
+
+    it("uses stableId when className is not set", () => {
+        const obj = new CSSObject({ color: "red" }, "s-stable123")
+        expect(obj.mainBlock.className).toBe("s-stable123")
+        expect(obj.hasExplicitClassName).toBe(false)
+    })
+
+    it("variant class names are still auto-generated", () => {
+        const obj = new CSSObject({
+            color: "red",
+            className: "my-button",
+            variants: { size: { sm: { fontSize: "12px" }, lg: { fontSize: "18px" } } },
+        })
+        expect(obj.mainBlock.className).toBe("my-button")
+        expect(obj.variantBlocks.size.sm.className).toMatch(/^c/)
+        expect(obj.variantBlocks.size.lg.className).toMatch(/^c/)
+    })
+})

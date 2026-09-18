@@ -55,6 +55,7 @@ function mochiPrebuiltCallNode(instance: MochiCSS<AllVariants>): SWC.CallExpress
 export class VanillaCssGenerator extends AstStyleGenerator {
     private readonly filesCss = new Map<string, Set<string>>()
     private readonly classNameLiterals = new Map<string, SWC.StringLiteral[]>()
+    private readonly explicitClassNames = new Set<string>()
     private currentSubstitution: SWC.Expression | null = null
     private currentMergedMochi: MochiCSS<AllVariants> | null = null
     private readonly mock: (...args: unknown[]) => unknown
@@ -117,6 +118,9 @@ export class VanillaCssGenerator extends AstStyleGenerator {
                 const cssObj = new CSSObject(style, stableId)
                 css.add(cssObj.asCssString())
                 mochiInstances.push(MochiCSS.from(cssObj))
+                if (cssObj.hasExplicitClassName) {
+                    this.explicitClassNames.add(cssObj.mainBlock.className)
+                }
             } catch (err) {
                 const message = getErrorMessage(err)
                 this.onDiagnostic?.({
@@ -138,13 +142,16 @@ export class VanillaCssGenerator extends AstStyleGenerator {
         this.currentMergedMochi = merged
         this.currentSubstitution = mochiPrebuiltCallNode(merged)
 
-        // Collect StringLiteral refs for the class remap pass
+        // Collect StringLiteral refs for the class remap pass.
+        // Explicit class names (user-provided via className prop) are excluded
+        // so ClassRemapPlugin leaves them untouched.
         const callNode = this.currentSubstitution
         const classNamesArr = callNode.arguments[0]?.expression as SWC.ArrayExpression | undefined
         if (classNamesArr) {
             for (const el of classNamesArr.elements) {
                 if (!el) continue
                 const lit = el.expression as SWC.StringLiteral
+                if (this.explicitClassNames.has(lit.value)) continue
                 getOrInsert(this.classNameLiterals, lit.value, () => []).push(lit)
             }
         }
