@@ -14,7 +14,7 @@ interface CliOptions {
     postcss?: string | true
     vite?: string | true
     next?: string | true
-    esbuild?: string | true
+    tsdown?: string | true
     framework?: string
 }
 
@@ -22,13 +22,13 @@ program
     .name("tsuki")
     .description("Add mochi-css to your project")
     .version(__VERSION__)
-    .addOption(new Option("-p, --preset <preset>", "Preset to use").choices(["vite", "nextjs", "lib", "esbuild"]))
+    .addOption(new Option("-p, --preset <preset>", "Preset to use").choices(["vite", "nextjs", "lib", "tsdown"]))
     .option("-n, --no-interactive", "Non-interactive mode: skip all prompts (treat as cancelled)")
     .option("--install", "Auto-accept package installation without prompting")
     .option("--postcss [path]", "Enable PostCSS module; optionally specify config path")
     .option("--vite [path]", "Use the given Vite config path instead of prompting")
     .option("--next [path]", "Use the given Next.js config path instead of prompting")
-    .option("--esbuild [path]", "Use the given esbuild build script path instead of prompting")
+    .option("--tsdown [path]", "Use the given tsdown config path instead of prompting")
     .addOption(new Option("--framework <framework>", "UI framework to install support for").choices(["react"]))
     .action(async (options: CliOptions) => {
         p.intro(pc.cyan("Installing Mochi-CSS..."))
@@ -69,7 +69,7 @@ program
             else if (presetId === "nextjs") moduleOptions.postcss = true
             if (options.vite !== undefined) moduleOptions.vite = options.vite
             if (options.next !== undefined) moduleOptions.next = options.next
-            if (options.esbuild !== undefined) moduleOptions.esbuild = options.esbuild
+            if (options.tsdown !== undefined) moduleOptions.tsdown = options.tsdown
             if (options.framework !== undefined) moduleOptions.framework = options.framework
 
             await runner.run({

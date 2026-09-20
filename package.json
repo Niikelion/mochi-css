@@ -17,7 +17,8 @@
         "dev": "turbo dev",
         "format": "turbo format",
         "lint": "turbo lint",
-        "report": "yarn workspace @mochi-css/benchmarks report"
+        "report": "yarn workspace @mochi-css/benchmarks report",
+        "assets.generate": "yarn workspace @mochi-css/html-assets screenshot-banners"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.2",

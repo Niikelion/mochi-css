@@ -1824,6 +1824,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mochi-css/bento@workspace:packages/bento":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/bento@workspace:packages/bento"
+  dependencies:
+    "@mochi-css/rolldown": "workspace:^"
+    "@mochi-css/shared-config": "workspace:^"
+    "@mochi-css/test": "workspace:^"
+    "@mochi-css/vanilla": "workspace:^"
+    "@types/node": "npm:^24.8.1"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    clsx: "npm:^2.1.1"
+    eslint: "npm:^9.39.2"
+    happy-dom: "npm:^20.8.9"
+    prettier: "npm:^3.8.1"
+    react: "npm:^19"
+    react-dom: "npm:^19.2.4"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    react: ^19
+  languageName: unknown
+  linkType: soft
+
 "@mochi-css/builder@npm:7.2.1, @mochi-css/builder@npm:^7.2.1, @mochi-css/builder@workspace:packages/builder":
   version: 0.0.0-use.local
   resolution: "@mochi-css/builder@workspace:packages/builder"
@@ -1887,30 +1913,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/esbuild@workspace:packages/esbuild":
-  version: 0.0.0-use.local
-  resolution: "@mochi-css/esbuild@workspace:packages/esbuild"
-  dependencies:
-    "@mochi-css/builder": "npm:7.2.1"
-    "@mochi-css/config": "npm:7.1.2"
-    "@mochi-css/shared-config": "npm:^2.0.0"
-    "@mochi-css/test": "npm:^2.0.0"
-    "@types/node": "npm:^24.8.1"
-    esbuild: "npm:^0.25.0"
-    eslint: "npm:^9.39.2"
-    typescript: "npm:^5.9.3"
-    vitest: "npm:^4.0.15"
-  peerDependencies:
-    esbuild: ^0.25
-  languageName: unknown
-  linkType: soft
-
 "@mochi-css/html-assets@workspace:tools/html-assets":
   version: 0.0.0-use.local
   resolution: "@mochi-css/html-assets@workspace:tools/html-assets"
   dependencies:
     "@fontsource/ibm-plex-mono": "npm:^5.1.0"
     "@fontsource/noto-sans-jp": "npm:^5.1.0"
+    "@mochi-css/shared-config": "workspace:^"
     "@mochi-css/vanilla": "npm:^10.0.0"
     "@mochi-css/vanilla-react": "npm:^7.0.5"
     "@mochi-css/vite": "npm:^6.1.0"
@@ -1918,9 +1927,7 @@ __metadata:
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
     "@vitejs/plugin-react": "npm:^6.0.1"
-    eslint-plugin-react-hooks: "npm:^7.1.0"
-    eslint-plugin-react-refresh: "npm:^0.5.2"
-    globals: "npm:^17.5.0"
+    eslint: "npm:^9.39.2"
     playwright: "npm:^1.52.0"
     react: "npm:^19.2.4"
     react-dom: "npm:^19.2.4"
@@ -2044,7 +2051,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/shared-config@npm:^2.0.0, @mochi-css/shared-config@workspace:packages/shared-config":
+"@mochi-css/rolldown@workspace:^, @mochi-css/rolldown@workspace:packages/rolldown":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/rolldown@workspace:packages/rolldown"
+  dependencies:
+    "@mochi-css/builder": "npm:7.2.1"
+    "@mochi-css/config": "npm:7.1.2"
+    "@mochi-css/core": "npm:6.0.0"
+    "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/test": "npm:^2.0.0"
+    "@types/node": "npm:^24.8.1"
+    eslint: "npm:^9.39.2"
+    rolldown: "npm:^1.0.0-beta.45"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    rolldown: ">=1.0.0-beta.45"
+  languageName: unknown
+  linkType: soft
+
+"@mochi-css/shared-config@npm:^2.0.0, @mochi-css/shared-config@workspace:^, @mochi-css/shared-config@workspace:packages/shared-config":
   version: 0.0.0-use.local
   resolution: "@mochi-css/shared-config@workspace:packages/shared-config"
   dependencies:
@@ -2113,7 +2139,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:packages/test":
+"@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:^, @mochi-css/test@workspace:packages/test":
   version: 0.0.0-use.local
   resolution: "@mochi-css/test@workspace:packages/test"
   dependencies:
@@ -2183,7 +2209,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla@npm:*, @mochi-css/vanilla@npm:10.1.0, @mochi-css/vanilla@npm:^10.0.0, @mochi-css/vanilla@npm:^10.1.0, @mochi-css/vanilla@workspace:packages/vanilla":
+"@mochi-css/vanilla@npm:*, @mochi-css/vanilla@npm:10.1.0, @mochi-css/vanilla@npm:^10.0.0, @mochi-css/vanilla@npm:^10.1.0, @mochi-css/vanilla@workspace:^, @mochi-css/vanilla@workspace:packages/vanilla":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla@workspace:packages/vanilla"
   dependencies:
@@ -2860,6 +2886,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@oxc-project/types@npm:=0.150.0":
+  version: 0.150.0
+  resolution: "@oxc-project/types@npm:0.150.0"
+  checksum: 10c0/e8b72ce72f5cd56b6c1da67dd65677c54850354acb0d2493016c791088f5cad991ba14ea79948ed766f62f6b6048e5de8ace163e154c8f21c550753052ccfe42
+  languageName: node
+  linkType: hard
+
 "@oxc-project/types@npm:=0.95.0":
   version: 0.95.0
   resolution: "@oxc-project/types@npm:0.95.0"
@@ -3218,6 +3251,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-android-arm-eabi@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-android-arm-eabi@npm:1.2.9"
+  conditions: os=android & cpu=arm
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-android-arm64@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-android-arm64@npm:1.0.0-beta.45"
@@ -3242,6 +3282,13 @@ __metadata:
 "@rolldown/binding-android-arm64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-android-arm64@npm:1.0.0-rc.17"
+  conditions: os=android & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-android-arm64@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-android-arm64@npm:1.2.9"
   conditions: os=android & cpu=arm64
   languageName: node
   linkType: hard
@@ -3274,6 +3321,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-darwin-arm64@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-darwin-arm64@npm:1.2.9"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-darwin-x64@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-darwin-x64@npm:1.0.0-beta.45"
@@ -3298,6 +3352,13 @@ __metadata:
 "@rolldown/binding-darwin-x64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-darwin-x64@npm:1.0.0-rc.17"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-darwin-x64@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-darwin-x64@npm:1.2.9"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
@@ -3330,6 +3391,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-freebsd-x64@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-freebsd-x64@npm:1.2.9"
+  conditions: os=freebsd & cpu=x64
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-arm-gnueabihf@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-linux-arm-gnueabihf@npm:1.0.0-beta.45"
@@ -3354,6 +3422,13 @@ __metadata:
 "@rolldown/binding-linux-arm-gnueabihf@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-linux-arm-gnueabihf@npm:1.0.0-rc.17"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-linux-arm-gnueabihf@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-arm-gnueabihf@npm:1.2.9"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
@@ -3386,6 +3461,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-arm64-gnu@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-arm64-gnu@npm:1.2.9"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-arm64-musl@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-linux-arm64-musl@npm:1.0.0-beta.45"
@@ -3414,6 +3496,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-arm64-musl@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-arm64-musl@npm:1.2.9"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-ppc64-gnu@npm:1.0.0-rc.12":
   version: 1.0.0-rc.12
   resolution: "@rolldown/binding-linux-ppc64-gnu@npm:1.0.0-rc.12"
@@ -3428,6 +3517,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-ppc64-gnu@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-ppc64-gnu@npm:1.2.9"
+  conditions: os=linux & cpu=ppc64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.12":
   version: 1.0.0-rc.12
   resolution: "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.12"
@@ -3438,6 +3534,13 @@ __metadata:
 "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-linux-s390x-gnu@npm:1.0.0-rc.17"
+  conditions: os=linux & cpu=s390x & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-linux-s390x-gnu@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-s390x-gnu@npm:1.2.9"
   conditions: os=linux & cpu=s390x & libc=glibc
   languageName: node
   linkType: hard
@@ -3470,6 +3573,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-x64-gnu@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-x64-gnu@npm:1.2.9"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-linux-x64-musl@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-linux-x64-musl@npm:1.0.0-beta.45"
@@ -3498,6 +3608,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-linux-x64-musl@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-linux-x64-musl@npm:1.2.9"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-openharmony-arm64@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-openharmony-arm64@npm:1.0.0-beta.45"
@@ -3522,6 +3639,13 @@ __metadata:
 "@rolldown/binding-openharmony-arm64@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-openharmony-arm64@npm:1.0.0-rc.17"
+  conditions: os=openharmony & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-openharmony-arm64@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-openharmony-arm64@npm:1.2.9"
   conditions: os=openharmony & cpu=arm64
   languageName: node
   linkType: hard
@@ -3592,6 +3716,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rolldown/binding-win32-arm64-msvc@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-win32-arm64-msvc@npm:1.2.9"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rolldown/binding-win32-ia32-msvc@npm:1.0.0-beta.45":
   version: 1.0.0-beta.45
   resolution: "@rolldown/binding-win32-ia32-msvc@npm:1.0.0-beta.45"
@@ -3623,6 +3754,13 @@ __metadata:
 "@rolldown/binding-win32-x64-msvc@npm:1.0.0-rc.17":
   version: 1.0.0-rc.17
   resolution: "@rolldown/binding-win32-x64-msvc@npm:1.0.0-rc.17"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rolldown/binding-win32-x64-msvc@npm:1.2.9":
+  version: 1.2.9
+  resolution: "@rolldown/binding-win32-x64-msvc@npm:1.2.9"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -3659,6 +3797,13 @@ __metadata:
   version: 1.0.0-rc.7
   resolution: "@rolldown/pluginutils@npm:1.0.0-rc.7"
   checksum: 10c0/9d5490b5805b25bcd1720ca01c4c032b55a0ef953dab36a8dd42c568e82214576baa464f3027cd5dff3fabcfbe3bf3db2251d12b60220f5d1cd2ffde5ee37082
+  languageName: node
+  linkType: hard
+
+"@rolldown/pluginutils@npm:^1.0.0":
+  version: 1.0.1
+  resolution: "@rolldown/pluginutils@npm:1.0.1"
+  checksum: 10c0/99d9b06d90196823e4d8c841f258db7a16e5dbba5824a2962b05d907b79f1ba929d56f22dd744fd530936e568c865ee56a719dc31e57e13bc0a8eb4764a8d8dd
   languageName: node
   linkType: hard
 
@@ -7210,30 +7355,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-react-hooks@npm:^7.1.0":
-  version: 7.1.0
-  resolution: "eslint-plugin-react-hooks@npm:7.1.0"
-  dependencies:
-    "@babel/core": "npm:^7.24.4"
-    "@babel/parser": "npm:^7.24.4"
-    hermes-parser: "npm:^0.25.1"
-    zod: "npm:^3.25.0 || ^4.0.0"
-    zod-validation-error: "npm:^3.5.0 || ^4.0.0"
-  peerDependencies:
-    eslint: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0 || ^9.0.0 || ^10.0.0
-  checksum: 10c0/b65683a031cbfa44b2f78b15ab6b9fc7d9a0628bff2d6de8a52720b07866a60a1e78172127dd1397ce697ebab945467dc82dd4a24fdef5303b7a47920cb78609
-  languageName: node
-  linkType: hard
-
-"eslint-plugin-react-refresh@npm:^0.5.2":
-  version: 0.5.2
-  resolution: "eslint-plugin-react-refresh@npm:0.5.2"
-  peerDependencies:
-    eslint: ^9 || ^10
-  checksum: 10c0/6e5b1b8ad673535ea1134fa16ecda986c389a045b87ca935e6c5f69070b1889218f3116bfb8b793ec10f37c286f28904d0b5b1d62a76760e465aa32e73e6010e
-  languageName: node
-  linkType: hard
-
 "eslint-plugin-react@npm:^7.37.0":
   version: 7.37.5
   resolution: "eslint-plugin-react@npm:7.37.5"
@@ -8064,13 +8185,6 @@ __metadata:
   version: 14.0.0
   resolution: "globals@npm:14.0.0"
   checksum: 10c0/b96ff42620c9231ad468d4c58ff42afee7777ee1c963013ff8aabe095a451d0ceeb8dcd8ef4cbd64d2538cef45f787a78ba3a9574f4a634438963e334471302d
-  languageName: node
-  linkType: hard
-
-"globals@npm:^17.5.0":
-  version: 17.5.0
-  resolution: "globals@npm:17.5.0"
-  checksum: 10c0/92828102ed2f5637907725f0478038bed02fc83e9fc89300bb753639ba7c022b6c02576fc772117302b431b204591db1f2fa909d26f3f0a9852cc856a941df3f
   languageName: node
   linkType: hard
 
@@ -11292,6 +11406,64 @@ __metadata:
   bin:
     rolldown: bin/cli.mjs
   checksum: 10c0/bb99abc62ece4e34edd06d2b8eb9ffb7194dc2f0465a4329bb106cbde3006a10f1575e3580b198b793341109a2109581aed623c537c12b0c3a4ba0d72169b2fb
+  languageName: node
+  linkType: hard
+
+"rolldown@npm:^1.0.0-beta.45":
+  version: 1.2.9
+  resolution: "rolldown@npm:1.2.9"
+  dependencies:
+    "@oxc-project/types": "npm:=0.150.0"
+    "@rolldown/binding-android-arm-eabi": "npm:1.2.9"
+    "@rolldown/binding-android-arm64": "npm:1.2.9"
+    "@rolldown/binding-darwin-arm64": "npm:1.2.9"
+    "@rolldown/binding-darwin-x64": "npm:1.2.9"
+    "@rolldown/binding-freebsd-x64": "npm:1.2.9"
+    "@rolldown/binding-linux-arm-gnueabihf": "npm:1.2.9"
+    "@rolldown/binding-linux-arm64-gnu": "npm:1.2.9"
+    "@rolldown/binding-linux-arm64-musl": "npm:1.2.9"
+    "@rolldown/binding-linux-ppc64-gnu": "npm:1.2.9"
+    "@rolldown/binding-linux-s390x-gnu": "npm:1.2.9"
+    "@rolldown/binding-linux-x64-gnu": "npm:1.2.9"
+    "@rolldown/binding-linux-x64-musl": "npm:1.2.9"
+    "@rolldown/binding-openharmony-arm64": "npm:1.2.9"
+    "@rolldown/binding-win32-arm64-msvc": "npm:1.2.9"
+    "@rolldown/binding-win32-x64-msvc": "npm:1.2.9"
+    "@rolldown/pluginutils": "npm:^1.0.0"
+  dependenciesMeta:
+    "@rolldown/binding-android-arm-eabi":
+      optional: true
+    "@rolldown/binding-android-arm64":
+      optional: true
+    "@rolldown/binding-darwin-arm64":
+      optional: true
+    "@rolldown/binding-darwin-x64":
+      optional: true
+    "@rolldown/binding-freebsd-x64":
+      optional: true
+    "@rolldown/binding-linux-arm-gnueabihf":
+      optional: true
+    "@rolldown/binding-linux-arm64-gnu":
+      optional: true
+    "@rolldown/binding-linux-arm64-musl":
+      optional: true
+    "@rolldown/binding-linux-ppc64-gnu":
+      optional: true
+    "@rolldown/binding-linux-s390x-gnu":
+      optional: true
+    "@rolldown/binding-linux-x64-gnu":
+      optional: true
+    "@rolldown/binding-linux-x64-musl":
+      optional: true
+    "@rolldown/binding-openharmony-arm64":
+      optional: true
+    "@rolldown/binding-win32-arm64-msvc":
+      optional: true
+    "@rolldown/binding-win32-x64-msvc":
+      optional: true
+  bin:
+    rolldown: ./bin/cli.mjs
+  checksum: 10c0/701019ab29fab27e5465b11ec482eb3f7e87766f9ecbbd618d3d26821437eb84fa9e852d1cdef41c4e2e525904e6a9d3974ede9fbbdc887c9da9a3981bf8946c
   languageName: node
   linkType: hard
 

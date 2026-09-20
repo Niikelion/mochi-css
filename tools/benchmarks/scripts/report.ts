@@ -72,7 +72,6 @@ ${rows.join("\n")}
 - **FCP**: First Contentful Paint — time until the browser renders the first text or image.
 - **TBT**: Total Blocking Time — sum of blocking time between FCP and TTI; measures main-thread contention.
 - **CLS**: Cumulative Layout Shift. All metrics measured via Playwright (Chromium headless) with CDP throttling: Slow 4G (~1.6 Mbps, 150 ms RTT) + 8× CPU slowdown applied to localhost.
-- \`tailwindcss\` produces no JS bundle — all styles are utility classes in the CSS file.
 `
 
     const resultsDir = path.join(root, "results")

@@ -1,0 +1,23 @@
+{
+    "name": "my-tsdown-app",
+    "private": true,
+    "packageManager": "npm@10.9.2",
+    "type": "module",
+    "scripts": {
+        "build": "tsdown"
+    },
+    "devDependencies": {
+        "@mochi-css/rolldown": "file:__MOCHI_ROOT__/packages/rolldown",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla",
+        "rolldown": "^1.0.0-beta.45",
+        "tsdown": "^0.15.7",
+        "typescript": "^5"
+    },
+    "overrides": {
+        "@mochi-css/builder": "file:__MOCHI_ROOT__/packages/builder",
+        "@mochi-css/config": "file:__MOCHI_ROOT__/packages/config",
+        "@mochi-css/core": "file:__MOCHI_ROOT__/packages/core",
+        "@mochi-css/plugins": "file:__MOCHI_ROOT__/packages/plugins",
+        "@mochi-css/vanilla": "file:__MOCHI_ROOT__/packages/vanilla"
+    }
+}

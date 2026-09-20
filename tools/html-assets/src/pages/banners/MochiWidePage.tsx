@@ -1,11 +1,17 @@
-import { BannerContainer } from "../../components/BannerContainer.tsx"
-import { gridBackground, Layout, LeftContent, MiddleContent, RightContent } from "../../components/banner"
-import { styled } from "@mochi-css/vanilla-react"
+import { BannerContainer } from "../../components/BannerContainer.tsx";
+import {
+    gridBackground,
+    Layout,
+    LeftContent,
+    MiddleContent,
+    RightContent,
+} from "../../components/banner";
+import { styled } from "@mochi-css/vanilla-react";
 
 const Left = styled(Layout.Left, {
     placeContent: "center",
-    placeItems: "center"
-})
+    placeItems: "center",
+});
 
 const GridWrapper = styled("section", {
     gridColumn: "2 / 4",
@@ -13,18 +19,18 @@ const GridWrapper = styled("section", {
     gridTemplateColumns: "subgrid",
     columnGap: 170,
     ...gridBackground({ cell: 170 }),
-})
+});
 
 const Middle = styled(Layout.Middle, {
     gridArea: "auto",
-})
+});
 
 const Right = styled(Layout.Right, {
     gridArea: "auto",
     display: "flex",
     placeItems: "center",
     placeContent: "center",
-})
+});
 
 export default function MochiWidePage() {
     return (
@@ -34,12 +40,14 @@ export default function MochiWidePage() {
                     <LeftContent />
                 </Left>
                 <GridWrapper>
-                    <Middle><MiddleContent /></Middle>
+                    <Middle>
+                        <MiddleContent />
+                    </Middle>
                     <Right>
                         <RightContent />
                     </Right>
                 </GridWrapper>
             </Layout.Root>
         </BannerContainer>
-    )
+    );
 }
