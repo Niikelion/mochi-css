@@ -12,6 +12,7 @@ export interface ModuleOptions {
     vite?: string | true
     next?: string | true
     tsdown?: string | true
+    storybook?: string | true
     framework?: string
 }
 

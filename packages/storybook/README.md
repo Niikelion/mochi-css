@@ -22,6 +22,11 @@ npm i -D @mochi-css/storybook
 
 ## Setup
 
+> **Automatic setup:** [`@mochi-css/tsuki`](../tsuki/README.md)'s `vite` preset can wire this
+> up for you — run `npx tsuki --preset vite` and answer "yes" when asked whether you use
+> Storybook (or pass `--storybook` to skip the prompt). It patches `.storybook/main.ts` for
+> you, or creates a default one if none exists. The steps below are the manual equivalent.
+
 ### 1. `mochi.config.ts`
 
 Create a config file in your project root (skip if you already have one):

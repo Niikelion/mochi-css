@@ -4,7 +4,7 @@ import * as p from "@clack/prompts"
 import { parseModule, generateCode } from "magicast"
 import type { Module, ModuleContext } from "@/types"
 import { mochiPackage } from "@/version"
-import { getPluginsElements, type ObjNode } from "./ast"
+import { getArrayPropElements, resolveExportedConfigObject, type ObjNode } from "./ast"
 import dedent from "dedent"
 
 const viteConfigNames = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs"]
@@ -24,7 +24,7 @@ const defaultViteConfig = /* language=typescript */ dedent`
 `
 
 function addPluginCallToObj(obj: ObjNode, configPath: string): void {
-    const elements = getPluginsElements(obj, configPath)
+    const elements = getArrayPropElements(obj, "plugins", configPath)
     elements.push({
         type: "CallExpression",
         callee: { type: "Identifier", name: "mochiCss" },
@@ -33,52 +33,8 @@ function addPluginCallToObj(obj: ObjNode, configPath: string): void {
 }
 
 function addToVitePlugins(mod: ReturnType<typeof parseModule>, configPath: string): void {
-    type DeclNode = { id: { type: string; name: string }; init: Record<string, unknown> | null }
-    type VarDeclNode = { type: "VariableDeclaration"; declarations: DeclNode[] }
-    type ExportDefaultDecl = {
-        type: "ExportDefaultDeclaration"
-        declaration: Record<string, unknown>
-    }
-
-    const body = (mod.$ast as unknown as { body: unknown[] }).body
-    const exportDefault = body.find((s) => (s as { type: string }).type === "ExportDefaultDeclaration") as
-        | ExportDefaultDecl
-        | undefined
-
-    if (!exportDefault) throw new Error(`No default export found in ${configPath}`)
-
-    const decl = exportDefault.declaration
-
-    if (decl["type"] === "ObjectExpression") {
-        addPluginCallToObj(decl as ObjNode, configPath)
-        return
-    }
-
-    if (decl["type"] === "CallExpression") {
-        const args = decl["arguments"] as Record<string, unknown>[]
-        const firstArg = args[0]
-        if (firstArg?.["type"] === "ObjectExpression") {
-            addPluginCallToObj(firstArg as ObjNode, configPath)
-            return
-        }
-    }
-
-    if (decl["type"] === "Identifier") {
-        const varName = decl["name"] as string
-        for (const stmt of body) {
-            if ((stmt as { type: string }).type !== "VariableDeclaration") continue
-            for (const d of (stmt as VarDeclNode).declarations) {
-                if (d.id.type !== "Identifier" || d.id.name !== varName) continue
-                if (d.init?.["type"] !== "ObjectExpression") {
-                    throw new Error(`Failed to add vite plugin to ${configPath}`)
-                }
-                addPluginCallToObj(d.init as ObjNode, configPath)
-                return
-            }
-        }
-    }
-
-    throw new Error(`Failed to add vite plugin to ${configPath}`)
+    const obj = resolveExportedConfigObject(mod, configPath)
+    addPluginCallToObj(obj, configPath)
 }
 
 async function addMochiToViteConfig(configPath: string): Promise<void> {
