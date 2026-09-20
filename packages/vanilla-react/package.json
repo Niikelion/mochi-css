@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vanilla-react",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "7.0.6",
+    "version": "7.0.7",
     "license": "MIT",
     "keywords": [
         "css-in-js",
@@ -78,7 +78,7 @@
     "dependencies": {
         "@mochi-css/config": "7.1.2",
         "@mochi-css/plugins": "7.1.4",
-        "@mochi-css/vanilla": "10.0.1",
+        "@mochi-css/vanilla": "10.1.0",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
