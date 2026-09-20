@@ -117,6 +117,27 @@ async function sleep(ms: number): Promise<void> {
     return new Promise(r => setTimeout(r, ms))
 }
 
+/** Request a source module through the dev server so Vite transforms it and registers its imports. */
+async function fetchModule(port: string, urlPath: string): Promise<string> {
+    const res = await fetch(`http://localhost:${port}${urlPath}`)
+    return res.ok ? await res.text() : ""
+}
+
+/** Poll a source module until the transformed output references `marker`, or the deadline passes. */
+async function pollModule(port: string, urlPath: string, marker: string, timeout: number): Promise<string> {
+    let body = ""
+    const deadline = Date.now() + timeout
+    while (Date.now() < deadline && !body.includes(marker)) {
+        await sleep(300)
+        try {
+            body = await fetchModule(port, urlPath)
+        } catch {
+            // server may briefly restart while it re-collects
+        }
+    }
+    return body
+}
+
 describe("vite smoke", () => {
     it(
         "build: produces CSS in dist",
@@ -183,6 +204,129 @@ describe("vite smoke", () => {
 
                 expect(updatedCss).not.toBe(initialCss)
                 expect(updatedCss).toContain("blue")
+            } finally {
+                dev.proc.kill()
+                await sleep(500)
+            }
+        },
+        HMR_TIMEOUT,
+    )
+
+    it(
+        "HMR: picks up a newly added component while the server is running",
+        async () => {
+            const dev = spawnDev(tmpDir)
+
+            try {
+                const match = await dev.waitFor(/localhost:(?:\x1b\[[0-9;]*m)*(\d+)/, 30_000)
+                const port = match[1]
+                await dev.waitFor(/ready in/i, 15_000)
+
+                // Prime the graph: load the entry so its module (and imports) are known.
+                await fetchModule(port, "/src/main.ts")
+
+                // Add a component that did not exist when the server started, and import it
+                // from the entry — the realistic "I added a new component" flow.
+                const extraPath = path.join(tmpDir, "src", "extra.ts")
+                const extraHash = fileHash(extraPath.replaceAll("\\", "/"))
+                await fs.writeFile(
+                    extraPath,
+                    `import { css } from "@mochi-css/vanilla"\nexport const extra = css({ color: "chartreuse", height: "333px" })\n`,
+                )
+                await fs.writeFile(
+                    path.join(tmpDir, "src", "main.ts"),
+                    `import { box } from "./styles"\nimport "./extra"\nconst el = document.getElementById("app")\nif (el) {\n    el.className = box.variant({})\n}\n`,
+                )
+
+                // The new component's source is served, transformed, with its CSS import wired in —
+                // i.e. the dev server picked up the added file instead of erroring.
+                const extraSrc = await pollModule(port, "/src/extra.ts", extraHash, 20_000)
+                expect(extraSrc).toContain(extraHash)
+
+                // And its extracted CSS is now served.
+                const extraCssUrl = `http://localhost:${port}/@id/__x00__virtual:mochi-css/${extraHash}.css`
+                let extraCss = ""
+                const deadline = Date.now() + 15_000
+                while (Date.now() < deadline && !extraCss.includes("333px")) {
+                    await sleep(300)
+                    try {
+                        const res = await fetch(extraCssUrl)
+                        if (res.ok) extraCss = await res.text()
+                    } catch {
+                        // server may briefly restart
+                    }
+                }
+                expect(extraCss).toContain("333px")
+                expect(extraCss).toContain("chartreuse")
+
+                // Server is still healthy: the entry still serves.
+                const mainRes = await fetch(`http://localhost:${port}/src/main.ts`)
+                expect(mainRes.ok).toBe(true)
+            } finally {
+                dev.proc.kill()
+                await sleep(500)
+            }
+        },
+        HMR_TIMEOUT,
+    )
+
+    it(
+        "HMR: handles a moved/renamed component while the server is running",
+        async () => {
+            const dev = spawnDev(tmpDir)
+
+            try {
+                const match = await dev.waitFor(/localhost:(?:\x1b\[[0-9;]*m)*(\d+)/, 30_000)
+                const port = match[1]
+                await dev.waitFor(/ready in/i, 15_000)
+
+                // Establish a known component at the original location and prime the graph.
+                const oldPath = path.join(tmpDir, "src", "styles.ts")
+                await fs.writeFile(
+                    oldPath,
+                    `import { css } from "@mochi-css/vanilla"\nexport const box = css({ backgroundColor: "indigo", width: "175px" })\n`,
+                )
+                await fs.writeFile(
+                    path.join(tmpDir, "src", "main.ts"),
+                    `import { box } from "./styles"\nconst el = document.getElementById("app")\nif (el) {\n    el.className = box.variant({})\n}\n`,
+                )
+                await fetchModule(port, "/src/main.ts")
+
+                // Move the component into a new folder and update the importer.
+                const newDir = path.join(tmpDir, "src", "widgets")
+                await fs.mkdir(newDir, { recursive: true })
+                const newPath = path.join(newDir, "moved.ts")
+                await fs.rename(oldPath, newPath)
+                await fs.writeFile(
+                    path.join(tmpDir, "src", "main.ts"),
+                    `import { box } from "./widgets/moved"\nconst el = document.getElementById("app")\nif (el) {\n    el.className = box.variant({})\n}\n`,
+                )
+
+                // The moved component is served from its new location with CSS wired in —
+                // the rename (delete + add) did not break the server.
+                const newHash = fileHash(newPath.replaceAll("\\", "/"))
+                const movedSrc = await pollModule(port, "/src/widgets/moved.ts", newHash, 20_000)
+                expect(movedSrc).toContain(newHash)
+
+                // Its CSS is served from the new hash.
+                const newCssUrl = `http://localhost:${port}/@id/__x00__virtual:mochi-css/${newHash}.css`
+                let movedCss = ""
+                const deadline = Date.now() + 15_000
+                while (Date.now() < deadline && !movedCss.includes("175px")) {
+                    await sleep(300)
+                    try {
+                        const res = await fetch(newCssUrl)
+                        if (res.ok) movedCss = await res.text()
+                    } catch {
+                        // server may briefly restart (full-reload on the delete event)
+                    }
+                }
+                expect(movedCss).toContain("175px")
+                expect(movedCss).toContain("indigo")
+
+                // Server is still healthy after the move.
+                const mainRes = await fetch(`http://localhost:${port}/src/main.ts`)
+                expect(mainRes.ok).toBe(true)
             } finally {
                 dev.proc.kill()
                 await sleep(500)
