@@ -3,6 +3,8 @@
 This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css).
 It integrates compile-time CSS-in-JS into your [tsdown](https://tsdown.dev) / [Rolldown](https://rolldown.rs) builds.
 
+It works with any Mochi-CSS API — both [`@mochi-css/vanilla-react`](../vanilla-react/README.md) and [`@mochi-css/stitches`](../stitches/README.md) — since extraction is driven by the extractors configured in `mochi.config.ts`.
+
 ## Installation
 
 ```bash
@@ -26,6 +28,8 @@ import { defineConfig } from "@mochi-css/vanilla/config"
 
 export default defineConfig({
     roots: ["src"],
+    // splitCss: false → one combined CSS file; true → one file per source module
+    splitCss: false,
 })
 ```
 

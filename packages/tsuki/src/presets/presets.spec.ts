@@ -18,6 +18,10 @@ vi.mock("@/modules/next", () => ({
     nextModule: { id: "next", name: "Next.js", run: vi.fn() },
 }))
 
+vi.mock("@/modules/tsdown", () => ({
+    tsdownModule: { id: "tsdown", name: "tsdown", run: vi.fn() },
+}))
+
 vi.mock("@/modules/mochiConfig", () => ({
     createMochiConfigModule: vi.fn().mockReturnValue({ id: "mochi-config", name: "Mochi Config", run: vi.fn() }),
 }))
@@ -34,7 +38,7 @@ import { createPostcssModule } from "@/modules/postcss"
 import { createMochiConfigModule } from "@/modules/mochiConfig"
 import { createUiFrameworkModule } from "@/modules/uiFramework"
 import { createGitignoreModule } from "@/modules/gitignore"
-import { libPreset, vitePreset, nextjsPreset } from "./index"
+import { libPreset, vitePreset, nextjsPreset, tsdownPreset } from "./index"
 
 afterEach(() => {
     vi.clearAllMocks()
@@ -134,6 +138,43 @@ describe("nextjsPreset", () => {
     it("calls createGitignoreModule with .mochi", () => {
         const { runner } = makeRunner()
         nextjsPreset.setup(runner)
+        expect(createGitignoreModule).toHaveBeenCalledWith(".mochi")
+    })
+})
+
+describe("tsdownPreset", () => {
+    it("registers mochi-config, postcss, tsdown, ui-framework, and gitignore modules", () => {
+        const { runner, modules } = makeRunner()
+        tsdownPreset.setup(runner)
+        expect(modules).toHaveLength(5)
+        expect(modules.at(0)?.id).toBe("mochi-config")
+        expect(modules.at(1)?.id).toBe("postcss")
+        expect(modules.at(2)?.id).toBe("tsdown")
+        expect(modules.at(3)?.id).toBe("ui-framework")
+        expect(modules.at(4)?.id).toBe("gitignore")
+    })
+
+    it("calls createMochiConfigModule with tmpDir: .mochi and roots: src", () => {
+        const { runner } = makeRunner()
+        tsdownPreset.setup(runner)
+        expect(createMochiConfigModule).toHaveBeenCalledWith({ tmpDir: ".mochi", roots: ["src"] })
+    })
+
+    it("calls createPostcssModule with no options", () => {
+        const { runner } = makeRunner()
+        tsdownPreset.setup(runner)
+        expect(createPostcssModule).toHaveBeenCalledWith()
+    })
+
+    it("calls createUiFrameworkModule with no args", () => {
+        const { runner } = makeRunner()
+        tsdownPreset.setup(runner)
+        expect(createUiFrameworkModule).toHaveBeenCalledWith()
+    })
+
+    it("calls createGitignoreModule with .mochi", () => {
+        const { runner } = makeRunner()
+        tsdownPreset.setup(runner)
         expect(createGitignoreModule).toHaveBeenCalledWith(".mochi")
     })
 })
