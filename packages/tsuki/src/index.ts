@@ -15,6 +15,7 @@ interface CliOptions {
     vite?: string | true
     next?: string | true
     tsdown?: string | true
+    storybook?: string | true
     framework?: string
 }
 
@@ -29,6 +30,7 @@ program
     .option("--vite [path]", "Use the given Vite config path instead of prompting")
     .option("--next [path]", "Use the given Next.js config path instead of prompting")
     .option("--tsdown [path]", "Use the given tsdown config path instead of prompting")
+    .option("--storybook [path]", "Add the mochi addon to Storybook; optionally specify the config path")
     .addOption(new Option("--framework <framework>", "UI framework to install support for").choices(["react"]))
     .action(async (options: CliOptions) => {
         p.intro(pc.cyan("Installing Mochi-CSS..."))
@@ -70,6 +72,7 @@ program
             if (options.vite !== undefined) moduleOptions.vite = options.vite
             if (options.next !== undefined) moduleOptions.next = options.next
             if (options.tsdown !== undefined) moduleOptions.tsdown = options.tsdown
+            if (options.storybook !== undefined) moduleOptions.storybook = options.storybook
             if (options.framework !== undefined) moduleOptions.framework = options.framework
 
             await runner.run({

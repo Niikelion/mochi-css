@@ -14,6 +14,10 @@ vi.mock("@/modules/vite", () => ({
     viteModule: { id: "vite", name: "Vite", run: vi.fn() },
 }))
 
+vi.mock("@/modules/storybook", () => ({
+    storybookModule: { id: "storybook", name: "Storybook", run: vi.fn() },
+}))
+
 vi.mock("@/modules/next", () => ({
     nextModule: { id: "next", name: "Next.js", run: vi.fn() },
 }))
@@ -67,15 +71,16 @@ describe("libPreset", () => {
 })
 
 describe("vitePreset", () => {
-    it("registers mochi-config, postcss, vite, ui-framework, and gitignore modules", () => {
+    it("registers mochi-config, postcss, vite, storybook, ui-framework, and gitignore modules", () => {
         const { runner, modules } = makeRunner()
         vitePreset.setup(runner)
-        expect(modules).toHaveLength(5)
+        expect(modules).toHaveLength(6)
         expect(modules.at(0)?.id).toBe("mochi-config")
         expect(modules.at(1)?.id).toBe("postcss")
         expect(modules.at(2)?.id).toBe("vite")
-        expect(modules.at(3)?.id).toBe("ui-framework")
-        expect(modules.at(4)?.id).toBe("gitignore")
+        expect(modules.at(3)?.id).toBe("storybook")
+        expect(modules.at(4)?.id).toBe("ui-framework")
+        expect(modules.at(5)?.id).toBe("gitignore")
     })
 
     it("calls createMochiConfigModule with tmpDir: .mochi and roots: src", () => {

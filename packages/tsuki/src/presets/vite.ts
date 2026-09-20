@@ -1,5 +1,6 @@
 import { createPostcssModule } from "@/modules/postcss"
 import { viteModule } from "@/modules/vite"
+import { storybookModule } from "@/modules/storybook"
 import { createMochiConfigModule } from "@/modules/mochiConfig"
 import { createUiFrameworkModule } from "@/modules/uiFramework"
 import { createGitignoreModule } from "@/modules/gitignore"
@@ -12,6 +13,7 @@ export const vitePreset: Preset = {
         runner.register(createMochiConfigModule({ tmpDir: ".mochi", roots: ["src"] }))
         runner.register(createPostcssModule())
         runner.register(viteModule)
+        runner.register(storybookModule)
         runner.register(createUiFrameworkModule())
         runner.register(createGitignoreModule(".mochi"))
     },

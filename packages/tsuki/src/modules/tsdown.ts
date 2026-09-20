@@ -4,7 +4,7 @@ import * as p from "@clack/prompts"
 import { parseModule, generateCode } from "magicast"
 import type { Module, ModuleContext } from "@/types"
 import { mochiPackage } from "@/version"
-import { getPluginsElements, type ObjNode } from "./ast"
+import { getArrayPropElements, type ObjNode } from "./ast"
 import dedent from "dedent"
 
 const tsdownConfigNames = ["tsdown.config.mts", "tsdown.config.ts", "tsdown.config.js", "tsdown.config.mjs"]
@@ -69,7 +69,7 @@ function addMochiToTsdownConfig(mod: ReturnType<typeof parseModule>, configPath:
         throw new Error(`Failed to find defineConfig() call in ${configPath}`)
     }
 
-    const elements = getPluginsElements(configObj, configPath)
+    const elements = getArrayPropElements(configObj, "plugins", configPath)
     elements.push({
         type: "CallExpression",
         callee: { type: "Identifier", name: "mochiCss" },

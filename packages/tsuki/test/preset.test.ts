@@ -44,6 +44,11 @@ describe("vite preset integration", () => {
         await fs.writeFile(path.join(tmpDir, "postcss.config.js"), `export default { plugins: {} }`)
         await fs.writeFile(path.join(tmpDir, "vite.config.ts"), `export default defineConfig({ plugins: [] })`)
 
+        // Decline the Storybook prompt so it doesn't also patch postcss.config.js with the
+        // shared `p.text` mock below.
+        vi.mocked(p.confirm).mockImplementation(async (opts: { message: string }) =>
+            Promise.resolve(opts.message === "Do you use PostCSS?"),
+        )
         vi.mocked(p.text).mockResolvedValue("postcss.config.js")
 
         const runner = new ModuleRunner()
@@ -52,6 +57,7 @@ describe("vite preset integration", () => {
 
         const postcssContent = await fs.readFile(path.join(tmpDir, "postcss.config.js"), "utf-8")
         expect(postcssContent).toContain("@mochi-css/postcss")
+        expect(postcssContent).not.toContain("@mochi-css/storybook")
 
         const mochiContent = await fs.readFile(path.join(tmpDir, "mochi.config.ts"), "utf-8")
         expect(mochiContent).toContain("tmpDir")
@@ -59,6 +65,45 @@ describe("vite preset integration", () => {
 
         const viteContent = await fs.readFile(path.join(tmpDir, "vite.config.ts"), "utf-8")
         expect(viteContent).toContain("mochiCss()")
+
+        expect(installPackages).toHaveBeenCalled()
+    })
+
+    it("adds the mochi addon to an existing Storybook config", async () => {
+        await fs.mkdir(path.join(tmpDir, ".storybook"), { recursive: true })
+        await fs.writeFile(
+            path.join(tmpDir, ".storybook", "main.ts"),
+            `export default { stories: [], addons: [] }`,
+        )
+
+        // Decline everything except the Storybook prompt.
+        vi.mocked(p.confirm).mockImplementation(async (opts: { message: string }) =>
+            Promise.resolve(opts.message === "Do you use Storybook?"),
+        )
+        vi.mocked(p.text).mockResolvedValue(path.join(".storybook", "main.ts"))
+
+        const runner = new ModuleRunner()
+        vitePreset.setup(runner)
+        await runner.run()
+
+        const storybookContent = await fs.readFile(path.join(tmpDir, ".storybook", "main.ts"), "utf-8")
+        expect(storybookContent).toContain("@mochi-css/storybook")
+
+        expect(installPackages).toHaveBeenCalled()
+    })
+
+    it("creates a default Storybook config via --storybook flag with no prompts", async () => {
+        vi.mocked(p.confirm).mockResolvedValue(false)
+        // viteModule always prompts for its own path (no confirm gate) — give it a fresh
+        // value so it doesn't reuse a prior test's mocked Storybook path.
+        vi.mocked(p.text).mockResolvedValue("vite.config.ts")
+
+        const runner = new ModuleRunner()
+        vitePreset.setup(runner)
+        await runner.run({ moduleOptions: { storybook: true } })
+
+        const storybookContent = await fs.readFile(path.join(tmpDir, ".storybook", "main.ts"), "utf-8")
+        expect(storybookContent).toContain("@mochi-css/storybook")
 
         expect(installPackages).toHaveBeenCalled()
     })
