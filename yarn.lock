@@ -2139,6 +2139,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mochi-css/storybook@workspace:packages/storybook":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/storybook@workspace:packages/storybook"
+  dependencies:
+    "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/test": "npm:^2.0.0"
+    "@mochi-css/vite": "npm:6.1.1"
+    "@types/node": "npm:^24.8.1"
+    eslint: "npm:^9.39.2"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^6.0.0"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    storybook: ^8 || ^9
+    vite: ^6 || ^7 || ^8
+  languageName: unknown
+  linkType: soft
+
 "@mochi-css/test@npm:^2.0.0, @mochi-css/test@workspace:^, @mochi-css/test@workspace:packages/test":
   version: 0.0.0-use.local
   resolution: "@mochi-css/test@workspace:packages/test"
@@ -2255,7 +2273,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vite@npm:*, @mochi-css/vite@npm:^6.1.0, @mochi-css/vite@workspace:packages/vite":
+"@mochi-css/vite@npm:*, @mochi-css/vite@npm:6.1.1, @mochi-css/vite@npm:^6.1.0, @mochi-css/vite@workspace:packages/vite":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vite@workspace:packages/vite"
   dependencies:
