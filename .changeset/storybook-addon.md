@@ -1,5 +1,6 @@
 ---
 "@mochi-css/storybook": minor
+"@mochi-css/tsuki": patch
 ---
 
 Add `@mochi-css/storybook` — a Storybook addon that integrates compile-time CSS extraction into Storybook's Vite builder (#38).
