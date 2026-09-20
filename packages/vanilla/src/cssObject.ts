@@ -230,9 +230,9 @@ export type VariantProps<V extends AllVariants> = {
 /** Combined type for style props with optional variants */
 export type MochiCSSProps<V extends AllVariants> = Omit<
     StyleProps,
-    "variants" | "compoundVariants" | "defaultVariants"
+    "variants" | "compoundVariants" | "defaultVariants" | "className"
 > &
-    VariantProps<V>
+    VariantProps<V> & { className?: string }
 
 /** Utility type to override properties of A with properties of B */
 type Override<A extends object, B extends object> = B & Omit<A, keyof B>
@@ -279,6 +279,8 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
     /** Compound variant conditions and their parsed sub-blocks */
     public readonly compoundVariants: { conditions: Record<string, string>; subBlocks: CssObjectSubBlock[] }[]
 
+    public readonly hasExplicitClassName: boolean
+
     /**
      * Creates a new CSSObject from style props.
      * Compiles main styles and all variant options into CSS blocks.
@@ -286,13 +288,15 @@ export class CSSObject<V extends AllVariants = DefaultVariants> {
      * @param props.variants - Named variant groups, each mapping variant values to style props
      * @param props.defaultVariants - Default value for each variant when none is provided at runtime
      * @param props.compoundVariants - Style props applied when a specific combination of variants is active
-     * @param className - Optional stable class name for the main block
+     * @param props.className - Optional explicit class name; bypasses auto-rename when set
+     * @param stableId - Optional stable ID (e.g. from styledIdPlugin); used when className is not set
      */
     public constructor(
-        { variants, defaultVariants, compoundVariants, ...props }: MochiCSSProps<V>,
-        className?: string,
+        { variants, defaultVariants, compoundVariants, className, ...props }: MochiCSSProps<V>,
+        stableId?: string,
     ) {
-        this.mainBlock = new CssObjectBlock(props as StyleProps, className)
+        this.hasExplicitClassName = className !== undefined
+        this.mainBlock = new CssObjectBlock(props as StyleProps, className ?? stableId)
         this.variantBlocks = {} as typeof this.variantBlocks
         this.variantDefaults = defaultVariants ?? {}
         this.compoundVariants = []

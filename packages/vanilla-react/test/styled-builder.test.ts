@@ -180,4 +180,64 @@ describe("styled builder pipeline", () => {
         expect(jpMatch?.[0]).toContain('"color"')
         expect(jpMatch?.[0]).toContain('"vertical"')
     })
+
+    it("preserves explicit className through the remap pipeline", async () => {
+        const filePath = path.resolve("src/button.tsx")
+        const source = dedent`
+            import { styled } from "@mochi-css/vanilla-react"
+
+            export const Button = styled("button", {
+                className: "my-button",
+                color: "red",
+                variants: {
+                    size: {
+                        sm: { fontSize: "12px" },
+                        lg: { fontSize: "18px" }
+                    }
+                }
+            })
+        `
+
+        const { chunks, modifiedSources } = await runDefineConfig(source, filePath)
+
+        const cssChunks = [...chunks.entries()].flatMap(([, v]) => [...v])
+        const css = cssChunks.join("\n")
+
+        expect(css).toContain(".my-button")
+        expect(css).toContain("color: red")
+
+        const sourcemod = modifiedSources.get(filePath)
+        expect(sourcemod).toContain('"my-button"')
+    })
+
+    it("explicit className is not remapped but variant classes still are", async () => {
+        const filePath = path.resolve("src/card.tsx")
+        const source = dedent`
+            import { styled } from "@mochi-css/vanilla-react"
+
+            export const Card = styled("div", {
+                className: "card",
+                padding: "16px",
+                variants: {
+                    elevated: {
+                        true: { boxShadow: "0 2px 4px rgba(0,0,0,.1)" }
+                    }
+                }
+            })
+        `
+
+        const { chunks, modifiedSources } = await runDefineConfig(source, filePath)
+
+        const cssChunks = [...chunks.entries()].flatMap(([, v]) => [...v])
+        const css = cssChunks.join("\n")
+
+        expect(css).toContain(".card")
+        const sourcemod = modifiedSources.get(filePath)
+        expect(sourcemod).toContain('"card"')
+
+        // Variant class names should still be auto-generated (not "card")
+        const variantMatch = /"elevated":\s*\{\s*"true":\s*"([^"]+)"/.exec(sourcemod ?? "")
+        expect(variantMatch).toBeTruthy()
+        expect(variantMatch?.[1]).not.toBe("card")
+    })
 })
