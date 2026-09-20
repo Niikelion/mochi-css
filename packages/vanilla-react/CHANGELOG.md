@@ -1,5 +1,45 @@
 # @mochi-css/react
 
+## 7.0.7
+
+### Patch Changes
+
+- Updated dependencies [5524a8d]
+    - @mochi-css/vanilla@10.1.0
+
+## 7.0.6
+
+### Patch Changes
+
+- @mochi-css/config@7.1.2
+- @mochi-css/plugins@7.1.4
+- @mochi-css/vanilla@10.0.1
+
+## 7.0.5
+
+### Patch Changes
+
+- @mochi-css/config@7.1.1
+- @mochi-css/plugins@7.1.3
+- @mochi-css/vanilla@10.0.0
+
+## 7.0.4
+
+### Patch Changes
+
+- Updated dependencies [fa6f315]
+    - @mochi-css/config@7.1.0
+    - @mochi-css/plugins@7.1.2
+    - @mochi-css/vanilla@9.0.0
+
+## 7.0.3
+
+### Patch Changes
+
+- a7e8e05: Republish the packages that depend on `@mochi-css/plugins` so they pick up the `ClassRemapPlugin` fix from `@mochi-css/plugins@7.1.1`. They were skipped in the previous release because internal dependency ranges used caret constraints that the patch bump still satisfied, so Changesets did not consider them changed. Internal dependency ranges are now pinned to exact versions so future dependency bumps always propagate to dependents.
+- Updated dependencies [a7e8e05]
+    - @mochi-css/vanilla@8.0.1
+
 ## 7.0.2
 
 ### Patch Changes

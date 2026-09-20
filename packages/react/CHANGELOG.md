@@ -1,5 +1,37 @@
 # @mochi-css/react
 
+## 4.0.9
+
+### Patch Changes
+
+- Updated dependencies [5524a8d]
+    - @mochi-css/vanilla@10.1.0
+
+## 4.0.8
+
+### Patch Changes
+
+- @mochi-css/vanilla@10.0.1
+
+## 4.0.7
+
+### Patch Changes
+
+- @mochi-css/vanilla@10.0.0
+
+## 4.0.6
+
+### Patch Changes
+
+- @mochi-css/vanilla@9.0.0
+
+## 4.0.5
+
+### Patch Changes
+
+- Updated dependencies [a7e8e05]
+    - @mochi-css/vanilla@8.0.1
+
 ## 4.0.4
 
 ### Patch Changes

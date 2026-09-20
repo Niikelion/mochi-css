@@ -1,11 +1,13 @@
 import fs from "fs"
 import path from "path"
+import { offsetSourcemapLines } from "@mochi-css/builder"
 import { buildCssOnce } from "./watcher.js"
 
 type DiskManifest = {
     global?: string
     files: Record<string, string>
     sourcemods?: Record<string, string>
+    sourcemaps?: Record<string, string>
 }
 
 type ManifestCache = { path: string; mtime: number; manifest: DiskManifest }
@@ -35,7 +37,7 @@ function injectImports(
     ctx: LoaderContext,
     manifest: DiskManifest,
     source: string,
-): string {
+): { code: string; prependedLines: number } {
     const imports: string[] = []
     const sourceDir = path.dirname(ctx.resourcePath)
 
@@ -60,8 +62,8 @@ function injectImports(
         ctx.addDependency(absoluteGlobalPath)
     }
 
-    if (imports.length === 0) return source
-    return imports.join("\n") + "\n" + source
+    if (imports.length === 0) return { code: source, prependedLines: 0 }
+    return { code: imports.join("\n") + "\n" + source, prependedLines: imports.length }
 }
 
 /**
@@ -96,10 +98,21 @@ export default function mochiLoader(this: LoaderContext, source: string): void {
                 return
             }
 
-            const sourcemod = manifest.sourcemods?.[resourcePath.replaceAll("\\", "/")]
+            const key = resourcePath.replaceAll("\\", "/")
+            const sourcemod = manifest.sourcemods?.[key]
             const transformed = sourcemod ?? source
+            // The map is only meaningful when we substituted a pre-built sourcemod.
+            const sourcemodMap = sourcemod !== undefined ? manifest.sourcemaps?.[key] : undefined
 
-            callback(null, injectImports(this, manifest, transformed as string))
+            const { code, prependedLines } = injectImports(this, manifest, transformed as string)
+
+            if (!sourcemodMap) {
+                callback(null, code)
+                return
+            }
+
+            const offsetMap = offsetSourcemapLines(sourcemodMap, prependedLines)
+            callback(null, code, JSON.parse(offsetMap) as object)
         } catch (err: unknown) {
             callback(err instanceof Error ? err : new Error(String(err)))
         }

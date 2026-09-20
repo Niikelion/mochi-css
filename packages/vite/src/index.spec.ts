@@ -76,7 +76,7 @@ type PluginHooks = {
     configureServer: (server: MockServer) => void
     handleHotUpdate: (ctx: HotUpdateContext) => Promise<MockModule[] | undefined>
     watchChange: (id: string, change: { event: string }) => Promise<void>
-    transform: (code: string, id: string) => Promise<{ code: string } | undefined>
+    transform: (code: string, id: string) => Promise<{ code: string; map?: string } | undefined>
     resolveId: (id: string) => { id: string } | undefined
     load: (id: string) => string | undefined
 }
@@ -107,7 +107,15 @@ describe("mochiCss vite plugin transform", () => {
         mockTransform.mockImplementation(async (source: string, _opts: { filePath: string }) => source)
     })
 
-    async function setupPlugin(manifestOverride?: { files: Record<string, string>; global: string | undefined }, entries?: string[]) {
+    async function setupPlugin(
+        manifestOverride?: {
+            files: Record<string, string>
+            global: string | undefined
+            sourcemods?: Record<string, string>
+            sourcemaps?: Record<string, string>
+        },
+        entries?: string[],
+    ) {
         const plugin = mochiCss(entries ? { entries } : undefined)
         const hooks = getHooks(plugin)
 
@@ -158,6 +166,38 @@ describe("mochiCss vite plugin transform", () => {
 
         const result = await hooks.transform("body { color: red; }", "/src/styles.css")
         expect(result).toBeUndefined()
+    })
+
+    it("returns the pre-built sourcemap alongside a sourcemod", async () => {
+        const id = "/src/App.tsx"
+        const map = JSON.stringify({ version: 3, sources: [id], names: [], mappings: "AAAA" })
+        const hooks = await setupPlugin({
+            files: {},
+            global: undefined,
+            sourcemods: { [id]: "const x = 2" },
+            sourcemaps: { [id]: map },
+        })
+
+        const result = await hooks.transform("const x = 1", id)
+        expect(result?.code).toBe("const x = 2")
+        // No CSS import injected, so the map passes through unshifted.
+        expect(JSON.parse(result?.map ?? "{}").mappings).toBe("AAAA")
+    })
+
+    it("offsets the sourcemap when a CSS import is injected", async () => {
+        const id = "/src/App.tsx"
+        const map = JSON.stringify({ version: 3, sources: [id], names: [], mappings: "AAAA" })
+        const hooks = await setupPlugin({
+            files: { [id]: ".s-abc { color: red; }" },
+            global: undefined,
+            sourcemods: { [id]: "const x = 2" },
+            sourcemaps: { [id]: map },
+        })
+
+        const result = await hooks.transform("const x = 1", id)
+        expect(result?.code).toContain("virtual:mochi-css/")
+        // One import line prepended → one leading empty mapping line.
+        expect(JSON.parse(result?.map ?? "{}").mappings).toBe(";AAAA")
     })
 
     it("injects global CSS import into entry file, even when manifest has styles for that file", async () => {

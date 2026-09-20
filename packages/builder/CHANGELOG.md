@@ -1,5 +1,42 @@
 # @mochi-css/builder
 
+## 7.2.1
+
+### Patch Changes
+
+- 3ddc344: Fix wildcard re-exports dropping styles.
+
+    Two related bugs:
+    1. **Path-separator mismatch on Windows** — `Builder.buildResolveImport` compared paths
+       from the pipeline's posix-normalized `path` util against module `filePath`s that
+       sometimes carried Windows-style backslashes (produced by any code that used node's
+       `path.resolve` before handing the module to the builder). Every wildcard barrel on
+       Windows silently dropped its `namespaceReexports`, even for plain specifiers like
+       `export * from "./component"`.
+    2. **`.js`-suffixed specifiers** — `export * from "./component.js"` (as tsc emits under
+       NodeNext / `verbatimModuleSyntax`) was never resolved back to `./component.ts` because
+       the resolver only appended extensions instead of stripping the `.js` first.
+
+    Both fixes apply to both the analysis-side resolver (`Builder.buildResolveImport`) and
+    the Rolldown virtual-fs plugin (`Bundler.tryResolve`) via a shared `resolveCandidates`
+    helper.
+
+## 7.2.0
+
+### Minor Changes
+
+- 55a7261: Emit sourcemaps for extracted source files.
+
+    The extraction pipeline reprints each touched file from its mutated AST but previously
+    returned the result with no sourcemap, so the chain back to the original source was severed
+    at Mochi and everything downstream pointed at the reprinted intermediate.
+
+    The builder now produces a sourcemap for every emitted source, composing the printer map with
+    a map for the pre-parse `filePreProcess` string edit so positions trace all the way back to
+    the original file. `collectMochiCss` returns these as `sourcemaps`, and the Vite `transform`
+    and Next.js loader now forward them (offset for any injected CSS `import` lines) so dev tools
+    map generated code to the real source. esbuild and full PostCSS plumbing are unchanged for now.
+
 ## 7.1.0
 
 ### Minor Changes

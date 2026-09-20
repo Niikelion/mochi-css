@@ -23,6 +23,7 @@ type DiskManifest = {
     global?: string
     files: Record<string, string>
     sourcemods?: Record<string, string>
+    sourcemaps?: Record<string, string>
 }
 
 /**
@@ -158,7 +159,7 @@ const creator: PluginCreator<Options> = (opts?: Options) => {
                     .map(f => systemPath.resolve(tmpDir, f))
             )
 
-            const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods }
+            const diskManifest: DiskManifest = { files: {}, sourcemods: css.sourcemods, sourcemaps: css.sourcemaps }
             const writtenCssPaths = new Set<string>()
 
             if (css.global) {

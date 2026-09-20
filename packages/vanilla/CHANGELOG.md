@@ -1,5 +1,57 @@
 # @mochi-css/vanilla
 
+## 10.1.0
+
+### Minor Changes
+
+- 5524a8d: Add explicit class names that bypass auto-rename.
+
+    `css()` and `styled()` now accept a `className` option in the style object:
+
+    ```ts
+    const Button = styled("button", { className: "my-button", color: "red" })
+    ```
+
+    When set, the class name is emitted verbatim in the extracted CSS and `ClassRemapPlugin`
+    skips it during remapping, so the final output keeps the exact name. This enables interop
+    with third-party libraries, stable test selectors, external CSS overrides, and theming
+    systems that target known class names.
+
+    Variant class names are still auto-generated — only the main block uses the explicit name.
+    An explicit `className` takes priority over the stable id injected by `styledIdPlugin`.
+
+## 10.0.1
+
+### Patch Changes
+
+- Updated dependencies [3ddc344]
+    - @mochi-css/builder@7.2.1
+    - @mochi-css/config@7.1.2
+    - @mochi-css/plugins@7.1.4
+
+## 10.0.0
+
+### Patch Changes
+
+- Updated dependencies [55a7261]
+    - @mochi-css/builder@7.2.0
+    - @mochi-css/config@7.1.1
+    - @mochi-css/plugins@7.1.3
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [fa6f315]
+    - @mochi-css/config@7.1.0
+    - @mochi-css/plugins@7.1.2
+
+## 8.0.1
+
+### Patch Changes
+
+- a7e8e05: Republish the packages that depend on `@mochi-css/plugins` so they pick up the `ClassRemapPlugin` fix from `@mochi-css/plugins@7.1.1`. They were skipped in the previous release because internal dependency ranges used caret constraints that the patch bump still satisfied, so Changesets did not consider them changed. Internal dependency ranges are now pinned to exact versions so future dependency bumps always propagate to dependents.
+
 ## 8.0.0
 
 ### Patch Changes

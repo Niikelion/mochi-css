@@ -1,5 +1,34 @@
 # @mochi-css/plugins
 
+## 7.1.4
+
+### Patch Changes
+
+- Updated dependencies [3ddc344]
+    - @mochi-css/builder@7.2.1
+    - @mochi-css/config@7.1.2
+
+## 7.1.3
+
+### Patch Changes
+
+- Updated dependencies [55a7261]
+    - @mochi-css/builder@7.2.0
+    - @mochi-css/config@7.1.1
+
+## 7.1.2
+
+### Patch Changes
+
+- Updated dependencies [fa6f315]
+    - @mochi-css/config@7.1.0
+
+## 7.1.1
+
+### Patch Changes
+
+- fd02519: Fix `createClassRemapPlugin` remapping user-authored class names. It now only remaps mochi-generated internal class names (those tracked in `classNameLiterals`), leaving raw selectors like `.ProseMirror` in `& .ProseMirror` untouched so users can target them.
+
 ## 7.1.0
 
 ### Minor Changes

@@ -1,5 +1,49 @@
 # @mochi-css/stitches
 
+## 5.0.2
+
+### Patch Changes
+
+- Updated dependencies [5524a8d]
+  - @mochi-css/vanilla@10.1.0
+
+## 5.0.1
+
+### Patch Changes
+
+- Updated dependencies [3ddc344]
+  - @mochi-css/builder@7.2.1
+  - @mochi-css/config@7.1.2
+  - @mochi-css/plugins@7.1.4
+  - @mochi-css/vanilla@10.0.1
+
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [55a7261]
+  - @mochi-css/builder@7.2.0
+  - @mochi-css/config@7.1.1
+  - @mochi-css/plugins@7.1.3
+  - @mochi-css/vanilla@10.0.0
+
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies [fa6f315]
+  - @mochi-css/config@7.1.0
+  - @mochi-css/plugins@7.1.2
+  - @mochi-css/vanilla@9.0.0
+
+## 3.0.1
+
+### Patch Changes
+
+- a7e8e05: Republish the packages that depend on `@mochi-css/plugins` so they pick up the `ClassRemapPlugin` fix from `@mochi-css/plugins@7.1.1`. They were skipped in the previous release because internal dependency ranges used caret constraints that the patch bump still satisfied, so Changesets did not consider them changed. Internal dependency ranges are now pinned to exact versions so future dependency bumps always propagate to dependents.
+- Updated dependencies [a7e8e05]
+  - @mochi-css/vanilla@8.0.1
+
 ## 3.0.0
 
 ### Patch Changes

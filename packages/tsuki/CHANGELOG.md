@@ -1,5 +1,82 @@
 # @mochi-css/tsuki
 
+## 7.1.7
+
+### Patch Changes
+
+- 5524a8d: Add explicit class names that bypass auto-rename.
+
+    `css()` and `styled()` now accept a `className` option in the style object:
+
+    ```ts
+    const Button = styled("button", { className: "my-button", color: "red" })
+    ```
+
+    When set, the class name is emitted verbatim in the extracted CSS and `ClassRemapPlugin`
+    skips it during remapping, so the final output keeps the exact name. This enables interop
+    with third-party libraries, stable test selectors, external CSS overrides, and theming
+    systems that target known class names.
+
+    Variant class names are still auto-generated — only the main block uses the explicit name.
+    An explicit `className` takes priority over the stable id injected by `styledIdPlugin`.
+
+## 7.1.6
+
+### Patch Changes
+
+- 3ddc344: Fix wildcard re-exports dropping styles.
+
+    Two related bugs:
+    1. **Path-separator mismatch on Windows** — `Builder.buildResolveImport` compared paths
+       from the pipeline's posix-normalized `path` util against module `filePath`s that
+       sometimes carried Windows-style backslashes (produced by any code that used node's
+       `path.resolve` before handing the module to the builder). Every wildcard barrel on
+       Windows silently dropped its `namespaceReexports`, even for plain specifiers like
+       `export * from "./component"`.
+    2. **`.js`-suffixed specifiers** — `export * from "./component.js"` (as tsc emits under
+       NodeNext / `verbatimModuleSyntax`) was never resolved back to `./component.ts` because
+       the resolver only appended extensions instead of stripping the `.js` first.
+
+    Both fixes apply to both the analysis-side resolver (`Builder.buildResolveImport`) and
+    the Rolldown virtual-fs plugin (`Bundler.tryResolve`) via a shared `resolveCandidates`
+    helper.
+
+## 7.1.5
+
+### Patch Changes
+
+- 55a7261: Emit sourcemaps for extracted source files.
+
+    The extraction pipeline reprints each touched file from its mutated AST but previously
+    returned the result with no sourcemap, so the chain back to the original source was severed
+    at Mochi and everything downstream pointed at the reprinted intermediate.
+
+    The builder now produces a sourcemap for every emitted source, composing the printer map with
+    a map for the pre-parse `filePreProcess` string edit so positions trace all the way back to
+    the original file. `collectMochiCss` returns these as `sourcemaps`, and the Vite `transform`
+    and Next.js loader now forward them (offset for any injected CSS `import` lines) so dev tools
+    map generated code to the real source. esbuild and full PostCSS plumbing are unchanged for now.
+
+## 7.1.4
+
+### Patch Changes
+
+- fa6f315: Republish `@mochi-css/config` with the `postProcessHooks` API on `FullContext`. The API was added in PR #32 (the CSS AST post-process pipeline that backs `ClassRemapPlugin`) but `config` was never version-bumped, so the published `@mochi-css/config@7.0.0` tarball shipped without it. `@mochi-css/plugins@7.1.1` calls `ctx.postProcessHooks.register(...)` inside `onLoad`, so installing the published set crashed the Vite dev server at startup with `TypeError: Cannot read properties of undefined (reading 'register')`.
+
+    Now that internal dependency ranges are pinned to exact versions, this bump propagates to every dependent (`plugins`, `vite`, `next`, `esbuild`, `postcss`, `stitches`, `vanilla`, `vanilla-react`), republishing a self-consistent set where the `postProcessHooks` producer and consumers agree. Fixes #36.
+
+## 7.1.3
+
+### Patch Changes
+
+- a7e8e05: Republish the packages that depend on `@mochi-css/plugins` so they pick up the `ClassRemapPlugin` fix from `@mochi-css/plugins@7.1.1`. They were skipped in the previous release because internal dependency ranges used caret constraints that the patch bump still satisfied, so Changesets did not consider them changed. Internal dependency ranges are now pinned to exact versions so future dependency bumps always propagate to dependents.
+
+## 7.1.2
+
+### Patch Changes
+
+- fd02519: Fix `createClassRemapPlugin` remapping user-authored class names. It now only remaps mochi-generated internal class names (those tracked in `classNameLiterals`), leaving raw selectors like `.ProseMirror` in `& .ProseMirror` untouched so users can target them.
+
 ## 7.1.1
 
 ### Patch Changes

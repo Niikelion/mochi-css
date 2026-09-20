@@ -111,6 +111,52 @@ describe("mochiLoader", () => {
         expect(result).toContain("const x = 2")
     })
 
+    it("passes the sourcemap as the callback's third argument when present", () => {
+        const resourcePath = "/project/src/App.tsx"
+        const modified = "const x = 2\n"
+        const map = JSON.stringify({ version: 3, sources: [resourcePath], names: [], mappings: "AAAA" })
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({
+                files: {},
+                sourcemods: { [resourcePath]: modified },
+                sourcemaps: { [resourcePath]: map },
+            }),
+        )
+
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, "const x = 1\n")
+
+        const call = callback.mock.calls[0]
+        expect(call?.[1]).toBe(modified)
+        // No CSS imports prepended, so the map is passed through unshifted.
+        expect((call?.[2] as { mappings: string }).mappings).toBe("AAAA")
+    })
+
+    it("offsets the sourcemap by injected CSS import lines", () => {
+        const resourcePath = "/project/src/App.tsx"
+        const modified = "const x = 2\n"
+        const map = JSON.stringify({ version: 3, sources: [resourcePath], names: [], mappings: "AAAA" })
+
+        mockStatSync.mockReturnValue({ mtimeMs: nextMtime() })
+        mockReadFileSync.mockReturnValue(
+            JSON.stringify({
+                files: { [resourcePath]: "/project/.mochi/abc123.css" },
+                sourcemods: { [resourcePath]: modified },
+                sourcemaps: { [resourcePath]: map },
+            }),
+        )
+
+        const { ctx, callback } = makeCtx({ resourcePath })
+        mochiLoader.call(ctx, "const x = 1\n")
+
+        const call = callback.mock.calls[0]
+        expect(call?.[1] as string).toContain("abc123.css")
+        // One import line prepended → one leading empty mapping line.
+        expect((call?.[2] as { mappings: string }).mappings).toBe(";AAAA")
+    })
+
     it("injects global CSS import alongside per-file CSS (splitCss: true)", () => {
         const manifestPath = "/project/.mochi/manifest.json"
         const resourcePath = "/project/src/App.tsx"

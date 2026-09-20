@@ -1,4 +1,4 @@
-import { path } from "./utils"
+import { path, resolveCandidates } from "./utils"
 import { rolldown, Plugin } from "rolldown"
 
 /**
@@ -40,14 +40,16 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
     }
 
     const tryResolve = (resolvedPath: string): string | null => {
-        if (normalizedFiles.has(resolvedPath)) return resolvedPath
-        for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
-            const withExt = resolvedPath + ext
-            if (normalizedFiles.has(withExt)) return withExt
-        }
-        for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
-            const indexFile = resolvedPath + "/index" + ext
-            if (normalizedFiles.has(indexFile)) return indexFile
+        for (const candidate of resolveCandidates(resolvedPath)) {
+            if (normalizedFiles.has(candidate)) return candidate
+            for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                const withExt = candidate + ext
+                if (normalizedFiles.has(withExt)) return withExt
+            }
+            for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                const indexFile = candidate + "/index" + ext
+                if (normalizedFiles.has(indexFile)) return indexFile
+            }
         }
         return null
     }

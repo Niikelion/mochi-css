@@ -1,4 +1,4 @@
-import { path } from "@/utils"
+import { path, resolveCandidates } from "@/utils"
 import fs from "fs/promises"
 import * as SWC from "@swc/core"
 import * as csstree from "css-tree"
@@ -13,6 +13,7 @@ import { MochiError, OnDiagnostic, getErrorMessage } from "@mochi-css/core"
 import { findAllFiles } from "@/findAllFiles"
 import { wrapFilesWithProxies, MutableFileEntry } from "@/AstProxy"
 import { Evaluator } from "@/Evaluator"
+import { buildPreprocessMap, composeWithPreprocessMap } from "@/sourcemap"
 
 type CssAstEntry = { originalCss: string; ast: CssTree.StyleSheet; wasMutated: boolean }
 
@@ -141,7 +142,15 @@ export class Builder {
     }
 
     private buildResolveImport(modules: Module[]): ResolveImport {
-        const knownFiles = new Set(modules.map((m) => m.filePath))
+        // Module filePaths may arrive with either separator (tests on Windows using node:path
+        // produce backslashes; the pipeline's own path.resolve produces posix). Look up under a
+        // posix-normalized index but return the module's ORIGINAL filePath — every downstream
+        // stage keys on that shape and must see it unchanged.
+        const knownFilesByPosix = new Map<string, string>()
+        for (const m of modules) {
+            knownFilesByPosix.set(path.fromSystemPath(m.filePath), m.filePath)
+        }
+        const lookup = (resolved: string): string | null => knownFilesByPosix.get(path.fromSystemPath(resolved)) ?? null
 
         const packageMap = new Map<string, string>()
         for (const root of this.options.roots) {
@@ -152,33 +161,32 @@ export class Builder {
 
         return (fromFile, importSource) => {
             const dir = path.dirname(fromFile)
-            // Try common extensions
-            const extensions = ["", ".ts", ".tsx", ".js", ".jsx"]
-            for (const ext of extensions) {
-                const resolved = path.resolve(dir, importSource + ext)
-                if (knownFiles.has(resolved)) {
-                    return resolved
+            for (const candidate of resolveCandidates(importSource)) {
+                // Try common extensions
+                for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
+                    const hit = lookup(path.resolve(dir, candidate + ext))
+                    if (hit !== null) return hit
                 }
-            }
-            // Try index files
-            for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
-                const resolved = path.resolve(dir, importSource, "index" + ext)
-                if (knownFiles.has(resolved)) {
-                    return resolved
+                // Try index files
+                for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                    const hit = lookup(path.resolve(dir, candidate, "index" + ext))
+                    if (hit !== null) return hit
                 }
             }
             // Try package-name resolution for named roots
             for (const [pkgName, sourceDir] of packageMap) {
                 if (importSource === pkgName || importSource.startsWith(pkgName + "/")) {
-                    const subPath = importSource.slice(pkgName.length)
-                    const base = path.resolve(sourceDir, subPath.replace(/^\//, "") || "index")
-                    for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
-                        const resolved = base + ext
-                        if (knownFiles.has(resolved)) return resolved
-                    }
-                    for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
-                        const resolved = path.resolve(sourceDir, subPath.replace(/^\//, ""), "index" + ext)
-                        if (knownFiles.has(resolved)) return resolved
+                    const subPath = importSource.slice(pkgName.length).replace(/^\//, "") || "index"
+                    for (const candidate of resolveCandidates(subPath)) {
+                        const base = path.resolve(sourceDir, candidate)
+                        for (const ext of ["", ".ts", ".tsx", ".js", ".jsx"]) {
+                            const hit = lookup(base + ext)
+                            if (hit !== null) return hit
+                        }
+                        for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+                            const hit = lookup(path.resolve(sourceDir, candidate, "index" + ext))
+                            if (hit !== null) return hit
+                        }
                     }
                 }
             }
@@ -278,9 +286,17 @@ export class Builder {
         }
     }
 
-    public async collectStylesFromModules(
-        modules: Module[],
-    ): Promise<{ chunks: Map<string, Set<string>>; modifiedSources: Map<string, string> }> {
+    public async collectStylesFromModules(modules: Module[]): Promise<{
+        chunks: Map<string, Set<string>>
+        modifiedSources: Map<string, string>
+        /**
+         * Sourcemaps (encoded JSON strings) for each serialized JS file, mapping the
+         * reprinted output back to the parse input. Keyed by file path, populated only for
+         * files reprinted from a mutated AST (not for opaque string replacements supplied
+         * via the deprecated emitModifiedSource path).
+         */
+        modifiedSourceMaps: Map<string, string>
+    }> {
         const resolveImport = this.buildResolveImport(modules)
         const onDiagnostic = this.options.onDiagnostic
         const runner = this.createRunner(modules, resolveImport)
@@ -288,6 +304,7 @@ export class Builder {
         evaluator.setGlobal("__global_mochi_diagnostics", onDiagnostic)
         const chunks = new Map<string, Set<string>>()
         const modifiedSources = new Map<string, string>()
+        const modifiedSourceMaps = new Map<string, string>()
         const markedForEval = new Map<string, Set<SWC.Expression>>()
         const cssAstChunks = new Map<string, CssAstEntry>()
         const deferredJsFiles = new Set<string>()
@@ -372,12 +389,16 @@ export class Builder {
         for (const hook of this.options.postProcessHooks ?? []) {
             await hook(runner, ppCtx)
         }
-        // Serialize deferred JS files (after postProcessHooks so AST mutations are captured)
+        // Serialize deferred JS files (after postProcessHooks so AST mutations are captured).
+        // Emit a sourcemap alongside so the reprinted output can be traced back to the parse
+        // input. SWC reconstructs sourcesContent from its span store, so the map is complete
+        // even though we only hand it the AST.
         for (const fp of deferredJsFiles) {
             try {
                 const { ast } = runner.engine.fileData.for(fp).get()
-                const { code } = SWC.printSync(ast)
+                const { code, map } = SWC.printSync(ast, { sourceMaps: true, filename: fp })
                 modifiedSources.set(fp, code)
+                if (map) modifiedSourceMaps.set(fp, map)
             } catch {
                 // file not in engine (e.g. non-JS paths)
             }
@@ -397,7 +418,7 @@ export class Builder {
 
         await this.options.cleanup?.()
 
-        return { chunks, modifiedSources }
+        return { chunks, modifiedSources, modifiedSourceMaps }
     }
 
     private async syncEmittedFiles(emitDir: string, files: Record<string, string | null>): Promise<void> {
@@ -452,9 +473,13 @@ export class Builder {
         await fs.writeFile(path.toSystemPath(manifestPath), JSON.stringify(newPaths), "utf8")
     }
 
-    public async collectMochiCss(
-        options?: CollectCssOptions,
-    ): Promise<{ global?: string; files?: Record<string, string>; sourcemods?: Record<string, string> }> {
+    public async collectMochiCss(options?: CollectCssOptions): Promise<{
+        global?: string
+        files?: Record<string, string>
+        sourcemods?: Record<string, string>
+        /** Sourcemaps (encoded JSON) for each entry in `sourcemods`, mapping the emitted source back to the original disk file. */
+        sourcemaps?: Record<string, string>
+    }> {
         const rootPaths = this.options.roots.map((r) => (typeof r === "string" ? r : r.path))
         const fileArrays = await Promise.all(rootPaths.map(findAllFiles))
         const allFiles = fileArrays.flat()
@@ -464,23 +489,48 @@ export class Builder {
         }
 
         const preprocessedSources: Record<string, string> = {}
+        // Original disk source for files altered by filePreProcess, needed to map back past it.
+        const preprocessOriginals: Record<string, string> = {}
         const modules = await Promise.all(
             allFiles.map(async (filePath) => {
                 const source = await fs.readFile(path.toSystemPath(filePath), "utf8")
                 const transformed = await this.preTransformFile(source, filePath)
                 if (transformed !== source) {
                     preprocessedSources[filePath] = transformed
+                    preprocessOriginals[filePath] = source
                 }
                 return transformed === source ? parseFile(filePath) : parseSource(transformed, filePath)
             }),
         )
 
-        const { chunks, modifiedSources } = await this.collectStylesFromModules(modules)
+        const { chunks, modifiedSources, modifiedSourceMaps } = await this.collectStylesFromModules(modules)
 
         // Build sourcemods: preprocessed files first, then AST-substituted files override
         const sourcemods: Record<string, string> = { ...preprocessedSources }
         for (const [filePath, code] of modifiedSources) {
             sourcemods[filePath] = code
+        }
+
+        // Build sourcemaps for each emitted source, composing past filePreProcess when needed.
+        const sourcemaps: Record<string, string> = {}
+        for (const filePath of Object.keys(sourcemods)) {
+            const printMap = modifiedSourceMaps.get(filePath)
+            const transformed = preprocessedSources[filePath]
+            const original = preprocessOriginals[filePath]
+            const wasPreprocessed = transformed !== undefined && original !== undefined
+
+            if (printMap && wasPreprocessed) {
+                // Reprinted from a preprocessed input: compose printer map past the preprocess edit.
+                const preMap = buildPreprocessMap(original, transformed, filePath)
+                sourcemaps[filePath] = composeWithPreprocessMap(printMap, preMap)
+            } else if (printMap) {
+                // Reprinted directly from the disk source: printer map is already disk-origin.
+                sourcemaps[filePath] = printMap
+            } else if (wasPreprocessed) {
+                // Preprocessed only, no AST reprint: the preprocess map is the whole story.
+                sourcemaps[filePath] = JSON.stringify(buildPreprocessMap(original, transformed, filePath))
+            }
+            // else: opaque emitModifiedSource string with no AST — no map can be produced.
         }
 
         const globalCss: string[] = []
@@ -495,6 +545,7 @@ export class Builder {
         }
 
         const resultSourcemods = Object.keys(sourcemods).length > 0 ? sourcemods : undefined
+        const resultSourcemaps = Object.keys(sourcemaps).length > 0 ? sourcemaps : undefined
 
         if (!this.options.splitCss) {
             const allCss = [...globalCss]
@@ -506,6 +557,7 @@ export class Builder {
             return {
                 global: allCss.length > 0 ? allCss.join("\n\n") : undefined,
                 sourcemods: resultSourcemods,
+                sourcemaps: resultSourcemaps,
             }
         }
 
@@ -513,6 +565,7 @@ export class Builder {
             global: globalCss.length > 0 ? globalCss.join("\n\n") : undefined,
             files: Object.keys(filesCss).length > 0 ? filesCss : undefined,
             sourcemods: resultSourcemods,
+            sourcemaps: resultSourcemaps,
         }
     }
 }

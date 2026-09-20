@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/html-assets",
     "private": true,
-    "version": "0.0.4",
+    "version": "0.0.6",
     "type": "module",
     "scripts": {
         "dev": "vite",
@@ -13,15 +13,15 @@
     "dependencies": {
         "@fontsource/ibm-plex-mono": "^5.1.0",
         "@fontsource/noto-sans-jp": "^5.1.0",
-        "@mochi-css/vanilla": "^8.0.0",
-        "@mochi-css/vanilla-react": "^7.0.2",
+        "@mochi-css/vanilla": "^10.0.0",
+        "@mochi-css/vanilla-react": "^7.0.5",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "wouter": "^3.9.0"
     },
     "devDependencies": {
         "@mochi-css/shared-config": "workspace:^",
-        "@mochi-css/vite": "^6.0.1",
+        "@mochi-css/vite": "^6.1.0",
         "@types/node": "^24.12.2",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",

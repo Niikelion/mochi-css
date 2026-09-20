@@ -2,6 +2,7 @@ import type { Plugin, ViteDevServer } from "vite"
 import {
     fileHash,
     type MochiManifest,
+    offsetSourcemapLines,
     path
 } from "@mochi-css/builder"
 import { loadConfig, resolveConfig, FullContext, createBuilder, type Config, OnDiagnostic } from "@mochi-css/config"
@@ -93,7 +94,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             }
             builder = createBuilder(resolved, ctx)
             const result = await builder.collectMochiCss()
-            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods }
+            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods, sourcemaps: result.sourcemaps }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -139,7 +140,7 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             const oldManifest = manifest
 
             const result = await builder.collectMochiCss()
-            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods }
+            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods, sourcemaps: result.sourcemaps }
 
             hashToSource.clear()
             for (const source of Object.keys(manifest.files)) {
@@ -209,6 +210,8 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             // Fall back to live filePreProcess only when no sourcemod exists for this file.
             const sourcemod = manifest?.sourcemods?.[id]
             const transformed = sourcemod ?? await context.filePreProcess.transform(code, { filePath: id })
+            // The map is only meaningful for a pre-built sourcemod; the live fallback has none.
+            const sourcemod_map = sourcemod !== undefined ? manifest?.sourcemaps?.[id] : undefined
 
             const imports: string[] = []
 
@@ -224,12 +227,14 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             }
 
             if (imports.length === 0) {
-                return transformed !== code ? { code: transformed } : undefined
+                if (transformed === code) return undefined
+                return sourcemod_map ? { code: transformed, map: sourcemod_map } : { code: transformed }
             }
 
-            return {
-                code: imports.join("\n") + "\n" + transformed,
-            }
+            // Prepended imports push the source down by `imports.length` lines; re-align the map.
+            const map = sourcemod_map ? offsetSourcemapLines(sourcemod_map, imports.length) : undefined
+            const out = imports.join("\n") + "\n" + transformed
+            return map ? { code: out, map } : { code: out }
         },
     }
 
