@@ -4,7 +4,6 @@ import { PluginContextCollector } from "@mochi-css/plugins"
 import dedent from "dedent"
 import path from "path"
 import { defineConfig } from "@/config"
-import { noop } from "@mochi-css/core"
 import type { Module } from "@mochi-css/builder"
 
 /**
@@ -17,7 +16,7 @@ import type { Module } from "@mochi-css/builder"
 
 async function runPipeline(modules: Module[]) {
     const config = defineConfig({})
-    const diagnostics: Array<{ code: string; message: string }> = []
+    const diagnostics: { code: string; message: string }[] = []
 
     const ctx = new PluginContextCollector()
     for (const plugin of config.plugins ?? []) {

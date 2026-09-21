@@ -1,6 +1,7 @@
 import * as SWC from "@swc/core"
 import type { FileInfo, StyleExtractor, DerivedExtractorBinding } from "./types"
 import { generateMinimalModuleItem } from "@mochi-css/builder"
+import { wrapModuleItemsForResilience } from "./resilientModuleWrap"
 
 type OnReplacementCall = (
     canonicalCall: SWC.CallExpression,
@@ -514,7 +515,7 @@ export function extractRelevantSymbols(
                 const code = SWC.printSync({
                     type: "Module",
                     span: emptySpan,
-                    body: moduleBody,
+                    body: wrapModuleItemsForResilience(filePath, moduleBody),
                     interpreter: "",
                 }).code
 
@@ -539,7 +540,12 @@ export function extractRelevantSymbols(
             const code = SWC.printSync({
                 type: "Module",
                 span: emptySpan,
-                body: [...moduleBody, ...derivedStatements, ...standaloneStatements, ...extraStatements],
+                body: wrapModuleItemsForResilience(filePath, [
+                    ...moduleBody,
+                    ...derivedStatements,
+                    ...standaloneStatements,
+                    ...extraStatements,
+                ]),
                 interpreter: "",
             }).code
 

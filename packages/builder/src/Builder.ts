@@ -14,6 +14,8 @@ import { findAllFiles } from "@/findAllFiles"
 import { wrapFilesWithProxies, MutableFileEntry } from "@/AstProxy"
 import { Evaluator } from "@/Evaluator"
 import { buildPreprocessMap, composeWithPreprocessMap } from "@/sourcemap"
+import { createDiagnosticRemapper } from "@/execDiagnosticRemap"
+import type { SourceMap } from "rolldown"
 
 type CssAstEntry = { originalCss: string; ast: CssTree.StyleSheet; wasMutated: boolean }
 
@@ -301,7 +303,16 @@ export class Builder {
         const onDiagnostic = this.options.onDiagnostic
         const runner = this.createRunner(modules, resolveImport)
         const evaluator = new Evaluator(this.options.runner)
-        evaluator.setGlobal("__global_mochi_diagnostics", onDiagnostic)
+        // Populated once bundleFiles() resolves, below — read lazily by the remapper on the
+        // first MOCHI_FILE_EXEC diagnostic, which only ever fires during the later executeCode().
+        // It IS reassigned below; only read via a closure created before that point, which
+        // confuses prefer-const's reassignment analysis.
+        // eslint-disable-next-line prefer-const
+        let bundleMap: SourceMap | undefined
+        evaluator.setGlobal(
+            "__global_mochi_diagnostics",
+            createDiagnosticRemapper(onDiagnostic, () => bundleMap),
+        )
         const chunks = new Map<string, Set<string>>()
         const modifiedSources = new Map<string, string>()
         const modifiedSourceMaps = new Map<string, string>()
@@ -369,8 +380,9 @@ export class Builder {
 
         const resultingFiles = this.options.getFilesToBundle?.(evalRunner, markedForEval) ?? {}
 
-        const code = await this.bundleFiles(resultingFiles)
-        await this.executeCode(code, evaluator)
+        const bundled = await this.bundleFiles(resultingFiles)
+        bundleMap = bundled.map
+        await this.executeCode(bundled.code, evaluator)
         runner.markEvaluated()
 
         for (const handler of this.options.postEvalTransforms ?? []) {

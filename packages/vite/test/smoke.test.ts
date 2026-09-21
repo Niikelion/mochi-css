@@ -138,6 +138,22 @@ async function pollModule(port: string, urlPath: string, marker: string, timeout
     return body
 }
 
+/** Poll an arbitrary URL until its body contains `marker`, or the deadline passes. */
+async function pollModuleUrl(url: string, marker: string, timeout: number): Promise<string> {
+    let body = ""
+    const deadline = Date.now() + timeout
+    while (Date.now() < deadline && !body.includes(marker)) {
+        await sleep(300)
+        try {
+            const res = await fetch(url)
+            if (res.ok) body = await res.text()
+        } catch {
+            // server may briefly restart while it re-collects
+        }
+    }
+    return body
+}
+
 describe("vite smoke", () => {
     it(
         "build: produces CSS in dist",
@@ -327,6 +343,62 @@ describe("vite smoke", () => {
                 // Server is still healthy after the move.
                 const mainRes = await fetch(`http://localhost:${port}/src/main.ts`)
                 expect(mainRes.ok).toBe(true)
+            } finally {
+                dev.proc.kill()
+                await sleep(500)
+            }
+        },
+        HMR_TIMEOUT,
+    )
+
+    it(
+        "HMR: recovers after a fatal extraction error without restarting the dev server",
+        async () => {
+            const dev = spawnDev(tmpDir)
+
+            try {
+                const match = await dev.waitFor(/localhost:(?:\x1b\[[0-9;]*m)*(\d+)/, 30_000)
+                const port = match[1]
+                await dev.waitFor(/ready in/i, 15_000)
+
+                const stylesPath = path.join(tmpDir, "src", "styles.ts")
+                const stylesHash = fileHash(stylesPath.replaceAll("\\", "/"))
+                const cssUrl = `http://localhost:${port}/@id/__x00__virtual:mochi-css/${stylesHash}.css`
+
+                // Establish a known-good baseline. Earlier tests in this file may have left
+                // main.ts importing from elsewhere — point it back at ./styles explicitly.
+                await fs.writeFile(
+                    stylesPath,
+                    `import { css } from "@mochi-css/vanilla"\nexport const box = css({ backgroundColor: "gold", width: "111px" })\n`,
+                )
+                await fs.writeFile(
+                    path.join(tmpDir, "src", "main.ts"),
+                    `import { box } from "./styles"\nconst el = document.getElementById("app")\nif (el) {\n    el.className = box.variant({})\n}\n`,
+                )
+                await fetchModule(port, "/src/main.ts")
+                const baselineCss = await pollModuleUrl(cssUrl, "111px", 15_000)
+                expect(baselineCss).toContain("gold")
+
+                // Introduce a fatal error — a syntax error fails at parse time, before per-file
+                // try/catch isolation can apply, so this is a genuine "whole extraction fails"
+                // case (unlike a runtime throw inside a component, which #44 now isolates).
+                await fs.writeFile(stylesPath, `import { css } from "@mochi-css/vanilla"\nexport const box = css({\n`)
+
+                // The dev server must not crash or hang: give the broken save a moment to be
+                // picked up, then confirm the process is still alive and still serving.
+                await sleep(1_500)
+                expect(dev.proc.exitCode).toBeNull()
+                const duringBreakRes = await fetch(`http://localhost:${port}/src/main.ts`)
+                expect(duringBreakRes.ok).toBe(true)
+
+                // Fix the file — recovery must happen from this same still-running dev server,
+                // with no restart.
+                await fs.writeFile(
+                    stylesPath,
+                    `import { css } from "@mochi-css/vanilla"\nexport const box = css({ backgroundColor: "teal", width: "222px" })\n`,
+                )
+                const recoveredCss = await pollModuleUrl(cssUrl, "222px", 20_000)
+                expect(recoveredCss).toContain("teal")
             } finally {
                 dev.proc.kill()
                 await sleep(500)

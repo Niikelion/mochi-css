@@ -1,5 +1,5 @@
 import { path, resolveCandidates } from "./utils"
-import { rolldown, Plugin } from "rolldown"
+import { rolldown, Plugin, SourceMap } from "rolldown"
 
 /**
  * Maps absolute file paths to their source content.
@@ -7,6 +7,9 @@ import { rolldown, Plugin } from "rolldown"
  * and will fall through to the real filesystem.
  */
 export type FileLookup = Partial<Record<string, string>>
+
+/** Result of bundling: the CJS source, plus a sourcemap back to the virtual input files when available. */
+export type BundleResult = { code: string; map?: SourceMap }
 
 /**
  * Bundles a set of in-memory source files into a single JavaScript string.
@@ -19,9 +22,9 @@ export interface Bundler {
      * @param rootFilePath - absolute path to the module entry-point.
      * @param files - virtual files.
      * @param tsConfigPath - optional path to a `tsconfig.json` to use for TypeScript compilation.
-     * @returns the bundled CJS source as a string
+     * @returns the bundled CJS source, plus a sourcemap back to the virtual input files.
      */
-    bundle(rootFilePath: string, files: FileLookup, tsConfigPath?: string): Promise<string>
+    bundle(rootFilePath: string, files: FileLookup, tsConfigPath?: string): Promise<BundleResult>
 }
 
 /**
@@ -81,7 +84,7 @@ function createVirtualFsPlugin(rootFilePath: string, files: FileLookup): Plugin 
  * Bundler implementation using Rolldown for bundling JavaScript and TypeScript files.
  */
 export class RolldownBundler implements Bundler {
-    async bundle(rootFilePath: string, files: FileLookup, tsConfigPath?: string): Promise<string> {
+    async bundle(rootFilePath: string, files: FileLookup, tsConfigPath?: string): Promise<BundleResult> {
         const build = await rolldown({
             input: rootFilePath,
             platform: "node",
@@ -91,8 +94,9 @@ export class RolldownBundler implements Bundler {
         })
 
         try {
-            const { output } = await build.generate({ format: "cjs" })
-            return output[0].code
+            const { output } = await build.generate({ format: "cjs", sourcemap: true })
+            const chunk = output[0]
+            return { code: chunk.code, map: chunk.map ?? undefined }
         } finally {
             await build.close()
         }
