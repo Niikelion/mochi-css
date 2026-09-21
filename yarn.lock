@@ -1982,6 +1982,42 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mochi-css/pdf@workspace:packages/pdf":
+  version: 0.0.0-use.local
+  resolution: "@mochi-css/pdf@workspace:packages/pdf"
+  dependencies:
+    "@arethetypeswrong/cli": "npm:^0.18.2"
+    "@eslint/js": "npm:^9.18.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    "@mochi-css/shared-config": "npm:^2.0.0"
+    "@mochi-css/test": "npm:^2.0.0"
+    "@mochi-css/vanilla": "npm:11.0.0"
+    "@mochi-css/vanilla-react": "npm:7.0.9"
+    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/react": "npm:^16.3.2"
+    "@types/node": "npm:^24.8.1"
+    "@types/react": "npm:^19.2.2"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitest/coverage-v8": "npm:^4.0.15"
+    clsx: "npm:^2.1.1"
+    eslint: "npm:^9.39.2"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-prettier: "npm:^5.5.5"
+    happy-dom: "npm:^20.8.9"
+    prettier: "npm:^3.8.1"
+    react: "npm:^19"
+    react-dom: "npm:^19.2.4"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.21.0"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.15"
+  peerDependencies:
+    react: ^19
+  languageName: unknown
+  linkType: soft
+
 "@mochi-css/plugins@npm:7.2.0, @mochi-css/plugins@workspace:packages/plugins":
   version: 0.0.0-use.local
   resolution: "@mochi-css/plugins@workspace:packages/plugins"
@@ -2193,7 +2229,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla-react@npm:*, @mochi-css/vanilla-react@npm:^7.0.8, @mochi-css/vanilla-react@npm:^7.0.9, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
+"@mochi-css/vanilla-react@npm:*, @mochi-css/vanilla-react@npm:7.0.9, @mochi-css/vanilla-react@npm:^7.0.8, @mochi-css/vanilla-react@npm:^7.0.9, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla-react@workspace:packages/vanilla-react"
   dependencies:
