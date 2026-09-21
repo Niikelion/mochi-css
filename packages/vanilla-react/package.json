@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/vanilla-react",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "7.0.8",
+    "version": "7.0.9",
     "license": "MIT",
     "keywords": [
         "css-in-js",

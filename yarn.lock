@@ -1969,7 +1969,7 @@ __metadata:
     "@mochi-css/next": "npm:^6.1.2"
     "@mochi-css/postcss": "npm:^6.0.5"
     "@mochi-css/vanilla": "npm:^11.0.0"
-    "@mochi-css/vanilla-react": "npm:^7.0.8"
+    "@mochi-css/vanilla-react": "npm:^7.0.9"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -2193,7 +2193,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vanilla-react@npm:*, @mochi-css/vanilla-react@npm:^7.0.8, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
+"@mochi-css/vanilla-react@npm:*, @mochi-css/vanilla-react@npm:^7.0.8, @mochi-css/vanilla-react@npm:^7.0.9, @mochi-css/vanilla-react@workspace:packages/vanilla-react":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vanilla-react@workspace:packages/vanilla-react"
   dependencies:
