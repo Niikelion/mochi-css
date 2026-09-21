@@ -7,7 +7,7 @@ import dedent from "dedent"
 import { Builder } from "@/Builder"
 import { RolldownBundler } from "@/Bundler"
 import { VmRunner } from "@/Runner"
-import type { AstPostProcessor, AnalysisContext, BuilderOptions, EmitHook } from "@/Builder"
+import type { AstPostProcessor, AnalysisContext, BuilderOptions, EmitHook, ExtractedFile } from "@/Builder"
 import type { Module } from "@/StageRunner"
 import { defineStage } from "@/analysis/Stage"
 import type { StageContext } from "@/analysis/Stage"
@@ -216,10 +216,10 @@ describe("Builder", () => {
                 sourceTransforms: [sourceTransform],
                 postEvalTransforms: [postHandler],
                 getFilesToBundle: (_runner, markedForEval) => {
-                    const result: Record<string, string | null> = {}
+                    const result: Record<string, ExtractedFile | null> = {}
                     for (const fp of markedForEval.keys()) {
                         if (fp === module.filePath) {
-                            result[fp] = SWC.printSync(module.ast).code
+                            result[fp] = { code: SWC.printSync(module.ast).code }
                         }
                     }
                     return result
@@ -402,10 +402,10 @@ describe("Builder", () => {
                 sourceTransforms: [sourceHandler],
                 postEvalTransforms: [postHandler],
                 getFilesToBundle: (_runner, markedForEval) => {
-                    const result: Record<string, string | null> = {}
+                    const result: Record<string, ExtractedFile | null> = {}
                     for (const fp of markedForEval.keys()) {
                         if (fp === module.filePath) {
-                            result[fp] = SWC.printSync(module.ast).code
+                            result[fp] = { code: SWC.printSync(module.ast).code }
                         }
                     }
                     return result

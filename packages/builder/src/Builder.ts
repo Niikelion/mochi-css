@@ -14,6 +14,8 @@ import { findAllFiles } from "@/findAllFiles"
 import { wrapFilesWithProxies, MutableFileEntry } from "@/AstProxy"
 import { Evaluator } from "@/Evaluator"
 import { buildPreprocessMap, composeWithPreprocessMap } from "@/sourcemap"
+import { createDiagnosticRemapper } from "@/execDiagnosticRemap"
+import type { SourceMap } from "rolldown"
 
 type CssAstEntry = { originalCss: string; ast: CssTree.StyleSheet; wasMutated: boolean }
 
@@ -49,6 +51,12 @@ const rootFileSuffix = dedent`
 export type CollectCssOptions = {
     onDep?: (path: string) => void
 }
+
+/**
+ * A file produced by `getFilesToBundle`: its extracted source, plus a sourcemap back to the
+ * original file when available (used to remap `MOCHI_FILE_EXEC` diagnostic positions).
+ */
+export type ExtractedFile = { code: string; map?: string }
 
 export type RootEntry = string | { path: string; package: string }
 
@@ -117,7 +125,7 @@ export type BuilderOptions = {
     getFilesToBundle?: (
         runner: StageRunner,
         markedForEval: Map<string, Set<SWC.Expression>>,
-    ) => Record<string, string | null>
+    ) => Record<string, ExtractedFile | null>
 
     /** When `true`, logs extra information (e.g., bundled code on execution failure) to help diagnose issues. */
     debug?: boolean
@@ -230,7 +238,7 @@ export class Builder {
         return evalRunner
     }
 
-    private async bundleFiles(files: Record<string, string | null>) {
+    private async bundleFiles(files: Record<string, ExtractedFile | null>) {
         // Prepare extracted project
         const cwd = path.fromSystemPath(process.cwd())
         const tmp = path.resolve(cwd, ".mochi")
@@ -238,14 +246,21 @@ export class Builder {
 
         const paths: string[] = []
         const fileLookup: FileLookup = {}
+        // Keyed by each file's path relative to `tmp` — exactly the "source" string the
+        // bundler's own sourcemap reports for it (RolldownBundler.bundle computes its map's
+        // sources relative to the root file's directory, which is `tmp`). Lets the remapper find
+        // the matching per-file map for the second hop (virtual-file position → original file
+        // position) without needing to know `tmp` itself.
+        const perFileMaps = new Map<string, string>()
 
-        for (const [filename, source] of Object.entries(files)) {
-            if (source === null) continue
+        for (const [filename, extracted] of Object.entries(files)) {
+            if (extracted === null) continue
             const relativePath = path.relative(cwd, filename)
             paths.push(relativePath)
 
-            const filePath = path.join(tmp, relativePath)
-            fileLookup[path.toSystemPath(filePath)] = source
+            const filePath = path.toSystemPath(path.join(tmp, relativePath))
+            fileLookup[filePath] = extracted.code
+            if (extracted.map) perFileMaps.set(relativePath, extracted.map)
         }
         const rootImports = paths.map((f) => `import "./${f}"`).join("\n")
 
@@ -253,7 +268,8 @@ export class Builder {
 
         try {
             // Bundle into single file
-            return await this.options.bundler.bundle(rootPath, fileLookup, this.options.tsConfigPath)
+            const bundled = await this.options.bundler.bundle(rootPath, fileLookup, this.options.tsConfigPath)
+            return { ...bundled, perFileMaps }
         } catch (err) {
             if (this.options.debug) {
                 for (const [path, code] of Object.entries(fileLookup)) {
@@ -301,7 +317,17 @@ export class Builder {
         const onDiagnostic = this.options.onDiagnostic
         const runner = this.createRunner(modules, resolveImport)
         const evaluator = new Evaluator(this.options.runner)
-        evaluator.setGlobal("__global_mochi_diagnostics", onDiagnostic)
+        // Populated once bundleFiles() resolves, below — read lazily by the remapper on the
+        // first MOCHI_FILE_EXEC diagnostic, which only ever fires during the later executeCode().
+        // Both ARE reassigned/populated below; only read via a closure created before that
+        // point, which confuses prefer-const's reassignment analysis.
+        // eslint-disable-next-line prefer-const
+        let bundleMap: SourceMap | undefined
+        const perFileMaps = new Map<string, string>()
+        evaluator.setGlobal(
+            "__global_mochi_diagnostics",
+            createDiagnosticRemapper(onDiagnostic, () => bundleMap, perFileMaps),
+        )
         const chunks = new Map<string, Set<string>>()
         const modifiedSources = new Map<string, string>()
         const modifiedSourceMaps = new Map<string, string>()
@@ -369,8 +395,10 @@ export class Builder {
 
         const resultingFiles = this.options.getFilesToBundle?.(evalRunner, markedForEval) ?? {}
 
-        const code = await this.bundleFiles(resultingFiles)
-        await this.executeCode(code, evaluator)
+        const bundled = await this.bundleFiles(resultingFiles)
+        bundleMap = bundled.map
+        for (const [file, map] of bundled.perFileMaps) perFileMaps.set(file, map)
+        await this.executeCode(bundled.code, evaluator)
         runner.markEvaluated()
 
         for (const handler of this.options.postEvalTransforms ?? []) {

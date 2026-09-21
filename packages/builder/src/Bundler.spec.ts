@@ -13,7 +13,7 @@ describe("RolldownBundler", () => {
             [index]: "export const foo = 42;",
         })
 
-        expect(result).toContain("42")
+        expect(result.code).toContain("42")
     })
 
     it("bundles multiple files with imports from memory", async () => {
@@ -27,8 +27,8 @@ describe("RolldownBundler", () => {
             [utils]: "export const bar = 10;",
         })
 
-        expect(result).toContain("10")
-        expect(result).toContain("bar")
+        expect(result.code).toContain("10")
+        expect(result.code).toContain("bar")
     })
 
     it("resolves relative imports correctly", async () => {
@@ -42,7 +42,7 @@ describe("RolldownBundler", () => {
             [helper]: "export const helper = () => 'hello';",
         })
 
-        expect(result).toContain("hello")
+        expect(result.code).toContain("hello")
     })
 
     it("falls back to disk for files not in memory", async () => {
@@ -59,7 +59,7 @@ describe("RolldownBundler", () => {
 
         await fs.rm(helper)
 
-        expect(result).toBeDefined()
+        expect(result.code).toBeDefined()
     })
 
     it("skips undefined files when not referenced", async () => {
@@ -73,7 +73,7 @@ describe("RolldownBundler", () => {
             [helper]: undefined,
         })
 
-        expect(result).toBeDefined()
+        expect(result.code).toBeDefined()
     })
 
     it("resolves directory imports via index files", async () => {
@@ -89,7 +89,7 @@ describe("RolldownBundler", () => {
             [component]: `export const Button = "button";`,
         })
 
-        expect(result).toContain("button")
+        expect(result.code).toContain("button")
     })
 
     it("correctly resolves absolute imports", async () => {
@@ -103,7 +103,7 @@ describe("RolldownBundler", () => {
             [helper]: `export const foo = "test"`,
         })
 
-        expect(result).toBeDefined()
+        expect(result.code).toBeDefined()
     })
 
     it("resolves .js import specifiers back to .ts source files (NodeNext extension rewrite)", async () => {
@@ -118,6 +118,19 @@ describe("RolldownBundler", () => {
             [helper]: `export const helper = () => 'ok';`,
         })
 
-        expect(result).toContain("ok")
+        expect(result.code).toContain("ok")
+    })
+
+    it("produces a sourcemap that traces the output back to the input", async () => {
+        const bundler = new RolldownBundler()
+
+        const index = path.resolve(process.cwd(), "index.js")
+        const result = await bundler.bundle(index, {
+            [index]: `export const foo = 42;`,
+        })
+
+        expect(result.map).toBeDefined()
+        expect(result.map?.mappings.length).toBeGreaterThan(0)
+        expect(result.map?.sources.length).toBeGreaterThan(0)
     })
 })

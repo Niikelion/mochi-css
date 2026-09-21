@@ -11,6 +11,7 @@ import type {
     StageDefinition,
     StageRunner,
     MutableFileEntry,
+    ExtractedFile,
 } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type * as SWC from "@swc/core"
@@ -89,7 +90,10 @@ export interface ResetCrossFileStateHookProvider {
 
 export interface GetFilesToBundleHookProvider {
     register(
-        fn: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>,
+        fn: (
+            runner: StageRunner,
+            markedForEval: Map<string, Set<SWC.Expression>>,
+        ) => Record<string, ExtractedFile | null>,
     ): void
 }
 
@@ -250,21 +254,27 @@ class GetFilesToBundleCollector implements GetFilesToBundleHookProvider {
     private readonly fns: ((
         runner: StageRunner,
         markedForEval: Map<string, Set<SWC.Expression>>,
-    ) => Record<string, string | null>)[] = []
+    ) => Record<string, ExtractedFile | null>)[] = []
 
     register(
-        fn: (runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>,
+        fn: (
+            runner: StageRunner,
+            markedForEval: Map<string, Set<SWC.Expression>>,
+        ) => Record<string, ExtractedFile | null>,
     ): void {
         this.fns.push(fn)
     }
 
     merged():
-        | ((runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>)
+        | ((
+              runner: StageRunner,
+              markedForEval: Map<string, Set<SWC.Expression>>,
+          ) => Record<string, ExtractedFile | null>)
         | undefined {
         if (this.fns.length === 0) return undefined
         const fns = [...this.fns]
         return (runner, markedForEval) => {
-            const result: Record<string, string | null> = {}
+            const result: Record<string, ExtractedFile | null> = {}
             for (const fn of fns) Object.assign(result, fn(runner, markedForEval))
             return result
         }
