@@ -20,6 +20,7 @@ import type {
     StageDefinition,
     MutableFileEntry,
     StageRunner,
+    ExtractedFile,
 } from "@mochi-css/builder"
 import type { OnDiagnostic } from "@mochi-css/core"
 import type * as SWC from "@swc/core"
@@ -48,7 +49,7 @@ export class PluginContextCollector implements PluginContext {
     private readonly _getFilesToBundle: ((
         runner: StageRunner,
         markedForEval: Map<string, Set<SWC.Expression>>,
-    ) => Record<string, string | null>)[] = []
+    ) => Record<string, ExtractedFile | null>)[] = []
 
     readonly filePreProcess = {
         // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -199,12 +200,15 @@ export class PluginContextCollector implements PluginContext {
     }
 
     getGetFilesToBundle():
-        | ((runner: StageRunner, markedForEval: Map<string, Set<SWC.Expression>>) => Record<string, string | null>)
+        | ((
+              runner: StageRunner,
+              markedForEval: Map<string, Set<SWC.Expression>>,
+          ) => Record<string, ExtractedFile | null>)
         | undefined {
         if (this._getFilesToBundle.length === 0) return undefined
         const fns = [...this._getFilesToBundle]
         return (runner, markedForEval) => {
-            const result: Record<string, string | null> = {}
+            const result: Record<string, ExtractedFile | null> = {}
             for (const fn of fns) Object.assign(result, fn(runner, markedForEval))
             return result
         }

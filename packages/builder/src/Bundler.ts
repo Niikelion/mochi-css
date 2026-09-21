@@ -94,7 +94,11 @@ export class RolldownBundler implements Bundler {
         })
 
         try {
-            const { output } = await build.generate({ format: "cjs", sourcemap: true })
+            // `dir` fixes the base the map's `sources` are computed relative to. Without it,
+            // Rolldown assumes an implicit `dist/`-like output location and the resulting
+            // relative paths are unpredictable to resolve back to our virtual file paths.
+            const dir = path.dirname(path.fromSystemPath(rootFilePath))
+            const { output } = await build.generate({ format: "cjs", sourcemap: true, dir })
             const chunk = output[0]
             return { code: chunk.code, map: chunk.map ?? undefined }
         } finally {

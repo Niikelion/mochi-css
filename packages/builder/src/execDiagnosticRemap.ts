@@ -27,21 +27,39 @@ function parseFirstFramePosition(stack: string): { line: number; column: number 
 }
 
 /**
- * Wraps `onDiagnostic` so a `MOCHI_FILE_EXEC` diagnostic's position gets remapped from the
- * bundled-script position (where the VM caught the throw) to a position in the extracted,
- * per-file source — via the bundler's own sourcemap — before reaching the caller.
+ * Wraps `onDiagnostic` so a `MOCHI_FILE_EXEC` diagnostic's position gets remapped, in two hops,
+ * from the bundled-script position (where the VM caught the throw) all the way back to a
+ * position in the *original* source file — before reaching the caller:
+ *
+ * 1. Bundle map: bundled-script position → position in the extracted per-file source (the
+ *    bundler's own sourcemap, from bundling all extracted files together).
+ * 2. Per-file map: that position → position in the original file (each extracted file's own
+ *    printer-generated sourcemap, since the extracted/minimized AST nodes keep their original
+ *    spans, a plain print-with-sourcemap already resolves this directly).
  *
  * `getBundleMap` is read lazily (once, on first `MOCHI_FILE_EXEC` diagnostic) so it can be
- * supplied by a variable populated only after bundling completes, without this wrapper needing
- * to know when that happens. The transient `stack` field is always stripped before forwarding —
- * callers should never see a raw bundle-internal stack trace.
+ * supplied by a variable populated only after bundling completes. `perFileMaps` is a live `Map`
+ * (mutated by the caller as extraction proceeds) keyed by the same virtual file path the bundle
+ * map's hop-1 `source` field resolves to — looked up, parsed, and cached lazily per file. The
+ * transient `stack` field is always stripped before forwarding — callers should never see a raw
+ * bundle-internal stack trace or an unmapped intermediate position.
  */
 export function createDiagnosticRemapper(
     onDiagnostic: OnDiagnostic,
     getBundleMap: () => SourceMap | undefined,
+    perFileMaps: ReadonlyMap<string, string>,
 ): OnDiagnostic {
-    let traceMap: TraceMap | undefined
-    let resolved = false
+    let bundleTraceMap: TraceMap | undefined
+    let bundleMapResolved = false
+    const perFileTraceMaps = new Map<string, TraceMap | undefined>()
+
+    function getPerFileTraceMap(source: string): TraceMap | undefined {
+        if (perFileTraceMaps.has(source)) return perFileTraceMaps.get(source)
+        const map = perFileMaps.get(source)
+        const traceMap = map ? new TraceMap(map) : undefined
+        perFileTraceMaps.set(source, traceMap)
+        return traceMap
+    }
 
     return (diagnostic) => {
         const { stack, ...rest } = diagnostic as DiagnosticWithStack
@@ -51,27 +69,44 @@ export function createDiagnosticRemapper(
             return
         }
 
-        if (!resolved) {
-            resolved = true
+        if (!bundleMapResolved) {
+            bundleMapResolved = true
             const map = getBundleMap()
             // TraceMap's object overload only accepts a *decoded* map; rolldown's SourceMap has
             // encoded (VLQ string) mappings, matching the string overload instead.
-            if (map) traceMap = new TraceMap(JSON.stringify(map))
+            if (map) bundleTraceMap = new TraceMap(JSON.stringify(map))
         }
 
-        const framePosition = traceMap ? parseFirstFramePosition(stack) : undefined
-        if (!traceMap || !framePosition) {
+        const framePosition = bundleTraceMap ? parseFirstFramePosition(stack) : undefined
+        if (!bundleTraceMap || !framePosition) {
             onDiagnostic(rest)
             return
         }
 
         // V8 stack columns are 1-based; sourcemap lookups expect 0-based columns.
-        const original = originalPositionFor(traceMap, { line: framePosition.line, column: framePosition.column - 1 })
-        if (original.line == null) {
+        const hop1 = originalPositionFor(bundleTraceMap, {
+            line: framePosition.line,
+            column: framePosition.column - 1,
+        })
+        if (hop1.line == null) {
             onDiagnostic(rest)
             return
         }
 
-        onDiagnostic({ ...rest, line: original.line, column: original.column })
+        const perFileMap = hop1.source ? getPerFileTraceMap(hop1.source) : undefined
+        if (!perFileMap) {
+            // No per-file map for this source (or it wasn't reprinted with one) — hop-1's
+            // position, within the extracted/minimized source, is still better than nothing.
+            onDiagnostic({ ...rest, line: hop1.line, column: hop1.column })
+            return
+        }
+
+        const hop2 = originalPositionFor(perFileMap, { line: hop1.line, column: hop1.column })
+        if (hop2.line == null) {
+            onDiagnostic({ ...rest, line: hop1.line, column: hop1.column })
+            return
+        }
+
+        onDiagnostic({ ...rest, line: hop2.line, column: hop2.column })
     }
 }

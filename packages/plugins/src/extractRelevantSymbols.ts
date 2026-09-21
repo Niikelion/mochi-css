@@ -1,7 +1,15 @@
 import * as SWC from "@swc/core"
 import type { FileInfo, StyleExtractor, DerivedExtractorBinding } from "./types"
-import { generateMinimalModuleItem } from "@mochi-css/builder"
+import { generateMinimalModuleItem, type ExtractedFile } from "@mochi-css/builder"
 import { wrapModuleItemsForResilience } from "./resilientModuleWrap"
+
+function printExtracted(filePath: string, body: SWC.ModuleItem[]): ExtractedFile {
+    const { code, map } = SWC.printSync(
+        { type: "Module", span: emptySpan, body, interpreter: "" },
+        { sourceMaps: true, filename: filePath },
+    )
+    return { code, map }
+}
 
 type OnReplacementCall = (
     canonicalCall: SWC.CallExpression,
@@ -427,7 +435,7 @@ export function extractRelevantSymbols(
     files: [string, FileInfo][],
     extraExpressions?: Map<string, Set<SWC.Expression>>,
     onReplacementCall?: OnReplacementCall,
-): Record<string, string | null> {
+): Record<string, ExtractedFile | null> {
     return Object.fromEntries(
         files.map(([filePath, info]) => {
             const styles = info.styleExpressions
@@ -443,13 +451,7 @@ export function extractRelevantSymbols(
                             (item.type === "ExportNamedDeclaration" && item.source != null),
                     )
                     if (reexportItems.length > 0) {
-                        const code = SWC.printSync({
-                            type: "Module",
-                            span: emptySpan,
-                            body: reexportItems,
-                            interpreter: "",
-                        }).code
-                        return [filePath, code]
+                        return [filePath, printExtracted(filePath, reexportItems)]
                     }
                 }
                 return [filePath, null]
@@ -512,14 +514,7 @@ export function extractRelevantSymbols(
             if (!hasExpressions && derivedStatements.length === 0) {
                 if (moduleBody.length === 0) return [filePath, null]
 
-                const code = SWC.printSync({
-                    type: "Module",
-                    span: emptySpan,
-                    body: wrapModuleItemsForResilience(filePath, moduleBody),
-                    interpreter: "",
-                }).code
-
-                return [filePath, code]
+                return [filePath, printExtracted(filePath, wrapModuleItemsForResilience(filePath, moduleBody))]
             }
 
             // Emit standalone extractor calls for any extracted calls not handled in-place
@@ -537,19 +532,14 @@ export function extractRelevantSymbols(
                 }
             }
 
-            const code = SWC.printSync({
-                type: "Module",
-                span: emptySpan,
-                body: wrapModuleItemsForResilience(filePath, [
-                    ...moduleBody,
-                    ...derivedStatements,
-                    ...standaloneStatements,
-                    ...extraStatements,
-                ]),
-                interpreter: "",
-            }).code
+            const body = wrapModuleItemsForResilience(filePath, [
+                ...moduleBody,
+                ...derivedStatements,
+                ...standaloneStatements,
+                ...extraStatements,
+            ])
 
-            return [filePath, code]
+            return [filePath, printExtracted(filePath, body)]
         }),
     )
 }

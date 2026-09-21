@@ -151,9 +151,13 @@ describe("graceful error handling during extraction (#44)", () => {
         expect(diagnostics.some((d) => d.code === "MOCHI_FILE_EXEC")).toBe(true)
     })
 
-    it("a MOCHI_FILE_EXEC diagnostic carries a real source position (sourcemap remapping)", async () => {
+    it("a MOCHI_FILE_EXEC diagnostic's position points at the throw in the ORIGINAL file (two-hop sourcemap remapping)", async () => {
         const brokenPath = path.resolve("src/broken.ts")
 
+        // Line 4 is `    throw new Error("mapped failure")` — the extraction pipeline reshapes
+        // this file substantially (minimizes it, wraps it in try/catch) before bundling, so a
+        // diagnostic landing on the right line in the ORIGINAL file (not just the extracted/
+        // minimized intermediate) proves the full two-hop remap — bundle map, then per-file map.
         const broken = await parseSource(
             dedent`
                 import { styled } from "@mochi-css/vanilla-react"
@@ -171,9 +175,7 @@ describe("graceful error handling during extraction (#44)", () => {
 
         const fileExecDiagnostics = diagnostics.filter((d) => d.code === "MOCHI_FILE_EXEC")
         expect(fileExecDiagnostics).toHaveLength(1)
-        // A real position within the extracted/minimized source, not left undefined.
-        expect(fileExecDiagnostics[0]?.line).toEqual(expect.any(Number))
+        expect(fileExecDiagnostics[0]).toMatchObject({ line: 4 })
         expect(fileExecDiagnostics[0]?.column).toEqual(expect.any(Number))
-        expect(fileExecDiagnostics[0]?.line).toBeGreaterThan(0)
     })
 })
