@@ -2145,7 +2145,7 @@ __metadata:
   dependencies:
     "@mochi-css/shared-config": "npm:^2.0.0"
     "@mochi-css/test": "npm:^2.0.0"
-    "@mochi-css/vite": "npm:6.1.2"
+    "@mochi-css/vite": "npm:6.1.3"
     "@types/node": "npm:^24.8.1"
     eslint: "npm:^9.39.2"
     typescript: "npm:^5.9.3"
@@ -2273,7 +2273,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mochi-css/vite@npm:*, @mochi-css/vite@npm:6.1.2, @mochi-css/vite@npm:^6.1.2, @mochi-css/vite@workspace:packages/vite":
+"@mochi-css/vite@npm:*, @mochi-css/vite@npm:6.1.3, @mochi-css/vite@npm:^6.1.2, @mochi-css/vite@workspace:packages/vite":
   version: 0.0.0-use.local
   resolution: "@mochi-css/vite@workspace:packages/vite"
   dependencies:
