@@ -38,10 +38,10 @@ export function Document({
 }: DocumentProps) {
     const sheet = resolvePageSize(size, orientation)
     const rootRef = useRef<HTMLDivElement | null>(null)
-    const pageCount = usePageCount(rootRef)
+    const { pageCount, layoutVersion } = usePageLayout(rootRef)
 
     return (
-        <DocumentContext.Provider value={{ size, orientation, margin, header, footer, pageCount }}>
+        <DocumentContext.Provider value={{ size, orientation, margin, header, footer, pageCount, layoutVersion }}>
             {/* Sizes the printed sheet to match the page boxes. Margins live inside the box as
                 padding, so the sheet itself takes none. This also makes printing straight from
                 the browser produce the same result as exporting. */}
@@ -54,22 +54,30 @@ export function Document({
 }
 
 /**
- * How many pages the document currently has.
+ * The document's pages as they currently stand.
  *
  * A document's length is a result of laying it out, not something known while rendering it —
- * flowed content decides how many pages it needs. The count is therefore read back from the
- * rendered pages, and watched, since a flow settles after its first paint.
+ * flowed content decides how many pages it needs. The pages are therefore read back from what
+ * rendered, and watched, since a flow settles after its first paint.
+ *
+ * The version changes whenever the pages themselves change, not merely how many there are: two
+ * flows where one gains a page as another loses one leaves the count alone while every number
+ * after that point moves.
  */
-function usePageCount(ref: React.RefObject<HTMLDivElement | null>): number {
-    const [pageCount, setPageCount] = useState(0)
+function usePageLayout(ref: React.RefObject<HTMLDivElement | null>): { pageCount: number; layoutVersion: number } {
+    const [layout, setLayout] = useState({ pageCount: 0, layoutVersion: 0 })
+    const seen = useRef<Element[]>([])
 
     useLayoutEffect(() => {
         const root = ref.current
         if (root === null) return
 
         const update = () => {
-            const count = root.querySelectorAll(PAGE_SELECTOR).length
-            setPageCount((previous) => (previous === count ? previous : count))
+            const pages = [...root.querySelectorAll(PAGE_SELECTOR)]
+            if (samePages(pages, seen.current)) return
+
+            seen.current = pages
+            setLayout((previous) => ({ pageCount: pages.length, layoutVersion: previous.layoutVersion + 1 }))
         }
 
         update()
@@ -83,5 +91,9 @@ function usePageCount(ref: React.RefObject<HTMLDivElement | null>): number {
         }
     }, [ref])
 
-    return pageCount
+    return layout
+}
+
+function samePages(a: Element[], b: Element[]): boolean {
+    return a.length === b.length && a.every((element, index) => element === b[index])
 }

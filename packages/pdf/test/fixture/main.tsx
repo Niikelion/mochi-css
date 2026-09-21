@@ -86,6 +86,21 @@ function Fixture() {
         )
     }
 
+    if (mode === "mixed") {
+        // A bare string among elements: the string renders as a text node, which is absent from
+        // element.children, so pairing React children with DOM children by index would shift.
+        return (
+            <Document size={{ width: 600, height: 400 }} margin={0}>
+                <AutoFlow>
+                    loose text
+                    <div style={{ height: 50 }}>alpha</div>
+                    <div style={{ height: 50 }}>beta</div>
+                    <div style={{ height: 50 }}>gamma</div>
+                </AutoFlow>
+            </Document>
+        )
+    }
+
     if (mode === "orphan") {
         // Exact pixel geometry, chosen so that without widow and orphan control the greedy pack
         // leaves precisely one line of the paragraph at the foot of the first page: a 400px

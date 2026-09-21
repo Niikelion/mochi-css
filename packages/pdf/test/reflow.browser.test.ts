@@ -154,6 +154,25 @@ describe("reflow in a real browser", () => {
     )
 
     it(
+        "keeps bare text alongside elements instead of dropping content",
+        async () => {
+            const page = await openFixture("mixed")
+            try {
+                const text = await page.$$eval(PAGE_SELECTOR, pages =>
+                    pages.map(element => element.querySelector("[data-mochi-page-content]")?.textContent ?? "").join(""),
+                )
+
+                for (const expected of ["loose text", "alpha", "beta", "gamma"]) {
+                    expect(text).toContain(expected)
+                }
+            } finally {
+                await page.close()
+            }
+        },
+        120_000,
+    )
+
+    it(
         "keeps every paragraph exactly once when flowing across pages",
         async () => {
             const page = await openFixture("flow")

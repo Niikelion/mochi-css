@@ -72,5 +72,13 @@ function firstOffsetAtOrBelow(range: Range, textNode: ChildNode, top: number, lo
 function offsetTop(range: Range, textNode: ChildNode, offset: number, length: number): number {
     range.setStart(textNode, offset)
     range.setEnd(textNode, Math.min(offset + 1, length))
-    return range.getBoundingClientRect().top
+
+    const rect = range.getBoundingClientRect()
+    // A character with no box — whitespace collapsed at a line break, a zero-width joiner —
+    // reports an empty rect at the origin. Taking that 0 at face value would break the ordering
+    // the search relies on and land the boundary in the wrong place. Treating it as belonging to
+    // the line before also puts trailing whitespace where it belongs.
+    if (rect.width === 0 && rect.height === 0) return Number.NEGATIVE_INFINITY
+
+    return rect.top
 }

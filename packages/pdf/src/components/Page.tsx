@@ -1,4 +1,12 @@
-import { useContext, useLayoutEffect, useRef, useState, type ComponentPropsWithRef, type CSSProperties } from "react"
+import {
+    useCallback,
+    useContext,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type ComponentPropsWithRef,
+    type CSSProperties,
+} from "react"
 import { styled } from "@mochi-css/vanilla-react"
 import { DocumentContext } from "./context"
 import { renderSlot, type PageSlot } from "./pageSlots"
@@ -43,7 +51,8 @@ export function Page({ size, orientation, margin, header, footer, style, childre
     const padding = resolvePageMargin(margin ?? document.margin)
 
     const boxRef = useRef<HTMLDivElement | null>(null)
-    const pageNumber = usePageNumber(boxRef, document.pageCount)
+    const mergedRef = useMergedRef(boxRef, rest.ref)
+    const pageNumber = usePageNumber(boxRef, document.layoutVersion)
     const info = { pageNumber, pageCount: document.pageCount }
 
     const headerContent = renderSlot(header ?? document.header, info)
@@ -55,7 +64,7 @@ export function Page({ size, orientation, margin, header, footer, style, childre
     return (
         <PageBox
             {...rest}
-            ref={mergeRefs(boxRef, rest.ref)}
+            ref={mergedRef}
             data-mochi-page=""
             style={{
                 ...PAGE_LAYOUT_STYLE,
@@ -81,10 +90,10 @@ export function Page({ size, orientation, margin, header, footer, style, childre
  * This page's 1-based position among the document's pages.
  *
  * Taken from the rendered order rather than tracked in React, because the pages a document ends up
- * with are only known after content has been flowed into them. Recomputed whenever the page count
- * changes, which is what a flow settling looks like from here.
+ * with are only known after content has been flowed into them. Recomputed whenever the document's
+ * pages change, which is what a flow settling looks like from here.
  */
-function usePageNumber(ref: React.RefObject<HTMLDivElement | null>, pageCount: number): number {
+function usePageNumber(ref: React.RefObject<HTMLDivElement | null>, layoutVersion: number): number {
     const [pageNumber, setPageNumber] = useState(0)
 
     useLayoutEffect(() => {
@@ -99,18 +108,28 @@ function usePageNumber(ref: React.RefObject<HTMLDivElement | null>, pageCount: n
         if (index < 0) return
 
         setPageNumber((previous) => (previous === index + 1 ? previous : index + 1))
-    }, [ref, pageCount])
+    }, [ref, layoutVersion])
 
     return pageNumber
 }
 
-function mergeRefs(
+/**
+ * Keeps an internal ref alongside one the caller passed.
+ *
+ * Memoised because React detaches and reattaches a callback ref whenever its identity changes,
+ * which for a new closure every render means on every render. The forwarded ref's return value is
+ * passed back so a cleanup-style ref still gets cleaned up.
+ */
+function useMergedRef(
     own: React.RefObject<HTMLDivElement | null>,
     forwarded: React.Ref<HTMLDivElement> | undefined,
 ): React.RefCallback<HTMLDivElement> {
-    return (element) => {
-        own.current = element
-        if (typeof forwarded === "function") forwarded(element)
-        else if (forwarded !== null && forwarded !== undefined) forwarded.current = element
-    }
+    return useCallback(
+        (element: HTMLDivElement | null) => {
+            own.current = element
+            if (typeof forwarded === "function") return forwarded(element) as void
+            if (forwarded !== null && forwarded !== undefined) forwarded.current = element
+        },
+        [own, forwarded],
+    )
 }

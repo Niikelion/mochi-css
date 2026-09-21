@@ -37,7 +37,7 @@ describe("collectAtoms", () => {
             </ul>,
         ]
 
-        expect(collectAtoms(nodes, container).map((atom) => atom.path)).toEqual([
+        expect(collectAtoms(nodes, container)?.map((atom) => atom.path)).toEqual([
             [0, 0],
             [0, 1],
         ])
@@ -53,10 +53,12 @@ describe("collectAtoms", () => {
             </ul>,
         ]
 
-        expect(collectAtoms(nodes, container).map((atom) => atom.path)).toEqual([[0]])
+        expect(collectAtoms(nodes, container)?.map((atom) => atom.path)).toEqual([[0]])
     })
 
-    it("stays atomic for a single child, which offers no break point", () => {
+    it("descends through a single-child wrapper to reach what is inside it", () => {
+        // No break point at the wrapper itself, but the paragraph within can still be split
+        // between its own lines, which only happens if the walk goes through.
         const container = buildDom([1])
         const nodes = [
             <div key="d">
@@ -64,7 +66,16 @@ describe("collectAtoms", () => {
             </div>,
         ]
 
-        expect(collectAtoms(nodes, container).map((atom) => atom.path)).toEqual([[0]])
+        expect(collectAtoms(nodes, container)?.map((atom) => atom.path)).toEqual([[0, 0]])
+    })
+
+    it("refuses to measure when the root children do not match what rendered", () => {
+        // Two React children, one rendered element: pairing them by index would attach the wrong
+        // measurement to the wrong node and drop the remainder.
+        const container = buildDom([0])
+        const nodes = [<p key="a">a</p>, <p key="b">b</p>]
+
+        expect(collectAtoms(nodes, container)).toBeNull()
     })
 
     it("does not descend into content marked break-inside: avoid", () => {
@@ -86,7 +97,7 @@ describe("collectAtoms", () => {
                 </ul>,
             ]
 
-            expect(collectAtoms(nodes, container).map((atom) => atom.path)).toEqual([[0]])
+            expect(collectAtoms(nodes, container)?.map((atom) => atom.path)).toEqual([[0]])
         } finally {
             window.getComputedStyle = original
         }
@@ -110,7 +121,7 @@ describe("collectAtoms", () => {
         const container = buildDom([0, 0])
         const nodes = [<p key="a">a</p>, <p key="b">b</p>]
 
-        expect(collectAtoms(nodes, container).map((atom) => atom.rect)).toEqual([
+        expect(collectAtoms(nodes, container)?.map((atom) => atom.rect)).toEqual([
             { top: 0, bottom: 100 },
             { top: 100, bottom: 200 },
         ])

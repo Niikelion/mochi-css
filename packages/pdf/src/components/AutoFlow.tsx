@@ -1,5 +1,4 @@
 import {
-    Children,
     useCallback,
     useLayoutEffect,
     useRef,
@@ -11,7 +10,7 @@ import {
 import { Page } from "./Page"
 import { collectAtoms, textGroups } from "../autoflow/collect"
 import { paginateRects } from "../autoflow/paginate"
-import { rebuild, type Fragment } from "../autoflow/nodes"
+import { normalizeItems, rebuild, type Fragment } from "../autoflow/nodes"
 import type { PageMargin, PageOrientation, PageSize } from "../pageSizes"
 
 // The probe must be laid out to be measurable, so it cannot be display:none. Clipping it to a
@@ -69,8 +68,18 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
         const content = probe.querySelector("[data-mochi-page-content]")
         if (content === null) return
 
-        const items = Children.toArray(children)
+        const items = normalizeItems(children)
         const atoms = collectAtoms(items, content)
+
+        // Nothing here can be paired with its measurement, so keep the content whole on one page.
+        // It overflows, which is visible and fixable, rather than paginating it wrongly.
+        if (atoms === null) {
+            warnUnmeasurable()
+            const fallback = [items.map((_, index) => ({ path: [index] }))]
+            setPages((previous) => (samePages(previous, fallback) ? previous : fallback))
+            return
+        }
+
         const assigned = paginateRects(
             atoms.map((atom) => atom.rect),
             contentBoxHeight(content),
@@ -123,7 +132,7 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
         }
     }, [remeasure])
 
-    const items = Children.toArray(children)
+    const items = normalizeItems(children)
 
     return (
         <>
@@ -145,6 +154,18 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
                 </Page>
             ))}
         </>
+    )
+}
+
+let warnedUnmeasurable = false
+
+function warnUnmeasurable(): void {
+    if (warnedUnmeasurable) return
+    warnedUnmeasurable = true
+    console.warn(
+        "[@mochi-css/pdf] AutoFlow could not match its children to what they rendered, so its content is on a single page. " +
+            "This happens when a child renders nothing, renders a fragment of several elements, or renders into a portal. " +
+            "Give each child a single element of its own to make it flowable.",
     )
 }
 

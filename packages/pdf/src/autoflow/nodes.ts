@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement, type ReactNode } from "react"
+import { Children, cloneElement, createElement, isValidElement, type ReactNode } from "react"
 
 /** A character range inside a text node, as `[start, end)`. */
 export type TextRange = { start: number; end: number }
@@ -8,6 +8,21 @@ export type Fragment = {
     /** Index chain from the root children array down to the node. */
     path: number[]
     text?: TextRange
+}
+
+/**
+ * The children to flow, as a list that lines up with what the DOM will contain.
+ *
+ * Bare text renders as a text node, which does not appear among an element's children — so a list
+ * mixing text with elements would pair the two sequences off by one and quietly drop the tail.
+ * Wrapping the text gives it an element of its own without changing how it lays out.
+ */
+export function normalizeItems(children: ReactNode): ReactNode[] {
+    return Children.toArray(children).map((child, index) =>
+        typeof child === "string" || typeof child === "number"
+            ? createElement("span", { key: `mochi-text-${index}` }, child)
+            : child,
+    )
 }
 
 /** Children of `node` as a flat array, or null when it has none to descend into. */
@@ -97,7 +112,10 @@ function rebuildLevel(nodes: ReactNode[], trie: Trie): ReactNode[] {
             continue
         }
 
-        out.push(cloneElement(node, undefined, ...rebuildLevel(children, sub)))
+        const rebuilt = rebuildLevel(children, sub)
+        // cloneElement with no children argument keeps the original ones, so an empty result has
+        // to be passed explicitly or the whole subtree reappears.
+        out.push(rebuilt.length === 0 ? cloneElement(node, undefined, null) : cloneElement(node, undefined, ...rebuilt))
     }
 
     return out

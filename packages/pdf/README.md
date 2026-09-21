@@ -78,14 +78,18 @@ Content is never split when it is marked `break-inside: avoid`, either through `
 plain CSS. Pagination re-runs when content changes and when late webfonts or images shift the
 layout.
 
-Two limits worth knowing:
+Three limits worth knowing:
 
+- **`<AutoFlow>` paginates in the browser.** It works from real layout, which the server does not
+  have, so server-rendered markup contains the content but no pages — it paginates once it
+  hydrates. `<Page>` renders fine anywhere. Export drives a real browser, so it is unaffected.
 - Only a block whose content is a single run of text breaks mid-block. One containing inline markup
   (`<strong>`, a link) is treated as one unit, so if it is taller than a page it is placed alone and
   allowed to overflow.
-- A component whose rendered DOM does not map one-to-one onto its React children — one returning a
-  fragment, for example — is treated as unsplittable. Breaking it would mean guessing which element
-  matched which child, so it is left whole instead.
+- Each child of `<AutoFlow>` should render exactly one element. Bare text is wrapped for you, but a
+  child that renders nothing, renders a fragment of several elements, or renders into a portal
+  cannot be matched to its measurement; rather than guess, the whole flow stays on one page and
+  warns. Wrapping such a child in an element makes it flowable again.
 
 ## Headers, footers and page numbers
 

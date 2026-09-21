@@ -48,9 +48,15 @@ function samePath(a: number[], b: number[]): boolean {
  * breaks that correspondence, and guessing there would split the wrong element. Such a node
  * stays atomic, which costs packing density but never produces wrong output.
  */
-export function collectAtoms(nodes: ReactNode[], container: Element): Atom[] {
+export function collectAtoms(nodes: ReactNode[], container: Element): Atom[] | null {
+    const elements = [...container.children]
+    // The same correspondence the descent requires has to hold at the root too. Without it the
+    // two sequences pair off by one, which attaches the wrong measurement to the wrong node and
+    // drops whatever falls off the end — wrong output, silently.
+    if (elements.length !== nodes.length) return null
+
     const out: Atom[] = []
-    walk(nodes, [...container.children], 0, [], out)
+    walk(nodes, elements, 0, [], out)
     return out
 }
 
@@ -60,7 +66,9 @@ function walk(nodes: ReactNode[], elements: Element[], depth: number, path: numb
         if (element === undefined) continue
 
         const children = depth < MAX_DEPTH && !isAtomic(element) ? elementChildren(nodes[index]) : null
-        const canDescend = children !== null && children.length >= 2 && element.children.length === children.length
+        // A single child is worth descending into: it cannot be split here, but a paragraph
+        // nested inside a wrapper can still be split between its own lines further down.
+        const canDescend = children !== null && element.children.length === children.length
 
         if (canDescend) {
             walk(children, [...element.children], depth + 1, [...path, index], out)
