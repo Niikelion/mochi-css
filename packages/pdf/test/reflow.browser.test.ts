@@ -123,6 +123,37 @@ describe("reflow in a real browser", () => {
     )
 
     it(
+        "never strands a single line of a paragraph at a page break",
+        async () => {
+            // This fixture's geometry leaves room for exactly one line at the foot of the first
+            // page, so without the minimum that line would be stranded there.
+            const page = await openFixture("orphan")
+            try {
+                const lineCounts = await page.$$eval(PAGE_SELECTOR, pages =>
+                    pages
+                        .map(element => {
+                            const paragraph = element.querySelector("p")
+                            if (paragraph?.firstChild == null) return null
+
+                            // Count the line boxes the browser actually produced on this page.
+                            const range = document.createRange()
+                            range.selectNodeContents(paragraph.firstChild)
+                            return range.getClientRects().length
+                        })
+                        // A page the paragraph does not reach at all is not a stranded line.
+                        .filter((count): count is number => count !== null),
+                )
+
+                expect(lineCounts.length).toBeGreaterThan(0)
+                for (const count of lineCounts) expect(count).toBeGreaterThanOrEqual(2)
+            } finally {
+                await page.close()
+            }
+        },
+        120_000,
+    )
+
+    it(
         "keeps every paragraph exactly once when flowing across pages",
         async () => {
             const page = await openFixture("flow")

@@ -70,13 +70,15 @@ browser layout rather than an estimate. Breaks are taken at the finest point the
 ancestors are rewrapped — a table split across pages is a real table on both, not loose rows.
 
 A paragraph too tall for one page breaks between its own lines and continues on the next, using the
-line boxes the browser already produced. No text is lost or repeated across the break.
+line boxes the browser already produced. No text is lost or repeated across the break, and a break
+never strands fewer than two lines on either side — a paragraph that cannot keep two lines behind
+moves to the next page whole.
 
 Content is never split when it is marked `break-inside: avoid`, either through `<KeepTogether>` or
 plain CSS. Pagination re-runs when content changes and when late webfonts or images shift the
 layout.
 
-Three limits worth knowing:
+Two limits worth knowing:
 
 - Only a block whose content is a single run of text breaks mid-block. One containing inline markup
   (`<strong>`, a link) is treated as one unit, so if it is taller than a page it is placed alone and
@@ -84,8 +86,6 @@ Three limits worth knowing:
 - A component whose rendered DOM does not map one-to-one onto its React children — one returning a
   fragment, for example — is treated as unsplittable. Breaking it would mean guessing which element
   matched which child, so it is left whole instead.
-- There is no widow and orphan control yet, so a break can leave a single line of a paragraph alone
-  at the foot or head of a page.
 
 ## Previewing with hot reload
 

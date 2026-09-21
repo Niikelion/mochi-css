@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from "vitest"
-import { collectAtoms } from "./collect"
+import { collectAtoms, textGroups } from "./collect"
+import type { Atom } from "./collect"
 
 /** Builds a container whose children mirror the shape the React nodes would render to. */
 function buildDom(shape: number[]): HTMLElement {
@@ -89,6 +90,20 @@ describe("collectAtoms", () => {
         } finally {
             window.getComputedStyle = original
         }
+    })
+
+    it("groups consecutive lines of one paragraph, leaving whole nodes ungrouped", () => {
+        const rect = { top: 0, bottom: 10 }
+        const atoms: Atom[] = [
+            { path: [0], rect },
+            { path: [1], rect, text: { start: 0, end: 5 } },
+            { path: [1], rect, text: { start: 5, end: 9 } },
+            { path: [2], rect, text: { start: 0, end: 4 } },
+            { path: [3], rect },
+        ]
+
+        // Lines of one paragraph share an id; a different paragraph starts a new one.
+        expect(textGroups(atoms)).toEqual([undefined, 1, 1, 3, undefined])
     })
 
     it("reports the measured position of each atom", () => {

@@ -10,6 +10,36 @@ export type Atom = Fragment & { rect: ItemRect }
 const MAX_DEPTH = 4
 
 /**
+ * Marks which atoms are lines of the same run of text, so pagination can keep a minimum number of
+ * them together. Atoms that are whole nodes break freely and get no group.
+ */
+export function textGroups(atoms: Atom[]): (number | undefined)[] {
+    const groups: (number | undefined)[] = []
+    let current: number | undefined
+    let previous: Atom | undefined
+
+    for (const [index, atom] of atoms.entries()) {
+        if (atom.text === undefined) {
+            groups.push(undefined)
+            current = undefined
+        } else {
+            // Lines of one paragraph are emitted consecutively and share its path.
+            if (current === undefined || previous?.text === undefined || !samePath(atom.path, previous.path)) {
+                current = index
+            }
+            groups.push(current)
+        }
+        previous = atom
+    }
+
+    return groups
+}
+
+function samePath(a: number[], b: number[]): boolean {
+    return a.length === b.length && a.every((step, index) => step === b[index])
+}
+
+/**
  * Finds the smallest units the content can be broken into, measured against the live layout
  * of `container`.
  *

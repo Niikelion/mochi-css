@@ -49,6 +49,22 @@ function Fixture() {
         )
     }
 
+    if (mode === "orphan") {
+        // Exact pixel geometry, chosen so that without widow and orphan control the greedy pack
+        // leaves precisely one line of the paragraph at the foot of the first page: a 400px
+        // content box, 380px of it taken by the block, and a 20px line that fits in what is left.
+        return (
+            <Document size={{ width: 600, height: 400 }} margin={0}>
+                <AutoFlow>
+                    <div style={{ height: 380 }}>lead</div>
+                    <p style={{ margin: 0, fontSize: 14, lineHeight: "20px" }}>
+                        {Array.from({ length: 150 }, (_, index) => `word${index}`).join(" ")}
+                    </p>
+                </AutoFlow>
+            </Document>
+        )
+    }
+
     if (mode === "keep") {
         // Pairs of 40mm blocks: three pairs fit per page, and the fourth must move whole.
         return (

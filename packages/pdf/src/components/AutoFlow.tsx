@@ -9,7 +9,7 @@ import {
     type ReactNode,
 } from "react"
 import { Page } from "./Page"
-import { collectAtoms } from "../autoflow/collect"
+import { collectAtoms, textGroups } from "../autoflow/collect"
 import { paginateRects } from "../autoflow/paginate"
 import { rebuild, type Fragment } from "../autoflow/nodes"
 import type { PageMargin, PageOrientation, PageSize } from "../pageSizes"
@@ -69,6 +69,7 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
         const assigned = paginateRects(
             atoms.map((atom) => atom.rect),
             contentBoxHeight(probe),
+            { groups: textGroups(atoms) },
         )
         const next = assigned.map((page) =>
             page.flatMap((index) => {
