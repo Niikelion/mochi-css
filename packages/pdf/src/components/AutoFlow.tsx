@@ -1,5 +1,13 @@
-import { Children, useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
-import { styled } from "@mochi-css/vanilla-react"
+import {
+    Children,
+    useCallback,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type ComponentPropsWithRef,
+    type CSSProperties,
+    type ReactNode,
+} from "react"
 import { Page } from "./Page"
 import { collectAtoms } from "../autoflow/collect"
 import { paginateRects } from "../autoflow/paginate"
@@ -22,8 +30,16 @@ const PROBE_CLIP_STYLE: CSSProperties = {
     pointerEvents: "none",
 }
 
-/** Marks its content as a unit that may not be split across a page break. */
-export const KeepTogether = styled("div", { breakInside: "avoid" })
+/**
+ * Marks its content as a unit that may not be split across a page break.
+ *
+ * Inline rather than extracted, for the same reason as the probe clip: silently losing the
+ * guarantee wherever the build step has not run would be worse than the extra attribute.
+ * Any element carrying `break-inside: avoid` from ordinary CSS is honoured too.
+ */
+export function KeepTogether({ style, ...rest }: ComponentPropsWithRef<"div">) {
+    return <div {...rest} data-mochi-keep-together="" style={{ ...style, breakInside: "avoid" }} />
+}
 
 export type AutoFlowProps = {
     size?: PageSize
