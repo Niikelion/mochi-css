@@ -59,6 +59,44 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
 
     const resolvedEntries = new Set(entries.map(entry => path.resolve(path.fromSystemPath(process.cwd()), entry)))
 
+    /** Re-collects CSS from disk, returning the manifest as it was before. */
+    const refreshManifest = async (): Promise<MochiManifest | undefined> => {
+        if (!builder) return undefined
+
+        const previous = manifest
+        const result = await builder.collectMochiCss()
+        manifest = {
+            global: result.global,
+            files: result.files ?? {},
+            sourcemods: result.sourcemods,
+            sourcemaps: result.sourcemaps,
+        }
+
+        hashToSource.clear()
+        for (const source of Object.keys(manifest.files)) {
+            hashToSource.set(fileHash(source), source)
+        }
+
+        return previous
+    }
+
+    /**
+     * Drops any transform Vite cached for `source`.
+     *
+     * A module transformed while the manifest was still stale keeps that output until it is
+     * invalidated — refetching alone returns the same cached body.
+     */
+    const invalidateSource = (source: string): void => {
+        const graph = server?.moduleGraph
+        if (!graph) return
+
+        for (const candidate of new Set([source, path.toSystemPath(source)])) {
+            for (const mod of graph.getModulesByFile(candidate) ?? []) {
+                graph.invalidateModule(mod)
+            }
+        }
+    }
+
     return {
         name: "mochi-css",
         enforce: "pre",
@@ -137,15 +175,8 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             if (!/\.(ts|tsx|js|jsx)$/.test(ctx.file)) return
             if (!context || !builder || !manifest) return
 
-            const oldManifest = manifest
-
-            const result = await builder.collectMochiCss()
-            manifest = { global: result.global, files: result.files ?? {}, sourcemods: result.sourcemods, sourcemaps: result.sourcemaps }
-
-            hashToSource.clear()
-            for (const source of Object.keys(manifest.files)) {
-                hashToSource.set(fileHash(source), source)
-            }
+            const oldManifest = await refreshManifest()
+            if (!oldManifest || !manifest) return
 
             const ctxModuleSet = new Set(ctx.modules)
             const invalidatedModules = new Set<NonNullable<ReturnType<typeof ctx.server.moduleGraph.getModuleById>>>()
@@ -183,6 +214,9 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
                 if (oldSourcemods[source] !== newSourcemods[source]) {
                     const mod = ctx.server.moduleGraph.getModuleById(source)
                     if (mod) invalidateAndCollectImporters(mod)
+                    // The id lookup above only finds modules keyed by the exact source path; a
+                    // file first seen during this rebuild may already be cached under its own id.
+                    invalidateSource(source)
                 }
             }
 
@@ -190,12 +224,25 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
         },
 
         async watchChange(id, change) {
-            if (change.event !== "delete") return
             if (!/\.(ts|tsx|js|jsx)$/.test(id)) return
             if (!manifest) return
 
-            delete manifest.files[id]
-            hashToSource.delete(fileHash(id))
+            if (change.event === "delete") {
+                delete manifest.files[id]
+                hashToSource.delete(fileHash(id))
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const ws = server?.hot ?? server?.ws
+                ws?.send({ type: "full-reload" })
+                return
+            }
+
+            if (change.event !== "create") return
+
+            // A created file is not in the module graph yet, so handleHotUpdate never runs for
+            // it and nothing else would rebuild the manifest — its styles would be missing until
+            // some already-known file happened to change.
+            await refreshManifest()
+            invalidateSource(id)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ws = server?.hot ?? server?.ws
             ws?.send({ type: "full-reload" })
