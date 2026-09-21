@@ -14,9 +14,11 @@ than three approximations of each other.
 page. Its content is laid out once in an off-screen probe page and measured against real browser
 layout, so the break points match what the exported PDF produces. Breaks are taken at the finest
 point the markup allows: a list or table split across pages is rewrapped so each page holds a real
-list or table rather than loose rows. Content marked `break-inside: avoid` — directly or via the
-`<KeepTogether>` helper — is never split, and a node whose rendered DOM does not map onto its React
-children is left whole rather than split at a guessed boundary.
+list or table rather than loose rows, and a paragraph too tall for one page breaks between its own
+line boxes and continues on the next without losing or repeating text. Content marked
+`break-inside: avoid` — directly or via the `<KeepTogether>` helper — is never split, and a node
+whose rendered DOM does not map onto its React children is left whole rather than split at a
+guessed boundary.
 
 `@mochi-css/pdf/export` adds `renderToPdf`, which drives a page you already serve through headless
 Chromium, waiting for fonts and for pagination to settle before printing. `@mochi-css/pdf/vite` adds

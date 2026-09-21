@@ -1,12 +1,10 @@
 import type { ReactNode } from "react"
-import { elementChildren } from "./nodes"
+import { elementChildren, type Fragment } from "./nodes"
+import { measureTextLines } from "./text"
 import type { ItemRect } from "./paginate"
 
-export type Atom = {
-    /** Index chain from the root children array down to this node. */
-    path: number[]
-    rect: ItemRect
-}
+/** A unit of content that can be placed on a page, with where it sits in the measured layout. */
+export type Atom = Fragment & { rect: ItemRect }
 
 /** How far to descend when looking for finer break points. */
 const MAX_DEPTH = 4
@@ -34,8 +32,24 @@ function walk(nodes: ReactNode[], elements: Element[], depth: number, path: numb
         const children = depth < MAX_DEPTH && !isAtomic(element) ? elementChildren(nodes[index]) : null
         const canDescend = children !== null && children.length >= 2 && element.children.length === children.length
 
-        if (canDescend) walk(children, [...element.children], depth + 1, [...path, index], out)
-        else out.push({ path: [...path, index], rect: rectOf(element) })
+        if (canDescend) {
+            walk(children, [...element.children], depth + 1, [...path, index], out)
+            continue
+        }
+
+        const here = [...path, index]
+
+        // Nothing smaller to break at structurally — but a run of text can still be broken
+        // between its own lines, which is what lets a paragraph continue onto the next page.
+        const lines = isAtomic(element) ? null : measureTextLines(element)
+        if (lines === null) {
+            out.push({ path: here, rect: rectOf(element) })
+            continue
+        }
+
+        for (const line of lines) {
+            out.push({ path: here, rect: line.rect, text: { start: line.start, end: line.end } })
+        }
     }
 }
 

@@ -98,6 +98,31 @@ describe("reflow in a real browser", () => {
     )
 
     it(
+        "breaks a long paragraph across pages without losing or repeating a character",
+        async () => {
+            const page = await openFixture("prose")
+            try {
+                const original = await page.evaluate(
+                    () => (window as unknown as { __PROSE__: string }).__PROSE__,
+                )
+                const parts = await page.$$eval(PAGE_SELECTOR, pages =>
+                    pages.map(element => element.querySelector("p")?.textContent ?? ""),
+                )
+
+                // A paragraph too tall for one page has to break inside itself.
+                expect(parts.length).toBeGreaterThan(1)
+                for (const part of parts) expect(part.length).toBeGreaterThan(0)
+
+                // The split is exact: the pages put back together are the original text.
+                expect(parts.join("")).toBe(original)
+            } finally {
+                await page.close()
+            }
+        },
+        120_000,
+    )
+
+    it(
         "keeps every paragraph exactly once when flowing across pages",
         async () => {
             const page = await openFixture("flow")

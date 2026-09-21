@@ -7,6 +7,11 @@ const mode = new URLSearchParams(window.location.search).get("mode")
 // decisions rather than trivially fitting everything.
 const BLOCK_HEIGHT = "40mm"
 
+// Numbered words so a test can tell truncation, duplication and reordering apart. Long enough to
+// run over several pages, which is the only way a break lands inside the paragraph.
+const PROSE = Array.from({ length: 1500 }, (_, index) => `word${index}`).join(" ")
+;(window as unknown as { __PROSE__: string }).__PROSE__ = PROSE
+
 function Fixture() {
     if (mode === "explicit") {
         return (
@@ -29,6 +34,16 @@ function Fixture() {
                             </li>
                         ))}
                     </ul>
+                </AutoFlow>
+            </Document>
+        )
+    }
+
+    if (mode === "prose") {
+        return (
+            <Document size="a4" margin="10mm">
+                <AutoFlow>
+                    <p style={{ margin: 0 }}>{PROSE}</p>
                 </AutoFlow>
             </Document>
         )

@@ -11,7 +11,7 @@ import {
 import { Page } from "./Page"
 import { collectAtoms } from "../autoflow/collect"
 import { paginateRects } from "../autoflow/paginate"
-import { rebuild } from "../autoflow/nodes"
+import { rebuild, type Fragment } from "../autoflow/nodes"
 import type { PageMargin, PageOrientation, PageSize } from "../pageSizes"
 
 // The probe must be laid out to be measurable, so it cannot be display:none. Clipping it to a
@@ -58,7 +58,7 @@ export type AutoFlowProps = {
  */
 export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps) {
     const probeRef = useRef<HTMLDivElement | null>(null)
-    const [pages, setPages] = useState<number[][][]>([])
+    const [pages, setPages] = useState<Fragment[][]>([])
 
     const remeasure = useCallback(() => {
         const probe = probeRef.current
@@ -71,7 +71,10 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
             contentBoxHeight(probe),
         )
         const next = assigned.map((page) =>
-            page.flatMap((index) => (atoms[index] === undefined ? [] : [atoms[index].path])),
+            page.flatMap((index) => {
+                const atom = atoms[index]
+                return atom === undefined ? [] : [{ path: atom.path, text: atom.text }]
+            }),
         )
 
         setPages((previous) => (samePages(previous, next) ? previous : next))
@@ -128,9 +131,9 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
                     {items}
                 </Page>
             </div>
-            {pages.map((paths, index) => (
+            {pages.map((fragments, index) => (
                 <Page key={index} size={size} orientation={orientation} margin={margin}>
-                    {rebuild(items, paths)}
+                    {rebuild(items, fragments)}
                 </Page>
             ))}
         </>
@@ -151,14 +154,17 @@ function toPx(value: string): number {
     return Number.isFinite(parsed) ? parsed : 0
 }
 
-function samePages(a: number[][][], b: number[][][]): boolean {
-    return a.length === b.length && a.every((page, index) => samePaths(page, b[index]))
+function samePages(a: Fragment[][], b: Fragment[][]): boolean {
+    return a.length === b.length && a.every((page, index) => samePage(page, b[index]))
 }
 
-function samePaths(a: number[][], b: number[][] | undefined): boolean {
+function samePage(a: Fragment[], b: Fragment[] | undefined): boolean {
     if (a.length !== b?.length) return false
-    return a.every((path, index) => {
-        const other = b[index]
-        return path.length === other?.length && path.every((step, i) => step === other[i])
-    })
+    return a.every((fragment, index) => sameFragment(fragment, b[index]))
+}
+
+function sameFragment(a: Fragment, b: Fragment | undefined): boolean {
+    if (b === undefined) return false
+    if (a.text?.start !== b.text?.start || a.text?.end !== b.text?.end) return false
+    return a.path.length === b.path.length && a.path.every((step, index) => step === b.path[index])
 }

@@ -29,12 +29,12 @@ describe("rebuild", () => {
     const nodes = [<p key="a">a</p>, <p key="b">b</p>, <p key="c">c</p>]
 
     it("keeps the listed top level nodes and drops the rest", () => {
-        const result = rebuild(nodes, [[0], [2]])
+        const result = rebuild(nodes, [{ path: [0] }, { path: [2] }])
         expect(result).toEqual([nodes[0], nodes[2]])
     })
 
-    it("orders nodes by their position, not by the order of the paths", () => {
-        const result = rebuild(nodes, [[2], [0]])
+    it("orders nodes by their position, not by the order of the fragments", () => {
+        const result = rebuild(nodes, [{ path: [2] }, { path: [0] }])
         expect(result).toEqual([nodes[0], nodes[2]])
     })
 
@@ -47,14 +47,8 @@ describe("rebuild", () => {
             </ul>
         )
 
-        const [head] = rebuild(
-            [list],
-            [
-                [0, 0],
-                [0, 1],
-            ],
-        )
-        const [tail] = rebuild([list], [[0, 2]])
+        const [head] = rebuild([list], [{ path: [0, 0] }, { path: [0, 1] }])
+        const [tail] = rebuild([list], [{ path: [0, 2] }])
 
         if (!isValidElement(head) || !isValidElement(tail)) throw new Error("expected elements")
         expect(head.type).toBe("ul")
@@ -71,6 +65,44 @@ describe("rebuild", () => {
                 <li>two</li>
             </ul>
         )
-        expect(rebuild([list], [[0]])).toEqual([list])
+        expect(rebuild([list], [{ path: [0] }])).toEqual([list])
+    })
+
+    describe("text fragments", () => {
+        const paragraph = <p className="body">one two three four</p>
+
+        it("keeps only the run of text belonging to the page", () => {
+            const [head] = rebuild([paragraph], [{ path: [0], text: { start: 0, end: 7 } }])
+
+            if (!isValidElement(head)) throw new Error("expected an element")
+            expect(childrenOf(head)).toEqual(["one two"])
+            // The wrapper and its props survive the split.
+            expect(head.type).toBe("p")
+            expect((head.props as { className?: string }).className).toBe("body")
+        })
+
+        it("joins the lines that share a page into one run", () => {
+            const [head] = rebuild(
+                [paragraph],
+                [
+                    { path: [0], text: { start: 0, end: 7 } },
+                    { path: [0], text: { start: 7, end: 13 } },
+                ],
+            )
+
+            if (!isValidElement(head)) throw new Error("expected an element")
+            expect(childrenOf(head)).toEqual(["one two three"])
+        })
+
+        it("continues the same paragraph on the next page", () => {
+            const [tail] = rebuild([paragraph], [{ path: [0], text: { start: 13, end: 18 } }])
+
+            if (!isValidElement(tail)) throw new Error("expected an element")
+            expect(childrenOf(tail)).toEqual([" four"])
+        })
+
+        it("leaves the node untouched when the run covers all of it", () => {
+            expect(rebuild([paragraph], [{ path: [0], text: { start: 0, end: 18 } }])).toEqual([paragraph])
+        })
     })
 })
