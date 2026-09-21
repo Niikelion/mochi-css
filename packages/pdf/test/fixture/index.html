@@ -5,20 +5,12 @@
         <title>fixture</title>
         <style>
             /*
-             * Stands in for the CSS mochi extracts from the styled() calls in Page/Document.
-             * Extraction is @mochi-css/vite's job and is covered by its own tests; this fixture
-             * only needs the rules that affect where the sheets break.
+             * Deliberately only this. No mochi extraction runs here, so the pages get none of the
+             * CSS the styled() calls would produce — which is the point: everything pagination
+             * and printing depend on has to hold without it.
              */
             body {
                 margin: 0;
-            }
-            [data-mochi-page] {
-                box-sizing: border-box;
-                overflow: hidden;
-                break-after: page;
-            }
-            [data-mochi-page]:last-child {
-                break-after: auto;
             }
         </style>
     </head>

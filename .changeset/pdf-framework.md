@@ -21,6 +21,10 @@ two lines on either side of the break. Content marked
 whose rendered DOM does not map onto its React children is left whole rather than split at a
 guessed boundary.
 
+`<Document>` takes `header` and `footer` slots that repeat on every page, either as fixed content or
+as a function receiving the page's number and the document's total. Running content takes its space
+from the page, so flowed content reflows into what is left rather than being drawn over.
+
 `@mochi-css/pdf/export` adds `renderToPdf`, which drives a page you already serve through headless
 Chromium, waiting for fonts and for pagination to settle before printing. `@mochi-css/pdf/vite` adds
 `mochiPdfPreview`, a dev-server plugin serving the document as a stack of page-shaped boxes that

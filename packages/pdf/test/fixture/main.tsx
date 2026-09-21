@@ -49,6 +49,37 @@ function Fixture() {
         )
     }
 
+    if (mode === "running" || mode === "plain") {
+        // 400px content box. With running content it drops to 260px, so 50px blocks go from
+        // eight a page to five — which is how a test can tell the header and footer were
+        // actually subtracted rather than drawn over the content.
+        const running = mode === "running"
+        return (
+            <Document
+                size={{ width: 600, height: 400 }}
+                margin={0}
+                header={running ? <div style={{ height: 100 }}>Report</div> : undefined}
+                footer={
+                    running
+                        ? ({ pageNumber, pageCount }) => (
+                              <div style={{ height: 40 }}>
+                                  Page {pageNumber} of {pageCount}
+                              </div>
+                          )
+                        : undefined
+                }
+            >
+                <AutoFlow>
+                    {Array.from({ length: 20 }, (_, index) => (
+                        <div key={index} style={{ height: 50 }}>
+                            block {index + 1}
+                        </div>
+                    ))}
+                </AutoFlow>
+            </Document>
+        )
+    }
+
     if (mode === "orphan") {
         // Exact pixel geometry, chosen so that without widow and orphan control the greedy pack
         // leaves precisely one line of the paragraph at the foot of the first page: a 400px

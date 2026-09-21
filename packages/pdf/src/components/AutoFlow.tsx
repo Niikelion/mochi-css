@@ -64,11 +64,16 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
         const probe = probeRef.current
         if (probe === null) return
 
+        // Measure the content area, not the whole page: a running header and footer take space
+        // the flowed content cannot use, and the flex layout has already subtracted it.
+        const content = probe.querySelector("[data-mochi-page-content]")
+        if (content === null) return
+
         const items = Children.toArray(children)
-        const atoms = collectAtoms(items, probe)
+        const atoms = collectAtoms(items, content)
         const assigned = paginateRects(
             atoms.map((atom) => atom.rect),
-            contentBoxHeight(probe),
+            contentBoxHeight(content),
             { groups: textGroups(atoms) },
         )
         const next = assigned.map((page) =>
@@ -95,7 +100,9 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
             remeasure()
         })
         observer.observe(probe)
-        for (const child of probe.children) observer.observe(child)
+
+        const content = probe.querySelector("[data-mochi-page-content]")
+        for (const child of content?.children ?? []) observer.observe(child)
 
         return () => {
             observer.disconnect()
@@ -141,7 +148,7 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
     )
 }
 
-function contentBoxHeight(element: HTMLElement): number {
+function contentBoxHeight(element: Element): number {
     const view = element.ownerDocument.defaultView
     if (view === null) return 0
 

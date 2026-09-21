@@ -87,6 +87,31 @@ Two limits worth knowing:
   fragment, for example — is treated as unsplittable. Breaking it would mean guessing which element
   matched which child, so it is left whole instead.
 
+## Headers, footers and page numbers
+
+```tsx
+<Document
+    size="a4"
+    margin="20mm"
+    header={<h1>Annual report</h1>}
+    footer={({ pageNumber, pageCount }) => (
+        <small>
+            Page {pageNumber} of {pageCount}
+        </small>
+    )}
+>
+    <AutoFlow>{content}</AutoFlow>
+</Document>
+```
+
+Both slots repeat on every page and take either fixed content or a function receiving the page's
+position. A page can override either with its own `header` or `footer` prop.
+
+Running content takes its space from the page rather than sitting on top of the content, so flowed
+content reflows into what is left — adding a header means fewer lines per page, not overlapping
+ones. `pageCount` is only knowable once the document has been laid out, so it starts at `0` and
+settles on the real total; a footer reading `Page 1 of 0` for one frame is that first pass.
+
 ## Previewing with hot reload
 
 ```ts
@@ -143,6 +168,7 @@ try {
 | `Page` | `@mochi-css/pdf` | One page |
 | `AutoFlow` | `@mochi-css/pdf` | Flows content across as many pages as it needs |
 | `KeepTogether` | `@mochi-css/pdf` | Marks content as unsplittable |
+| `PageInfo`, `PageSlot` | `@mochi-css/pdf` | Types for header and footer slots |
 | `PAGE_SIZES`, `resolvePageSize`, `resolvePageMargin` | `@mochi-css/pdf` | Page geometry helpers |
 | `mochiPdfPreview` | `@mochi-css/pdf/vite` | Dev preview plugin |
 | `renderToPdf` | `@mochi-css/pdf/export` | Renders a served document to a PDF |
