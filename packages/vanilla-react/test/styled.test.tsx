@@ -85,6 +85,46 @@ describe("variant prop stripping", () => {
     })
 })
 
+describe("raw (unrewritten) path", () => {
+    // Mochi's build-time rewrite replaces styled()'s trailing args with a single _mochiPrebuilt
+    // result. These tests call the real styled() directly with plain style objects — as it
+    // receives them anywhere the rewrite hasn't run (dev usage outside the pipeline, tests,
+    // Storybook without extraction wired) — to prove it still computes real classes and works,
+    // rather than assuming its args are already prebuilt.
+    it("computes real classNames and a working selector from a plain style object", () => {
+        const Button = styled("button", { color: "red" })
+        expect(Button.selector).toMatch(/^\.[a-zA-Z0-9]+$/)
+        expect(Button.toString()).toBe(Button.selector)
+    })
+
+    it("strips variant props from the DOM when given a plain style object with variants", () => {
+        const Button = styled("button", {
+            variants: { size: { sm: { fontSize: 12 }, lg: { fontSize: 18 } } },
+        })
+        const { container } = renderer.render(<Button size="lg">click</Button>)
+        const btn = container.querySelector("button")
+        expect(btn?.hasAttribute("size")).toBe(false)
+    })
+
+    it("applies the variant's own class when given a plain style object with variants", () => {
+        const Button = styled("button", {
+            variants: { size: { sm: { fontSize: 12 }, lg: { fontSize: 18 } } },
+        })
+        const largeClass = Button.selector.replace(/^\./, "")
+        const { container } = renderer.render(<Button size="lg">click</Button>)
+        const btn = container.querySelector("button")
+        // The base class always applies; a variant selection adds a second class beyond it.
+        expect(btn?.classList.contains(largeClass)).toBe(true)
+        expect(btn?.classList.length).toBeGreaterThan(1)
+    })
+
+    it("merges a MochiCSS arg (e.g. from css()) with a plain style object, same as the rewritten path", () => {
+        const base = renderer.css({ color: "red" })
+        const Button = styled("button", base, { fontWeight: "bold" })
+        expect(Button.selector.split(".").filter(Boolean).length).toBeGreaterThanOrEqual(2)
+    })
+})
+
 describe("_mochiPrebuilt fast path", () => {
     it("isMochiCSS recognizes _mochiPrebuilt result", () => {
         const instance = _mochiPrebuilt(["s-test"], { color: { red: "cRed", green: "cGreen" } }, { color: "red" })
