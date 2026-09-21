@@ -96,6 +96,7 @@
         "@types/node": "^24.8.1",
         "@types/react": "^19.2.2",
         "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^5.0.0",
         "@vitest/coverage-v8": "^4.0.15",
         "eslint": "^9.39.2",
         "eslint-config-prettier": "^10.1.8",
