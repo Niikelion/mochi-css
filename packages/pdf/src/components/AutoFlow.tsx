@@ -1,4 +1,4 @@
-import { Children, useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react"
+import { Children, useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { styled } from "@mochi-css/vanilla-react"
 import { Page } from "./Page"
 import { collectAtoms } from "../autoflow/collect"
@@ -8,7 +8,10 @@ import type { PageMargin, PageOrientation, PageSize } from "../pageSizes"
 
 // The probe must be laid out to be measurable, so it cannot be display:none. Clipping it to a
 // zero-sized box keeps it out of both the visible flow and the printed output instead.
-const ProbeClip = styled("div", {
+//
+// Inline rather than extracted: a probe that escapes its clip renders as a full extra page and
+// prints as an extra sheet, so it must not depend on the build step having run.
+const PROBE_CLIP_STYLE: CSSProperties = {
     position: "absolute",
     top: 0,
     left: 0,
@@ -17,7 +20,7 @@ const ProbeClip = styled("div", {
     overflow: "hidden",
     visibility: "hidden",
     pointerEvents: "none",
-})
+}
 
 /** Marks its content as a unit that may not be split across a page break. */
 export const KeepTogether = styled("div", { breakInside: "avoid" })
@@ -97,17 +100,18 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
 
     return (
         <>
-            <ProbeClip aria-hidden="true">
+            <div aria-hidden="true" style={PROBE_CLIP_STYLE}>
                 <Page
                     ref={probeRef}
                     size={size}
                     orientation={orientation}
                     margin={margin}
+                    data-mochi-probe=""
                     style={{ overflow: "visible" }}
                 >
                     {items}
                 </Page>
-            </ProbeClip>
+            </div>
             {pages.map((paths, index) => (
                 <Page key={index} size={size} orientation={orientation} margin={margin}>
                     {rebuild(items, paths)}

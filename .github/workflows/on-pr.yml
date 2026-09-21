@@ -73,6 +73,8 @@ jobs:
                     cache: 'yarn'
             -   name: Install dependencies
                 run: yarn install --immutable
+            -   name: Install Chromium for PDF export tests
+                run: yarn workspace @mochi-css/pdf exec playwright install --with-deps chromium
             -   name: Run tests
                 run: yarn turbo test --filter="!./tools/benchmarks/**"
     changeset:

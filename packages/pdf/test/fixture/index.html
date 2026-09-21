@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>fixture</title>
+        <style>
+            /*
+             * Stands in for the CSS mochi extracts from the styled() calls in Page/Document.
+             * Extraction is @mochi-css/vite's job and is covered by its own tests; this fixture
+             * only needs the rules that affect where the sheets break.
+             */
+            body {
+                margin: 0;
+            }
+            [data-mochi-page] {
+                box-sizing: border-box;
+                overflow: hidden;
+                break-after: page;
+            }
+            [data-mochi-page]:last-child {
+                break-after: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/main.tsx"></script>
+    </body>
+</html>

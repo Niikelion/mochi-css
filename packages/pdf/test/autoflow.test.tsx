@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach } from "vitest"
 import { render, cleanup } from "@testing-library/react"
-import { AutoFlow, Document, Page } from "@/index"
+import { AutoFlow, Document, Page } from "../src/index"
 
 const ITEM_HEIGHT = 40
 const PAGE_HEIGHT = 100

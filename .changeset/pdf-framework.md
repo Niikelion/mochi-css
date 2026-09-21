@@ -6,8 +6,9 @@
 Add `@mochi-css/pdf`, a framework for authoring PDF documents as React components.
 
 Documents are built from `<Document>` and `<Page>`, which render as real fixed-size boxes styled
-through `@mochi-css/vanilla-react`, so the on-screen preview is the same rendering that gets
-printed rather than an approximation of it.
+through `@mochi-css/vanilla-react`. `<Document>` also emits the `@page` rule that sizes the printed
+sheet, so the preview, printing from the browser and exporting all produce the same result rather
+than three approximations of each other.
 
 `<AutoFlow>` flows content across as many pages as it needs instead of requiring one `<Page>` per
 page. Its content is laid out once in an off-screen probe page and measured against real browser
@@ -16,3 +17,9 @@ point the markup allows: a list or table split across pages is rewrapped so each
 list or table rather than loose rows. Content marked `break-inside: avoid` — directly or via the
 `<KeepTogether>` helper — is never split, and a node whose rendered DOM does not map onto its React
 children is left whole rather than split at a guessed boundary.
+
+`@mochi-css/pdf/export` adds `renderToPdf`, which drives a page you already serve through headless
+Chromium, waiting for fonts and for pagination to settle before printing. `@mochi-css/pdf/vite` adds
+`mochiPdfPreview`, a dev-server plugin serving the document as a stack of page-shaped boxes that
+repaginates on hot reload. `playwright` and `vite` are optional peer dependencies, needed only by
+the entry point that uses them.
