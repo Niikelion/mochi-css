@@ -61,11 +61,17 @@ function Fixture() {
                 header={running ? <div style={{ height: 100 }}>Report</div> : undefined}
                 footer={
                     running
-                        ? ({ pageNumber, pageCount }) => (
-                              <div style={{ height: 40 }}>
-                                  Page {pageNumber} of {pageCount}
-                              </div>
-                          )
+                        ? ({ pageNumber, pageCount }) => {
+                              // Called once per page render, so a test can watch this stop
+                              // growing and know the document settled instead of looping.
+                              const counter = window as unknown as { __FOOTER_RENDERS__?: number }
+                              counter.__FOOTER_RENDERS__ = (counter.__FOOTER_RENDERS__ ?? 0) + 1
+                              return (
+                                  <div style={{ height: 40 }}>
+                                      Page {pageNumber} of {pageCount}
+                                  </div>
+                              )
+                          }
                         : undefined
                 }
             >

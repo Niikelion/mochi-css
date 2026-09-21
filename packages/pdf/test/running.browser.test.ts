@@ -104,6 +104,32 @@ describe("running headers and footers", () => {
     )
 
     it(
+        "settles instead of re-rendering forever",
+        async () => {
+            // Page numbers are derived from the rendered layout, and the layout is derived from
+            // the pages — the kind of loop that only shows up as a pinned CPU. A settled document
+            // stops calling its footer.
+            const page = await openFixture("running")
+            try {
+                const read = () =>
+                    page.evaluate(() => (window as unknown as { __FOOTER_RENDERS__?: number }).__FOOTER_RENDERS__ ?? 0)
+
+                const settled = await read()
+                await page.waitForTimeout(1000)
+                const later = await read()
+
+                expect(later).toBe(settled)
+                // Settling takes a pass each to flow, count and number the pages, so a handful per
+                // page. Well above that would mean passes feeding each other rather than resolving.
+                expect(settled).toBeLessThan(30)
+            } finally {
+                await page.close()
+            }
+        },
+        120_000,
+    )
+
+    it(
         "keeps the content clear of the header and footer",
         async () => {
             const page = await openFixture("running")
