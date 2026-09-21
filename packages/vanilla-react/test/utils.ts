@@ -1,35 +1,21 @@
 import { afterEach } from "vitest"
-import {
-    createElement,
-    type ReactElement,
-    type ComponentProps,
-    type FC,
-    type ComponentType,
-    type HTMLElementType,
-} from "react"
+import type { ReactElement, ElementType } from "react"
 import { render as rtlRender, cleanup as rtlCleanup } from "@testing-library/react"
 import {
     CSSObject,
     AllVariants,
     MochiCSSProps,
     MergeCSSVariants,
-    RefineVariants,
     MochiCSS,
     mergeMochiCss,
     GlobalCssObject,
     GlobalCssStyles,
     camelToKebab,
 } from "@mochi-css/vanilla"
+import { styled, MochiStyledComponent } from "@/styled"
 import { CSSStyleDeclaration } from "happy-dom"
-import clsx from "clsx"
 
 const STYLE_ELEMENT_ID = "mochi-test-styles"
-
-type Cls = { className?: string }
-
-type MochiProps<V extends AllVariants[]> = {
-    className?: string
-} & Partial<RefineVariants<MergeCSSVariants<V>>>
 
 function normalizeValue(kebabProp: string, value: string): string {
     const el = document.createElement("div")
@@ -103,28 +89,16 @@ class TestRenderer {
         this.capturedCss.push(obj.asCssString())
     }
 
-    styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
+    // Computes styles the same way css() does (capturing CSS text for injectCss()) and hands
+    // the resulting MochiCSS instance to the real styled() — which takes its fast path since
+    // isMochiCSS() short-circuits, so this exercises the actual exported component logic
+    // (prop stripping, variant application) rather than a parallel reimplementation of it.
+    styled<T extends ElementType, V extends AllVariants[]>(
         target: T,
         ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS<V[K]> }
-    ): FC<Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>> & { toString(): string; selector: string } {
+    ): MochiStyledComponent<T, V> {
         const styles = this.css<V>(...(props as Parameters<typeof this.css<V>>))
-        const selector = styles.selector
-        const variantKeys = new Set(Object.keys(styles.variantClassNames))
-        return Object.assign(
-            ({ className, ...p }: Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>) => {
-                const variantProps: Record<string, unknown> = {}
-                const restProps: Record<string, unknown> = {}
-                for (const [k, v] of Object.entries(p)) {
-                    if (variantKeys.has(k)) variantProps[k] = v
-                    else restProps[k] = v
-                }
-                return createElement(target, {
-                    className: clsx(styles.variant(variantProps as Parameters<typeof styles.variant>[0]), className),
-                    ...restProps,
-                })
-            },
-            { toString: () => selector, selector },
-        )
+        return styled(target, styles) as MochiStyledComponent<T, V>
     }
 
     render(element: ReactElement) {
