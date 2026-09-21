@@ -1,5 +1,71 @@
 # @mochi-css/plugins
 
+## 7.2.0
+
+### Minor Changes
+
+- c767356: Graceful per-file error isolation during CSS extraction, with diagnostics mapped all the way
+  back to the original source file (#44).
+
+    Same per-file `try`/`catch` isolation as the sibling PR (extraction no longer aborts for the
+    entire project when one file throws at module scope — see that changeset for the full
+    rationale), but goes further on the diagnostic-quality side: `MOCHI_FILE_EXEC`'s `line`/`column`
+    are now resolved through **two** hops of sourcemap lookup instead of one, landing on the exact
+    line in the user's **original** file rather than a position in the extracted/minimized
+    intermediate.
+
+    This required widening the `getFilesToBundle` hook's return shape everywhere it's threaded:
+    - **`@mochi-css/builder`** — `ExtractedFile = { code: string; map?: string }` is now exported;
+      `getFilesToBundle` returns `Record<string, ExtractedFile | null>` instead of
+      `Record<string, string | null>`. `RolldownBundler.bundle()` now passes an explicit `dir` to
+      Rolldown so the bundle sourcemap's relative source paths are predictable enough to resolve
+      back to each file's own map. **Breaking** for custom `Bundler` implementations (same as the
+      sibling PR) and for any `BuilderOptions.getFilesToBundle` implementation.
+    - **`@mochi-css/config`** — `GetFilesToBundleHookProvider.register()`'s callback return type
+      changed to match. **Breaking** for any plugin directly registering a `getFilesToBundle` hook.
+    - **`@mochi-css/plugins`** — `extractRelevantSymbols` now prints each file with
+      `sourceMaps: true`, returning `{ code, map }` instead of a bare string.
+
+    ## Alternative
+
+    A sibling PR keeps the same Part A but does only the first sourcemap hop (bundle position →
+    extracted/minimized file position), without touching `getFilesToBundle`'s return shape at all —
+    smaller, lower-risk, doesn't reach the original file's exact line. This PR exists to compare the
+    two directly.
+
+- c767356: Graceful per-file error isolation during CSS extraction, with sourcemap-mapped diagnostics (#44).
+
+    Previously, all extracted files are bundled and executed together in one shared script (required
+    for cross-file imports, wildcard re-exports, and derived-extractor propagation to resolve
+    correctly) — so a runtime throw anywhere in one file's module-level code aborted extraction for
+    the **entire project**, and on every dev-server HMR recollect, not just the initial build.
+
+    **`@mochi-css/plugins`** — each extracted file's generated module body is now wrapped in a
+    `try`/`catch` at code-generation time. Exported bindings are pre-declared as `let` outside the
+    `try` and assigned inside it, so if the assignment never runs (an earlier statement in that file
+    threw), the export still exists — just `undefined` — instead of crashing module linking for the
+    whole shared script. On catch, a new `MOCHI_FILE_EXEC` warning diagnostic names the file and the
+    real error message. Handles `const`/`let` (single, multi-declarator, destructured), `function`/
+    `class` declarations, and `export default`.
+
+    **`@mochi-css/builder`** — `MOCHI_FILE_EXEC` diagnostics now carry a real `line`/`column`,
+    resolved from the bundler's own sourcemap rather than left blank. This required a breaking change:
+    `Bundler.bundle()` now returns `Promise<{ code: string; map?: SourceMap }>` instead of
+    `Promise<string>` — anyone implementing a custom `Bundler` needs to update their return shape.
+    `RolldownBundler` now requests `sourcemap: true` from Rolldown accordingly.
+
+    Net effect: a broken file now degrades to "no styles from that file, plus a diagnostic with a
+    usable position" instead of taking down extraction for every file in the project — including
+    mid dev-server session, where fixing the broken file recovers extraction without restarting the
+    dev server.
+
+### Patch Changes
+
+- Updated dependencies [c767356]
+- Updated dependencies [c767356]
+    - @mochi-css/builder@8.0.0
+    - @mochi-css/config@8.0.0
+
 ## 7.1.4
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/rolldown",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -37,8 +37,8 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/builder": "7.2.1",
-        "@mochi-css/config": "7.1.2",
+        "@mochi-css/builder": "8.0.0",
+        "@mochi-css/config": "8.0.0",
         "@mochi-css/core": "6.0.0"
     },
     "peerDependencies": {

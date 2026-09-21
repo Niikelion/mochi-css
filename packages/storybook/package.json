@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/storybook",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -69,7 +69,7 @@
         "vitest": "^4.0.15"
     },
     "dependencies": {
-        "@mochi-css/vite": "6.1.1"
+        "@mochi-css/vite": "6.1.2"
     },
     "peerDependencies": {
         "storybook": "^8 || ^9",
