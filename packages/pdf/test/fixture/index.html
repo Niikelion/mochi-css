@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>fixture</title>
+        <style>
+            /*
+             * Deliberately only this. No mochi extraction runs here, so the pages get none of the
+             * CSS the styled() calls would produce — which is the point: everything pagination
+             * and printing depend on has to hold without it.
+             */
+            body {
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/main.tsx"></script>
+    </body>
+</html>

@@ -1,0 +1,117 @@
+{
+    "name": "@mochi-css/pdf",
+    "repository": "git@github.com:Niikelion/mochi-css.git",
+    "version": "0.0.0",
+    "license": "MIT",
+    "keywords": [
+        "pdf",
+        "print",
+        "react",
+        "css-in-js"
+    ],
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "sideEffects": false,
+    "typesVersions": {
+        "*": {
+            "export": [
+                "./dist/export/index.d.ts"
+            ],
+            "vite": [
+                "./dist/vite/index.d.ts"
+            ]
+        }
+    },
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.mts",
+                "import": "./dist/index.mjs"
+            },
+            "require": {
+                "types": "./dist/index.d.ts",
+                "require": "./dist/index.js"
+            }
+        },
+        "./export": {
+            "import": {
+                "types": "./dist/export/index.d.mts",
+                "import": "./dist/export/index.mjs"
+            },
+            "require": {
+                "types": "./dist/export/index.d.ts",
+                "require": "./dist/export/index.js"
+            }
+        },
+        "./vite": {
+            "import": {
+                "types": "./dist/vite/index.d.mts",
+                "import": "./dist/vite/index.mjs"
+            },
+            "require": {
+                "types": "./dist/vite/index.d.ts",
+                "require": "./dist/vite/index.js"
+            }
+        }
+    },
+    "scripts": {
+        "build": "tsc --noEmit && tsdown",
+        "test": "vitest",
+        "coverage": "vitest run --coverage",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
+    },
+    "dependencies": {
+        "@mochi-css/vanilla": "11.0.0",
+        "@mochi-css/vanilla-react": "7.0.9",
+        "clsx": "^2.1.1"
+    },
+    "peerDependencies": {
+        "playwright": "^1",
+        "react": "^19",
+        "vite": "^6 || ^7 || ^8"
+    },
+    "peerDependenciesMeta": {
+        "playwright": {
+            "optional": true
+        },
+        "vite": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.2",
+        "@eslint/js": "^9.18.0",
+        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "@mochi-css/shared-config": "^2.0.0",
+        "@mochi-css/test": "^2.0.0",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.2",
+        "@types/node": "^24.8.1",
+        "@types/react": "^19.2.2",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^5.0.0",
+        "@vitest/coverage-v8": "^4.0.15",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.5",
+        "happy-dom": "^20.8.9",
+        "pdf-lib": "^1.17.1",
+        "playwright": "^1.50.0",
+        "prettier": "^3.8.1",
+        "react": "^19",
+        "react-dom": "^19.2.4",
+        "tsdown": "^0.15.7",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.21.0",
+        "vite": "^6.0.0",
+        "vite-tsconfig-paths": "^5.1.4",
+        "vitest": "^4.0.15"
+    }
+}
