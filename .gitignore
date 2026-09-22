@@ -25,7 +25,9 @@ node_modules
 .turbo
 
 .claude
+.codex
 CLAUDE.md
+AGENTS.md
 .smoke-tmp
 
 /blog/
