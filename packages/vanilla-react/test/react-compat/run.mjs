@@ -38,7 +38,9 @@ writeFileSync(
         2,
     ),
 )
-writeFileSync(join(fixture, ".yarnrc.yml"), "nodeLinker: node-modules\n")
+// This disposable consumer resolves a different React version on every run, so it must
+// create its own lockfile even in CI. The repository install remains immutable.
+writeFileSync(join(fixture, ".yarnrc.yml"), "nodeLinker: node-modules\nenableImmutableInstalls: false\n")
 writeFileSync(join(fixture, "yarn.lock"), "")
 writeFileSync(
     join(fixture, "tsconfig.json"),
