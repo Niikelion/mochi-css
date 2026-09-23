@@ -1,4 +1,14 @@
-import { ComponentPropsWithRef, ComponentType, createElement, ElementType, FC } from "react"
+import {
+    ComponentPropsWithRef,
+    ComponentRef,
+    ComponentType,
+    createElement,
+    ElementType,
+    ForwardRefExoticComponent,
+    PropsWithoutRef,
+    RefAttributes,
+    forwardRef,
+} from "react"
 import clsx from "clsx"
 import { css } from "@mochi-css/vanilla"
 import type { AllVariants, MergeCSSVariants, MochiCSSProps, MochiCSS, RefineVariants } from "@mochi-css/vanilla"
@@ -7,8 +17,11 @@ type MochiProps<V extends AllVariants[]> = {
     className?: string
 } & Partial<RefineVariants<MergeCSSVariants<V>>>
 
-export type MochiStyledComponent<T extends ElementType, V extends AllVariants[]> = FC<
-    Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> & MochiProps<V>
+type StyledProps<T extends ElementType, V extends AllVariants[]> = Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> &
+    MochiProps<V>
+
+export type MochiStyledComponent<T extends ElementType, V extends AllVariants[]> = ForwardRefExoticComponent<
+    PropsWithoutRef<StyledProps<T, V>> & RefAttributes<ComponentRef<T>>
 > & {
     toString(): string
     selector: string
@@ -29,7 +42,8 @@ export function styled<T extends ElementType, V extends AllVariants[]>(
     const selector = styles.selector
     const variantKeys = new Set(Object.keys(styles.variantClassNames))
     return Object.assign(
-        ({ className, ...p }: Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> & MochiProps<V>) => {
+        forwardRef<ComponentRef<T>, StyledProps<T, V>>((componentProps, ref) => {
+            const { className, ...p } = componentProps as StyledProps<T, V>
             const variantProps: Record<string, unknown> = {}
             const restProps: Record<string, unknown> = {}
             for (const [k, v] of Object.entries(p)) {
@@ -39,8 +53,9 @@ export function styled<T extends ElementType, V extends AllVariants[]>(
             return createElement(target as ComponentType<Record<string, unknown>>, {
                 className: clsx(styles.variant(variantProps), className),
                 ...restProps,
+                ref,
             })
-        },
+        }),
         { toString: () => selector, selector },
-    ) as MochiStyledComponent<T, V>
+    )
 }
