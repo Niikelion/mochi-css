@@ -47,6 +47,7 @@
     "scripts": {
         "build": "tsc --noEmit && tsdown",
         "test": "vitest",
+        "test:react-compat": "node test/react-compat/run.mjs",
         "coverage": "vitest run --coverage",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
@@ -82,6 +83,6 @@
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
-        "react": "^19"
+        "react": "^18.0.0 || ^19.0.0"
     }
 }
