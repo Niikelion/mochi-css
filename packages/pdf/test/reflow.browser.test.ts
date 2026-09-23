@@ -44,6 +44,128 @@ async function openFixture(mode: string): Promise<Page> {
 }
 
 describe("reflow in a real browser", () => {
+    it("omits finished table rows rather than repeating empty padded rows", async () => {
+        const page = await openFixture("parallel-table-rows")
+        try {
+            const pages = await page.$$eval(PAGE_SELECTOR, (pages) =>
+                pages.map((page) => {
+                    const content = page.querySelector("[data-mochi-page-content]")
+                    const rows = [...page.querySelectorAll("tr")]
+                    return {
+                        rows: rows.length,
+                        items: [...page.querySelectorAll("[data-item]")].map((item) => item.getAttribute("data-item")),
+                        overflow: rows.some(
+                            (row) =>
+                                row.getBoundingClientRect().bottom > (content?.getBoundingClientRect().bottom ?? 0) + 1,
+                        ),
+                    }
+                }),
+            )
+            expect(pages.map((page) => page.rows)).toEqual([4, 4])
+            expect(pages.every((page) => !page.overflow)).toBe(true)
+            expect(pages.flatMap((page) => page.items)).toEqual(Array.from({ length: 8 }, (_, index) => `row${index}`))
+        } finally {
+            await page.close()
+        }
+    }, 120_000)
+    it("does not carry empty grid rows or their gaps onto the next page", async () => {
+        const page = await openFixture("parallel-grid-rows")
+        try {
+            const result = await page.$$eval(PAGE_SELECTOR, (pages) =>
+                pages.map((page) => {
+                    const content = page.querySelector("[data-mochi-page-content]")
+                    const items = [...page.querySelectorAll("[data-item]")]
+                    return {
+                        items: items
+                            .filter((item) => item.textContent !== "")
+                            .map((item) => item.getAttribute("data-item")),
+                        overflow: items.some(
+                            (item) =>
+                                item.getBoundingClientRect().bottom >
+                                (content?.getBoundingClientRect().bottom ?? 0) + 1,
+                        ),
+                    }
+                }),
+            )
+            expect(result).toHaveLength(2)
+            expect(result.map((page) => page.items.length)).toEqual([8, 8])
+            expect(result.every((page) => !page.overflow)).toBe(true)
+            expect(result.flatMap((page) => page.items)).toEqual(Array.from({ length: 16 }, (_, i) => `grid${i}`))
+        } finally {
+            await page.close()
+        }
+    }, 120_000)
+    it("keeps rowspan origins on table continuation pages", async () => {
+        const page = await openFixture("parallel-rowspan")
+        try {
+            const pages = await page.$$eval(PAGE_SELECTOR, (pages) =>
+                pages.map((page) => ({
+                    items: [...page.querySelectorAll("[data-item]")].map((item) => item.getAttribute("data-item")),
+                    left: page.querySelector('[data-slot="left"]')?.getBoundingClientRect().left,
+                    span: page.querySelector('[data-slot="span"]')?.getAttribute("rowspan"),
+                    spanText: page.querySelector('[data-slot="span"]')?.textContent,
+                })),
+            )
+            expect(pages).toHaveLength(2)
+            expect(pages[0]?.spanText).toBe("span")
+            expect(pages[1]?.spanText).toBe("")
+            expect(pages[1]?.span).toBe("2")
+            expect(pages[1]?.left).toBe(pages[0]?.left)
+            expect(pages.flatMap((page) => page.items).sort()).toEqual(
+                ["span", ...Array.from({ length: 8 }, (_, i) => `left${i}`), "right0", "right1"].sort(),
+            )
+        } finally {
+            await page.close()
+        }
+    }, 120_000)
+    it.each(["parallel-flex", "parallel-grid", "parallel-grid-span", "parallel-table"])(
+        "preserves parallel slots in %s",
+        async (mode) => {
+            const page = await openFixture(mode)
+            try {
+                const result = await page.$$eval(PAGE_SELECTOR, (pages) =>
+                    pages.map((page) => {
+                        const content = page.querySelector("[data-mochi-page-content]")
+                        const slots = [...page.querySelectorAll("[data-slot]")]
+                        return {
+                            items: [...page.querySelectorAll("[data-item]")].map((item) =>
+                                item.getAttribute("data-item"),
+                            ),
+                            slots: slots.map((slot) => ({
+                                name: slot.getAttribute("data-slot"),
+                                text: slot.textContent,
+                                width: slot.getBoundingClientRect().width,
+                                left: slot.getBoundingClientRect().left,
+                            })),
+                            overflow:
+                                content === null
+                                    ? true
+                                    : [...content.querySelectorAll("[data-item], [data-after]")].some(
+                                          (item) =>
+                                              item.getBoundingClientRect().bottom >
+                                              content.getBoundingClientRect().bottom + 1,
+                                      ),
+                        }
+                    }),
+                )
+                expect(result).toHaveLength(2)
+                expect(result[0]?.items).toEqual(["left0", "left1", "left2", "left3", "left4", "right0", "right1"])
+                expect(result[1]?.items).toEqual(["left5", "left6", "left7"])
+                expect(result[1]?.slots[1]?.text).toBe("")
+                for (const current of result) {
+                    expect(current.slots).toHaveLength(2)
+                    expect(current.overflow).toBe(false)
+                    current.slots.forEach((slot, index) => {
+                        expect(slot.width).toBeCloseTo(result[0]?.slots[index]?.width ?? 0, 1)
+                        expect(slot.left).toBeCloseTo(result[0]?.slots[index]?.left ?? 0, 1)
+                    })
+                }
+            } finally {
+                await page.close()
+            }
+        },
+        120_000,
+    )
     it(
         "splits a list across pages, leaving a real list on each",
         async () => {

@@ -2,9 +2,10 @@ import type { ReactNode } from "react"
 import { elementChildren, type Fragment } from "./nodes"
 import { measureTextLines } from "./text"
 import type { ItemRect } from "./paginate"
+import { measureParallel, type ParallelLayout } from "./parallel"
 
 /** A unit of content that can be placed on a page, with where it sits in the measured layout. */
-export type Atom = Fragment & { rect: ItemRect }
+export type Atom = Fragment & { rect: ItemRect; layouts?: ParallelLayout[] }
 
 /** How far to descend when looking for finer break points. */
 const MAX_DEPTH = 4
@@ -60,7 +61,14 @@ export function collectAtoms(nodes: ReactNode[], container: Element): Atom[] | n
     return out
 }
 
-function walk(nodes: ReactNode[], elements: Element[], depth: number, path: number[], out: Atom[]): void {
+function walk(
+    nodes: ReactNode[],
+    elements: Element[],
+    depth: number,
+    path: number[],
+    out: Atom[],
+    layouts: ParallelLayout[] = [],
+): void {
     for (let index = 0; index < nodes.length; index++) {
         const element = elements[index]
         if (element === undefined) continue
@@ -71,7 +79,23 @@ function walk(nodes: ReactNode[], elements: Element[], depth: number, path: numb
         const canDescend = children !== null && element.children.length === children.length
 
         if (canDescend) {
-            walk(children, [...element.children], depth + 1, [...path, index], out)
+            const parallel = measureParallel(element, [...path, index])
+            // Keep the source row of rowspans even after its own content has ended, so cells
+            // below it cannot shift into the spanning cell's column on continuation pages.
+            const table = layouts.findLast((layout) => layout.table === true)
+            if (table !== undefined && element.tagName === "TR" && parallel !== undefined) {
+                const tableRow = [...path, index]
+                table.slots.push({ path: tableRow, tableRow, style: {}, structural: true })
+                table.slots.push(...parallel.slots.map((slot) => ({ ...slot, tableRow })))
+            }
+            walk(
+                children,
+                [...element.children],
+                depth + 1,
+                [...path, index],
+                out,
+                parallel === undefined ? layouts : [...layouts, parallel],
+            )
             continue
         }
 
@@ -81,12 +105,12 @@ function walk(nodes: ReactNode[], elements: Element[], depth: number, path: numb
         // between its own lines, which is what lets a paragraph continue onto the next page.
         const lines = isAtomic(element) ? null : measureTextLines(element)
         if (lines === null) {
-            out.push({ path: here, rect: rectOf(element) })
+            out.push({ path: here, rect: rectOf(element), layouts })
             continue
         }
 
         for (const line of lines) {
-            out.push({ path: here, rect: line.rect, text: { start: line.start, end: line.end } })
+            out.push({ path: here, rect: line.rect, text: { start: line.start, end: line.end }, layouts })
         }
     }
 }
