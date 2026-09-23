@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client"
 import { AutoFlow, Document, KeepTogether, Page } from "../../src/index"
+import { Parallel } from "./Parallel"
 
 const mode = new URLSearchParams(window.location.search).get("mode")
 
@@ -13,6 +14,7 @@ const PROSE = Array.from({ length: 1500 }, (_, index) => `word${index}`).join(" 
 ;(window as unknown as { __PROSE__: string }).__PROSE__ = PROSE
 
 function Fixture() {
+    if (mode?.startsWith("parallel-")) return <Parallel mode={mode} />
     if (mode === "explicit") {
         return (
             <Document size="a4" margin="10mm">

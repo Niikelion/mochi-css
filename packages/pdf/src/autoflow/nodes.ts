@@ -1,4 +1,4 @@
-import { Children, cloneElement, createElement, isValidElement, type ReactNode } from "react"
+import { Children, cloneElement, createElement, isValidElement, type ReactNode, type CSSProperties } from "react"
 
 /** A character range inside a text node, as `[start, end)`. */
 export type TextRange = { start: number; end: number }
@@ -8,6 +8,9 @@ export type Fragment = {
     /** Index chain from the root children array down to the node. */
     path: number[]
     text?: TextRange
+    empty?: boolean
+    style?: CSSProperties
+    rowSpan?: number
 }
 
 /**
@@ -51,6 +54,9 @@ export function textContentOf(node: ReactNode): string | null {
 type Trie = {
     children: Map<number, Trie>
     text?: TextRange
+    empty?: boolean
+    style?: CSSProperties
+    rowSpan?: number
 }
 
 /**
@@ -78,6 +84,9 @@ function buildTrie(fragments: Fragment[]): Trie {
             node = next
         }
 
+        if (fragment.empty !== undefined) node.empty = fragment.empty
+        if (fragment.style !== undefined) node.style = fragment.style
+        if (fragment.rowSpan !== undefined) node.rowSpan = fragment.rowSpan
         if (fragment.text === undefined) continue
         // Lines of the same paragraph on the same page are contiguous, so their union is the run
         // of text that page shows.
@@ -97,9 +106,21 @@ function rebuildLevel(nodes: ReactNode[], trie: Trie): ReactNode[] {
     const out: ReactNode[] = []
 
     for (const index of [...trie.children.keys()].sort((a, b) => a - b)) {
-        const node = nodes[index]
+        let node = nodes[index]
         const sub = trie.children.get(index)
         if (node === undefined || sub === undefined) continue
+
+        if (sub.rowSpan !== undefined && isValidElement<{ rowSpan?: number }>(node)) {
+            node = cloneElement(node, { rowSpan: sub.rowSpan })
+        }
+
+        if (sub.style !== undefined && isValidElement<{ style?: CSSProperties }>(node)) {
+            node = cloneElement(node, { style: { ...node.props.style, ...sub.style } })
+        }
+        if (sub.empty === true && isValidElement(node)) {
+            out.push(cloneElement(node, undefined, null))
+            continue
+        }
 
         if (sub.text !== undefined) {
             out.push(sliceText(node, sub.text))

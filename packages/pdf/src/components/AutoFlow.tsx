@@ -8,8 +8,8 @@ import {
     type ReactNode,
 } from "react"
 import { Page } from "./Page"
-import { collectAtoms, textGroups } from "../autoflow/collect"
-import { paginateRects } from "../autoflow/paginate"
+import { collectAtoms } from "../autoflow/collect"
+import { paginateAtoms } from "../autoflow/parallel"
 import { normalizeItems, rebuild, type Fragment } from "../autoflow/nodes"
 import type { PageMargin, PageOrientation, PageSize } from "../pageSizes"
 
@@ -80,17 +80,7 @@ export function AutoFlow({ size, orientation, margin, children }: AutoFlowProps)
             return
         }
 
-        const assigned = paginateRects(
-            atoms.map((atom) => atom.rect),
-            contentBoxHeight(content),
-            { groups: textGroups(atoms) },
-        )
-        const next = assigned.map((page) =>
-            page.flatMap((index) => {
-                const atom = atoms[index]
-                return atom === undefined ? [] : [{ path: atom.path, text: atom.text }]
-            }),
-        )
+        const next = paginateAtoms(atoms, contentBoxHeight(content))
 
         setPages((previous) => (samePages(previous, next) ? previous : next))
     }, [children])
@@ -194,6 +184,8 @@ function samePage(a: Fragment[], b: Fragment[] | undefined): boolean {
 
 function sameFragment(a: Fragment, b: Fragment | undefined): boolean {
     if (b === undefined) return false
+    if (a.empty !== b.empty || a.rowSpan !== b.rowSpan || JSON.stringify(a.style) !== JSON.stringify(b.style))
+        return false
     if (a.text?.start !== b.text?.start || a.text?.end !== b.text?.end) return false
     return a.path.length === b.path.length && a.path.every((step, index) => step === b.path[index])
 }
