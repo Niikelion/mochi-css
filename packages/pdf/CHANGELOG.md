@@ -1,5 +1,11 @@
 # @mochi-css/pdf
 
+## 0.1.1
+
+### Patch Changes
+
+- 5c7c7f2: Paginate parallel AutoFlow content using shared page boundaries and retain empty continuation slots and measured widths for columns, grids, and table cells.
+
 ## 0.1.0
 
 ### Minor Changes

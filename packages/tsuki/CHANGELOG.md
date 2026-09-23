@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 7.2.5
+
+### Patch Changes
+
+- 5c7c7f2: Paginate parallel AutoFlow content using shared page boundaries and retain empty continuation slots and measured widths for columns, grids, and table cells.
+
 ## 7.2.4
 
 ### Patch Changes
