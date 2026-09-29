@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { InlineConfig, Plugin } from "vite";
 import { viteFinal, previewAnnotations } from "./index";
+import { isAbsolute, basename } from "node:path";
 
 function pluginNames(config: InlineConfig): string[] {
     const names: string[] = [];
@@ -66,14 +67,58 @@ describe("viteFinal", () => {
 });
 
 describe("previewAnnotations", () => {
-    it("appends the preview entry to existing entries", () => {
-        expect(previewAnnotations(["existing.ts"])).toEqual([
+    it("recognizes the CommonJS preview registered by older Storybook versions", () => {
+        const [entry] = previewAnnotations();
+        if (typeof entry !== "string")
+            throw new Error("Expected a preview path");
+        const existing = [{ absolute: entry.replace(/\.mjs$/, ".js") }];
+        expect(previewAnnotations(existing)).toEqual(existing);
+    });
+    it("ignores unrelated and empty automatic preview entries", () => {
+        expect(
+            previewAnnotations([], {
+                presetsList: [
+                    { preset: { previewAnnotations: [undefined, "other.ts"] } },
+                ],
+            }),
+        ).toEqual(previewAnnotations());
+    });
+    it("defers to Storybook's later automatic preview registration", () => {
+        const [absolute] = previewAnnotations();
+        const options = {
+            presetsList: [
+                {
+                    preset: {
+                        previewAnnotations: [
+                            { absolute, bare: "@mochi-css/storybook/preview" },
+                        ],
+                    },
+                },
+            ],
+        };
+        expect(previewAnnotations(["existing.ts"], options)).toEqual([
             "existing.ts",
-            "@mochi-css/storybook/preview",
         ]);
+    });
+    it("does not duplicate an automatically registered preview entry", () => {
+        const entries = previewAnnotations(["existing.ts"]);
+        expect(previewAnnotations(entries)).toEqual(entries);
+    });
+    it("appends the preview entry to existing entries", () => {
+        const entries = previewAnnotations(["existing.ts"]);
+        expect(entries).toHaveLength(2);
+        expect(entries[0]).toBe("existing.ts");
+        expect(entries.slice(1)).toEqual(previewAnnotations());
     });
 
     it("returns just the preview entry when called with no args", () => {
-        expect(previewAnnotations()).toEqual(["@mochi-css/storybook/preview"]);
+        const entries = previewAnnotations();
+        expect(entries).toHaveLength(1);
+        const [entry] = entries;
+        expect(typeof entry).toBe("string");
+        if (typeof entry !== "string")
+            throw new Error("Expected a preview path");
+        expect(isAbsolute(entry)).toBe(true);
+        expect(basename(entry)).toBe("preview.mjs");
     });
 });

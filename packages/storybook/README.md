@@ -7,6 +7,9 @@ stories render with correctly extracted styles — in both dev and build modes.
 > **Builder support:** this addon targets Storybook's **Vite** builder (the default for
 > most frameworks). Webpack-builder support is not included yet.
 
+Supports Storybook 8, 9, and 10 with the Vite builder. For Storybook 10, use an ESM
+main configuration (`export default`) and Node.js 20.19+ or 22.12+.
+
 It works with any Mochi-CSS API — both [`@mochi-css/vanilla-react`](../vanilla-react/README.md)
 and [`@mochi-css/stitches`](../stitches/README.md) — since extraction is driven by the
 extractors configured in `mochi.config.ts`.
