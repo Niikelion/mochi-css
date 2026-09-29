@@ -1,5 +1,7 @@
 import type { InlineConfig, Plugin, PluginOption } from "vite";
 import { mochiCss } from "@mochi-css/vite";
+import { fileURLToPath } from "node:url";
+import { normalize } from "node:path";
 
 /**
  * Preview entry that pulls in Mochi's global CSS (globalCss, keyframes, and — when
@@ -7,7 +9,7 @@ import { mochiCss } from "@mochi-css/vite";
  * plugin cannot inject the global import itself; adding it as a preview annotation
  * makes global styles available in every story.
  */
-const PREVIEW_ENTRY = "@mochi-css/storybook/preview";
+const PREVIEW_ENTRY = fileURLToPath(new URL("./preview.mjs", import.meta.url));
 
 const PLUGIN_NAME = "mochi-css";
 
@@ -50,7 +52,38 @@ export const viteFinal = (config: InlineConfig): InlineConfig => {
  * Storybook preset hook. Registers the preview entry that imports Mochi's global CSS so
  * `globalCss()`/keyframes styles apply inside every story.
  */
-export const previewAnnotations = (entries: string[] = []): string[] => [
-    ...entries,
-    PREVIEW_ENTRY,
-];
+type PreviewEntry = string | { absolute: string; bare?: string };
+type PreviewOptions = {
+    presetsList?: { preset: { previewAnnotations?: unknown } }[];
+};
+
+const isPreviewEntry = (entry: unknown): boolean => {
+    const path =
+        typeof entry === "string"
+            ? entry
+            : typeof entry === "object" && entry !== null && "absolute" in entry
+              ? entry.absolute
+              : undefined;
+    if (typeof path !== "string") return false;
+    return (
+        path === "@mochi-css/storybook/preview" ||
+        normalize(path) === normalize(PREVIEW_ENTRY) ||
+        normalize(path) === normalize(PREVIEW_ENTRY.replace(/\.mjs$/, ".js"))
+    );
+};
+
+export const previewAnnotations = (
+    entries: PreviewEntry[] = [],
+    options: PreviewOptions = {},
+): PreviewEntry[] => {
+    // Storybook's virtual addon preset appends the exported preview AFTER this hook.
+    // Inspect that registration too, so normal addon loading does not import it twice.
+    const autoRegistered = options.presetsList?.some(
+        ({ preset }) =>
+            Array.isArray(preset.previewAnnotations) &&
+            preset.previewAnnotations.some(isPreviewEntry),
+    );
+    return autoRegistered || entries.some(isPreviewEntry)
+        ? entries
+        : [...entries, PREVIEW_ENTRY];
+};

@@ -2403,7 +2403,7 @@ __metadata:
     vite: "npm:^6.0.0"
     vitest: "npm:^4.0.15"
   peerDependencies:
-    storybook: ^8 || ^9
+    storybook: ^8 || ^9 || ^10
     vite: ^6 || ^7 || ^8
   languageName: unknown
   linkType: soft
