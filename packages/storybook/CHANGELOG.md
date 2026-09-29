@@ -1,5 +1,11 @@
 # @mochi-css/storybook
 
+## 0.3.0
+
+### Minor Changes
+
+- 142b6a6: Support Storybook 10 alongside Storybook 8 and 9 with the Vite builder. Resolve the global CSS preview annotation to an absolute ESM file path and avoid duplicate registration when Storybook discovers the preview export automatically.
+
 ## 0.2.2
 
 ### Patch Changes
