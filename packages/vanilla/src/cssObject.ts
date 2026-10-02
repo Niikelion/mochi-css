@@ -204,15 +204,9 @@ export type CompoundVariant<V extends AllVariants> = {
 
 /**
  * Refines string literal types to their proper runtime types.
- * Converts "true"/"false" strings to boolean literals.
+ * Converts either "true" or "false" to boolean, including single-option variants.
  */
-export type RefineVariantType<T extends string> = T extends "true"
-    ? true
-    : T extends "false"
-      ? false
-      : T extends string
-        ? T
-        : string
+export type RefineVariantType<T extends string> = T extends "true" | "false" ? boolean : T
 
 /**
  * Props for defining variants in a style object.
