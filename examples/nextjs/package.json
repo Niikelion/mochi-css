@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@mochi-css/vanilla": "^11.0.1",
-        "@mochi-css/vanilla-react": "^7.0.10",
+        "@mochi-css/vanilla-react": "^7.1.0",
         "next": "^16.1.6",
         "react": "^19",
         "react-dom": "^19"

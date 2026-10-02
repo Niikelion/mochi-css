@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 7.2.8
+
+### Patch Changes
+
+- a4c99e3: Support React 18.x alongside React 19.x, including ref forwarding through styled components in both major versions.
+
 ## 7.2.7
 
 ### Patch Changes
