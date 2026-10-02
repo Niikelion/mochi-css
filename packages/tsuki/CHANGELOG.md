@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 7.2.7
+
+### Patch Changes
+
+- e55f1c8: Infer boolean for variant options named "true" or "false", even when only one is defined. This allows boolean variables and either boolean default value for single-option variants.
+
 ## 7.2.6
 
 ### Patch Changes

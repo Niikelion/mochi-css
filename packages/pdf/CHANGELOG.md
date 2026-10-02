@@ -1,5 +1,13 @@
 # @mochi-css/pdf
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [e55f1c8]
+    - @mochi-css/vanilla@11.0.1
+    - @mochi-css/vanilla-react@7.0.10
+
 ## 0.1.1
 
 ### Patch Changes
