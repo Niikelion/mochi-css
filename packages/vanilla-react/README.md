@@ -3,6 +3,8 @@
 This package is part of the [Mochi-CSS project](https://github.com/Niikelion/mochi-css).
 It provides the `styled` utility for creating type-safe styled React components.
 
+Supports React 18.x and 19.x. Refs are forwarded to the wrapped element or component in both versions.
+
 ## Installation
 
 ```bash
