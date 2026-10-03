@@ -1,5 +1,11 @@
 # @mochi-css/react
 
+## 4.0.12
+
+### Patch Changes
+
+- @mochi-css/vanilla@11.0.2
+
 ## 4.0.11
 
 ### Patch Changes

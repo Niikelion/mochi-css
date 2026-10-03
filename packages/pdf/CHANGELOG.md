@@ -1,5 +1,12 @@
 # @mochi-css/pdf
 
+## 0.1.4
+
+### Patch Changes
+
+- @mochi-css/vanilla@11.0.2
+- @mochi-css/vanilla-react@7.1.1
+
 ## 0.1.3
 
 ### Patch Changes

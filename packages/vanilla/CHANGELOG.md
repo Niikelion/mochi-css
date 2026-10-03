@@ -1,5 +1,12 @@
 # @mochi-css/vanilla
 
+## 11.0.2
+
+### Patch Changes
+
+- Updated dependencies [faa2080]
+    - @mochi-css/plugins@7.2.1
+
 ## 11.0.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mochi-css/react
 
+## 7.1.1
+
+### Patch Changes
+
+- Updated dependencies [faa2080]
+    - @mochi-css/plugins@7.2.1
+    - @mochi-css/vanilla@11.0.2
+
 ## 7.1.0
 
 ### Minor Changes
