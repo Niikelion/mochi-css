@@ -97,7 +97,7 @@ describe("wildcard re-exports (#41)", () => {
             require: createRequire(import.meta.url),
         })
         expect(applicationModule.exports).toEqual({
-            Button: expect.any(Function),
+            Button: expect.objectContaining({ selector: expect.any(String) }),
             BrandMark: expect.any(Function),
             setInputValue: expect.any(Function),
         })
