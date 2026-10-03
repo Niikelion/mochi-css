@@ -3,6 +3,7 @@ import { Builder, parseSource, RolldownBundler, VmRunner } from "@mochi-css/buil
 import { PluginContextCollector } from "@mochi-css/plugins"
 import dedent from "dedent"
 import path from "path"
+import { createRequire } from "node:module"
 import { defineConfig } from "@/config"
 import type { Module } from "@mochi-css/builder"
 
@@ -51,6 +52,57 @@ function cssFromChunks(chunks: Map<string, Set<string>>): string {
 }
 
 describe("wildcard re-exports (#41)", () => {
+    it.each(["wildcard", "named"])("extracts a mixed workspace barrel with %s re-exports", async (kind) => {
+        const root = path.resolve("packages/ui/src")
+        const sources = {
+            "Button.tsx": `import { styled } from "@mochi-css/vanilla-react";
+                export const Button = styled("button", { color: "coral" });`,
+            "BrandMark.tsx": `import { createElement } from "react";
+                export function BrandMark() { return createElement("span", null, "brand"); }`,
+            "setInputValue.ts": `export function setInputValue(input, value) { input.value = value; }`,
+            "ordinary.ts": `export * from "./BrandMark"; export * from "./setInputValue";`,
+            "index.ts":
+                kind === "wildcard"
+                    ? `export * from "./Button"; export * from "./ordinary";`
+                    : `export { Button } from "./Button";
+                   export { BrandMark } from "./BrandMark";
+                   export { setInputValue } from "./setInputValue";`,
+        }
+        const modules = await Promise.all(
+            Object.entries(sources).map(([name, source]) => parseSource(source, path.join(root, name))),
+        )
+        const consumer = await parseSource(
+            `import { styled } from "@mochi-css/vanilla-react";
+             import { Button } from "../packages/ui/src";
+             export const BlueButton = styled(Button, { color: "blue" });`,
+            path.resolve("src/app.tsx"),
+        )
+        const { chunks, diagnostics, modifiedSources } = await runPipeline([...modules, consumer])
+        expect(cssFromChunks(chunks)).toContain("coral")
+        expect(cssFromChunks(chunks)).toContain("blue")
+        expect(diagnostics).toEqual([])
+
+        // The application bundle must still resolve every public export after extraction.
+        const files = Object.fromEntries(
+            Object.entries(sources).map(([name, source]) => {
+                const filePath = path.join(root, name)
+                return [filePath, modifiedSources.get(filePath.replaceAll("\\", "/")) ?? source]
+            }),
+        )
+        const { code } = await new RolldownBundler().bundle(path.join(root, "index.ts"), files)
+        const applicationModule = { exports: {} }
+        await new VmRunner().execute(code, {
+            module: applicationModule,
+            exports: applicationModule.exports,
+            require: createRequire(import.meta.url),
+        })
+        expect(applicationModule.exports).toEqual({
+            Button: expect.any(Function),
+            BrandMark: expect.any(Function),
+            setInputValue: expect.any(Function),
+        })
+    })
+
     it("resolves `export * from './x.js'` when the actual file is .ts (barrel-side)", async () => {
         // NodeNext / verbatimModuleSyntax projects write `.js` extensions even though sources
         // are `.ts`. The bundler resolves this at runtime, but the ExportsStage's resolveImport
