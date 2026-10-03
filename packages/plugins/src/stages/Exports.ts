@@ -1,4 +1,4 @@
-import { type StageContext, defineStage, type FileCache } from "@mochi-css/builder"
+import { type StageContext, defineStage, type FileCache, type ResolveImport } from "@mochi-css/builder"
 import { isLocalImport, getOrInsert } from "../utils"
 
 /** A single named reexport specifier from one source file. */
@@ -31,6 +31,7 @@ export type ExportsStageResult = {
  */
 export type ExportsStageOut = {
     fileExports: FileCache<ExportsStageResult>
+    resolveImport: ResolveImport
 }
 
 /**
@@ -101,6 +102,6 @@ export const ExportsStage = defineStage({
             },
         )
 
-        return { fileExports }
+        return { fileExports, resolveImport }
     },
 })

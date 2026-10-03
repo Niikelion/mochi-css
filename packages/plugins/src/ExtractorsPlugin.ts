@@ -414,7 +414,12 @@ export function createExtractorsPlugin(extractors: StyleExtractor[]): MochiPlugi
                           }
                         : undefined
 
-                return extractRelevantSymbols([...filesInfoMap.entries()], markedForEval, onReplacementCall)
+                return extractRelevantSymbols(
+                    [...filesInfoMap.entries()],
+                    markedForEval,
+                    onReplacementCall,
+                    exportsOut.resolveImport,
+                )
             })
 
             // sourceTransform: sets up generators and extractors global

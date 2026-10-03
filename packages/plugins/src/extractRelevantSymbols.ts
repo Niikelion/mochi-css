@@ -1,9 +1,10 @@
 import * as SWC from "@swc/core"
 import type { FileInfo, StyleExtractor, DerivedExtractorBinding } from "./types"
-import { generateMinimalModuleItem, type ExtractedFile } from "@mochi-css/builder"
+import { generateMinimalModuleItem, type ExtractedFile, type ResolveImport } from "@mochi-css/builder"
 import { wrapModuleItemsForResilience } from "./resilientModuleWrap"
+import { isLocalImport } from "./utils"
 
-function printExtracted(filePath: string, body: SWC.ModuleItem[]): ExtractedFile {
+function printModule(filePath: string, body: SWC.ModuleItem[]): ExtractedFile {
     const { code, map } = SWC.printSync(
         { type: "Module", span: emptySpan, body, interpreter: "" },
         { sourceMaps: true, filename: filePath },
@@ -435,8 +436,14 @@ export function extractRelevantSymbols(
     files: [string, FileInfo][],
     extraExpressions?: Map<string, Set<SWC.Expression>>,
     onReplacementCall?: OnReplacementCall,
+    resolveImport?: ResolveImport,
 ): Record<string, ExtractedFile | null> {
-    return Object.fromEntries(
+    const bodies = new Map<string, SWC.ModuleItem[]>()
+    const printExtracted = (filePath: string, body: SWC.ModuleItem[]): ExtractedFile => {
+        bodies.set(filePath, body)
+        return printModule(filePath, body)
+    }
+    const extracted: Record<string, ExtractedFile | null> = Object.fromEntries(
         files.map(([filePath, info]) => {
             const styles = info.styleExpressions
             const hasDerived = info.derivedExtractorBindings.size > 0
@@ -542,4 +549,28 @@ export function extractRelevantSymbols(
             return [filePath, printExtracted(filePath, body)]
         }),
     )
+
+    if (resolveImport) {
+        // Prune only the extraction copy: application modules retain their public exports.
+        // Repeat so barrels that become empty also disappear from upstream barrels.
+        let changed = true
+        while (changed) {
+            changed = false
+            for (const [filePath, file] of Object.entries(extracted)) {
+                if (!file) continue
+                const originalBody = bodies.get(filePath)
+                if (!originalBody) continue
+                const body = originalBody.filter((item) => {
+                    if (item.type !== "ExportAllDeclaration" && item.type !== "ExportNamedDeclaration") return true
+                    if (!item.source || !isLocalImport(item.source.value)) return true
+                    const target = resolveImport(filePath, item.source.value)
+                    return target === null || !(target in extracted) || extracted[target] !== null
+                })
+                if (body.length === originalBody.length) continue
+                extracted[filePath] = body.length > 0 ? printExtracted(filePath, body) : null
+                changed = true
+            }
+        }
+    }
+    return extracted
 }
