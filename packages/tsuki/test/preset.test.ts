@@ -26,7 +26,6 @@ let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
-    vi.stubGlobal("__VERSION__", "2.1.0")
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-preset-"))
     origCwd = process.cwd()
     process.chdir(tmpDir)
@@ -71,10 +70,7 @@ describe("vite preset integration", () => {
 
     it("adds the mochi addon to an existing Storybook config", async () => {
         await fs.mkdir(path.join(tmpDir, ".storybook"), { recursive: true })
-        await fs.writeFile(
-            path.join(tmpDir, ".storybook", "main.ts"),
-            `export default { stories: [], addons: [] }`,
-        )
+        await fs.writeFile(path.join(tmpDir, ".storybook", "main.ts"), `export default { stories: [], addons: [] }`)
 
         // Decline everything except the Storybook prompt.
         vi.mocked(p.confirm).mockImplementation(async (opts: { message: string }) =>

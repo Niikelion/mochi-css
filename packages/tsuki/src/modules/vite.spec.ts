@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import fs from "fs/promises"
 import path from "path"
 import os from "os"
-import { viteModule } from "./vite"
+import { addMochiToViteSource, viteModule } from "./vite"
 import { noop } from "@mochi-css/core"
 
 vi.mock("@clack/prompts", () => ({
@@ -17,7 +17,6 @@ let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
-    vi.stubGlobal("__VERSION__", "2.1.0")
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-vite-"))
     origCwd = process.cwd()
     process.chdir(tmpDir)
@@ -86,5 +85,81 @@ describe("viteModule.run", () => {
         vi.mocked(p.text).mockResolvedValue("vite.config.ts")
         await viteModule.run(ctx)
         expect(p.log.success).not.toHaveBeenCalled()
+    })
+})
+
+describe("addMochiToViteSource", () => {
+    it("keeps the rest of a multi-line config untouched", () => {
+        const source = [
+            "import react from '@vitejs/plugin-react';",
+            "import { defineConfig } from 'vite';",
+            "",
+            "export default defineConfig({",
+            "  plugins: [",
+            "    react(),",
+            "    pwa({",
+            "      registerType: 'prompt',",
+            "    }),",
+            "  ],",
+            "  server: { port: 5173 },",
+            "});",
+            "",
+        ].join("\n")
+        expect(addMochiToViteSource(source, "vite.config.ts")).toBe(
+            [
+                "import { mochiCss } from '@mochi-css/vite';",
+                "import react from '@vitejs/plugin-react';",
+                "import { defineConfig } from 'vite';",
+                "",
+                "export default defineConfig({",
+                "  plugins: [",
+                "    react(),",
+                "    pwa({",
+                "      registerType: 'prompt',",
+                "    }),",
+                "    mochiCss(),",
+                "  ],",
+                "  server: { port: 5173 },",
+                "});",
+                "",
+            ].join("\n"),
+        )
+    })
+
+    it("adds a comma when the last plugin has none", () => {
+        const source =
+            'import { defineConfig } from "vite"\nexport default defineConfig({\n    plugins: [\n        react()\n    ]\n})\n'
+        expect(addMochiToViteSource(source, "vite.config.ts")).toBe(
+            'import { mochiCss } from "@mochi-css/vite"\nimport { defineConfig } from "vite"\nexport default defineConfig({\n    plugins: [\n        react(),\n        mochiCss()\n    ]\n})\n',
+        )
+    })
+
+    it("extends a single-line plugins array on the same line", () => {
+        const source = "export default { plugins: [react()] }\n"
+        expect(addMochiToViteSource(source, "vite.config.ts")).toBe(
+            'import { mochiCss } from "@mochi-css/vite"\nexport default { plugins: [react(), mochiCss()] }\n',
+        )
+    })
+
+    it("fills an empty plugins array", () => {
+        expect(addMochiToViteSource("export default { plugins: [] }", "vite.config.ts")).toBe(
+            'import { mochiCss } from "@mochi-css/vite"\nexport default { plugins: [mochiCss()] }',
+        )
+    })
+
+    it("keeps Windows line endings", () => {
+        const source = "export default {\r\n  plugins: [\r\n    react(),\r\n  ],\r\n}\r\n"
+        expect(addMochiToViteSource(source, "vite.config.ts")).toBe(
+            'import { mochiCss } from "@mochi-css/vite"\r\nexport default {\r\n  plugins: [\r\n    react(),\r\n    mochiCss(),\r\n  ],\r\n}\r\n',
+        )
+    })
+
+    it("changes nothing when mochiCss() is already set up", () => {
+        const source = 'import { mochiCss } from "@mochi-css/vite"\nexport default { plugins: [mochiCss()] }\n'
+        expect(addMochiToViteSource(source, "vite.config.ts")).toBe(source)
+    })
+
+    it("leaves configs without a plugins array to the AST fallback", () => {
+        expect(addMochiToViteSource("export default defineConfig({})", "vite.config.ts")).toBeUndefined()
     })
 })

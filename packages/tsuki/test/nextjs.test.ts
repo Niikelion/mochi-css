@@ -26,7 +26,7 @@ let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
-    vi.stubGlobal("__VERSION__", "2.1.0")
+    vi.stubGlobal("__PACKAGE_VERSIONS__", { "@mochi-css/postcss": "6.0.5" })
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-integration-"))
     origCwd = process.cwd()
 
@@ -56,6 +56,6 @@ describe("postcss integration", () => {
         const modified = await fs.readFile(path.join(tmpDir, "postcss.config.mjs"), "utf-8")
         expect(modified).toContain("@mochi-css/postcss")
         expect(modified).toContain("tailwindcss")
-        expect(installPackages).toHaveBeenCalledWith([{ name: "@mochi-css/postcss@^2.0.0", dev: true }], false)
+        expect(installPackages).toHaveBeenCalledWith([{ name: "@mochi-css/postcss@^6.0.5", dev: true }], false)
     })
 })

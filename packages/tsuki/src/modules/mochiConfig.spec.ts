@@ -14,7 +14,7 @@ let tmpDir: string
 let origCwd: string
 
 beforeEach(async () => {
-    vi.stubGlobal("__VERSION__", "2.1.0")
+    vi.stubGlobal("__PACKAGE_VERSIONS__", { "@mochi-css/vanilla": "11.0.2", "@mochi-css/vanilla-react": "7.1.1" })
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "mochi-tsuki-mochiconfig-"))
     origCwd = process.cwd()
     process.chdir(tmpDir)
@@ -106,13 +106,13 @@ describe("createMochiConfigModule", () => {
     it("requires @mochi-css/vanilla package", async () => {
         const requirePackage = vi.fn()
         await createMochiConfigModule().run({ ...ctx, requirePackage })
-        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla@^2.0.0")
+        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla@^11.0.2")
     })
 
     it("requires @mochi-css/vanilla-react when styledId: true", async () => {
         const requirePackage = vi.fn()
         await createMochiConfigModule({ styledId: true }).run({ ...ctx, requirePackage })
-        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla-react@^2.0.0")
+        expect(requirePackage).toHaveBeenCalledWith("@mochi-css/vanilla-react@^7.1.1")
     })
 
     it("does not explicitly require @mochi-css/builder (it installs transitively)", async () => {
