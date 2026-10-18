@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/pdf",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "license": "MIT",
     "keywords": [
         "pdf",
@@ -67,8 +67,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@mochi-css/vanilla": "11.0.2",
-        "@mochi-css/vanilla-react": "7.1.1",
+        "@mochi-css/vanilla": "11.0.3",
+        "@mochi-css/vanilla-react": "7.1.2",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {

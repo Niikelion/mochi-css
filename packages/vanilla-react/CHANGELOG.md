@@ -1,5 +1,13 @@
 # @mochi-css/react
 
+## 7.1.2
+
+### Patch Changes
+
+- 35a4c3d: Keep variant types when `css()` or `styled()` receives several styles and some of them have no `variants`. Previously one plain style, such as `styled("p", tones, { margin: 0 })`, made TypeScript give up inferring the whole argument list, so variant props were missing (styled) or accepted any value (`css().variant()`).
+- Updated dependencies [35a4c3d]
+    - @mochi-css/vanilla@11.0.3
+
 ## 7.1.1
 
 ### Patch Changes
