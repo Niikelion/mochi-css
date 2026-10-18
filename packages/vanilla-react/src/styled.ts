@@ -11,25 +11,25 @@ import {
 } from "react"
 import clsx from "clsx"
 import { css } from "@mochi-css/vanilla"
-import type { AllVariants, MergeCSSVariants, MochiCSSProps, MochiCSS, RefineVariants } from "@mochi-css/vanilla"
+import type { MergeCSSVariants, MochiCSSProps, MochiCSS, RefineVariants, VariantSlot } from "@mochi-css/vanilla"
 
-type MochiProps<V extends AllVariants[]> = {
+type MochiProps<V extends unknown[]> = {
     className?: string
 } & Partial<RefineVariants<MergeCSSVariants<V>>>
 
-type StyledProps<T extends ElementType, V extends AllVariants[]> = Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> &
+type StyledProps<T extends ElementType, V extends unknown[]> = Omit<ComponentPropsWithRef<T>, keyof MochiProps<V>> &
     MochiProps<V>
 
-export type MochiStyledComponent<T extends ElementType, V extends AllVariants[]> = ForwardRefExoticComponent<
+export type MochiStyledComponent<T extends ElementType, V extends unknown[]> = ForwardRefExoticComponent<
     PropsWithoutRef<StyledProps<T, V>> & RefAttributes<ComponentRef<T>>
 > & {
     toString(): string
     selector: string
 }
 
-export function styled<T extends ElementType, V extends AllVariants[]>(
+export function styled<T extends ElementType, V extends unknown[] | []>(
     target: T,
-    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS<V[K]> | string }
+    ...props: { [K in keyof V]: MochiCSSProps<VariantSlot<V[K]>> | MochiCSS<VariantSlot<V[K]>> | string }
 ): MochiStyledComponent<T, V> {
     // In built output, Mochi rewrites styled()'s trailing args into a single prebuilt
     // MochiCSS instance (`_mochiPrebuilt(...)`) — css() takes that fast path unchanged

@@ -6,6 +6,7 @@ import {
     MochiCSS,
     MochiCSSProps,
     MergeCSSVariants,
+    VariantSlot,
 } from "@mochi-css/vanilla";
 import { HTMLElementType } from "react";
 import { StitchesConfig, StitchesTheme, defaultThemeMap } from "@/types";
@@ -28,8 +29,10 @@ export function createStitches(config: StitchesConfig) {
             resolvedConfig.theme ?? {},
             resolvedConfig.prefix,
         ),
-        css<V extends AllVariants[]>(
-            ...args: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS }
+        css<V extends unknown[] | []>(
+            ...args: {
+                [K in keyof V]: MochiCSSProps<VariantSlot<V[K]>> | MochiCSS;
+            }
         ): MochiCSS<MergeCSSVariants<V>> {
             return runtimeCss<V>(args, resolvedConfig);
         },
