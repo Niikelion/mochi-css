@@ -109,9 +109,13 @@ export async function installPackages(packages: PackageRequest[], autoInstall = 
     const agent = packageManager.agent
     const devFlag = agent === "deno" ? "--dev" : "-D"
 
-    // Group packages by dev/prod
-    const devPackages = packages.filter((pkg) => pkg.dev !== false).map((pkg) => pkg.name)
-    const prodPackages = packages.filter((pkg) => pkg.dev === false).map((pkg) => pkg.name)
+    // Group packages by dev/prod; a package asked for both ways is a regular dependency
+    const prodPackages = [...new Set(packages.filter((pkg) => pkg.dev === false).map((pkg) => pkg.name))]
+    const devPackages = [
+        ...new Set(
+            packages.filter((pkg) => pkg.dev !== false && !prodPackages.includes(pkg.name)).map((pkg) => pkg.name),
+        ),
+    ]
 
     const packageList = [...devPackages.map((name) => `${name} (dev)`), ...prodPackages.map((name) => name)].join(", ")
 
@@ -126,19 +130,30 @@ export async function installPackages(packages: PackageRequest[], autoInstall = 
         }
     }
 
-    // Install dev dependencies
-    if (devPackages.length > 0) {
-        const cmd = resolveCommand(agent, "add", [devFlag, ...devPackages])
+    const groups = [
+        { title: "dev dependencies", packages: devPackages, args: [devFlag, ...devPackages] },
+        { title: "dependencies", packages: prodPackages, args: prodPackages },
+    ].filter((group) => group.packages.length > 0)
+
+    // Every group is attempted, so one failing install doesn't leave the others out.
+    const failed: string[] = []
+    for (const group of groups) {
+        const cmd = resolveCommand(agent, "add", group.args)
         if (cmd === null) throw new Error("Could not prepare install command")
 
-        await runInstall(`Installing dev dependencies: ${devPackages.join(", ")}`, cmd.command, cmd.args, devPackages)
+        try {
+            await runInstall(
+                `Installing ${group.title}: ${group.packages.join(", ")}`,
+                cmd.command,
+                cmd.args,
+                group.packages,
+            )
+        } catch {
+            failed.push(`${cmd.command} ${cmd.args.join(" ")}`)
+        }
     }
 
-    // Install prod dependencies
-    if (prodPackages.length > 0) {
-        const cmd = resolveCommand(agent, "add", prodPackages)
-        if (cmd === null) throw new Error("Could not prepare install command")
-
-        await runInstall(`Installing dependencies: ${prodPackages.join(", ")}`, cmd.command, cmd.args, prodPackages)
+    if (failed.length > 0) {
+        throw new Error(`Some packages could not be installed. Install them with:\n${failed.join("\n")}`)
     }
 }
