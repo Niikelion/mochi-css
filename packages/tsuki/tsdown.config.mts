@@ -21,6 +21,8 @@ function workspaceVersions(): Record<string, string> {
 export default defineConfig({
     entry: "src/index.ts",
     format: ["esm"],
+    // Always emit dist/index.js, which package.json's `bin` points at; newer tsdown defaults to .mjs.
+    fixedExtension: false,
     dts: false,
     clean: true,
     skipNodeModulesBundle: true,
