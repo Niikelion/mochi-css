@@ -231,12 +231,18 @@ export type MochiCSSProps<V extends AllVariants> = Omit<
 /** Utility type to override properties of A with properties of B */
 type Override<A extends object, B extends object> = B & Omit<A, keyof B>
 
+/**
+ * The variants one style contributes. A style without `variants` gives inference nothing to work with,
+ * so its slot arrives as `unknown` (or as the bare constraint); it contributes no variants.
+ */
+type DeclaredVariants<V> = V extends AllVariants ? (string extends keyof V ? DefaultVariants : V) : DefaultVariants
+
+/** The variants of one inferred `css`/`styled` argument slot; a slot inferred as `unknown` (no `variants`) has none. */
+export type VariantSlot<V> = V extends AllVariants ? V : DefaultVariants
+
 /** Recursively merges variant types from a tuple, with later types overriding earlier */
-export type MergeCSSVariants<V extends AllVariants[]> = V extends [
-    infer V1 extends AllVariants,
-    ...infer VRest extends AllVariants[],
-]
-    ? Override<V1, MergeCSSVariants<VRest>>
+export type MergeCSSVariants<V extends unknown[]> = V extends [infer V1, ...infer VRest]
+    ? Override<DeclaredVariants<V1>, MergeCSSVariants<VRest>>
     : DefaultVariants
 
 /** Refines all values in a string record to their proper variant types */

@@ -13,6 +13,14 @@ if (!version || !/^(18|19)(\.\d+\.\d+)?$/.test(version)) {
 const major = version.split(".")[0]
 const types = major
 const fixture = mkdtempSync(join(tmpdir(), "mochi-react-compat-"))
+// The checkout's own builds of what vanilla-react depends on, so unreleased changes are tested together.
+const packagesDir = resolve(root, "..")
+const localPackages = Object.fromEntries(
+    ["vanilla-react", "vanilla", "plugins", "config", "builder", "core"].map((name) => [
+        `@mochi-css/${name}`,
+        `file:${join(packagesDir, name).replaceAll("\\", "/")}`,
+    ]),
+)
 const { packageManager } = JSON.parse(readFileSync(resolve(root, "../../package.json"), "utf8"))
 writeFileSync(
     join(fixture, "package.json"),
@@ -22,8 +30,9 @@ writeFileSync(
             private: true,
             type: "module",
             packageManager,
+            resolutions: localPackages,
             dependencies: {
-                "@mochi-css/vanilla-react": `file:${root.replaceAll("\\", "/")}`,
+                "@mochi-css/vanilla-react": localPackages["@mochi-css/vanilla-react"],
                 react: version,
                 "react-dom": version,
                 "@types/react": types,

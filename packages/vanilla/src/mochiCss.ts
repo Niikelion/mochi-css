@@ -85,9 +85,7 @@ export function _mochiPrebuilt<V extends AllVariants = DefaultVariants>(
 
 const emptyMochiCSS = new MochiCSS<AllVariants>([], {}, {})
 
-export function mergeMochiCss<V extends AllVariants[]>(
-    instances: MochiCSS<AllVariants>[],
-): MochiCSS<MergeCSSVariants<V>> {
+export function mergeMochiCss<V extends unknown[]>(instances: MochiCSS<AllVariants>[]): MochiCSS<MergeCSSVariants<V>> {
     if (instances.length === 0) return emptyMochiCSS as MochiCSS<MergeCSSVariants<V>>
 
     return new MochiCSS<AllVariants>(

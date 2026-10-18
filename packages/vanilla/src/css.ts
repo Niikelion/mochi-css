@@ -1,11 +1,15 @@
-import { CSSObject, type AllVariants, type MochiCSSProps, type MergeCSSVariants } from "@/cssObject"
+import { CSSObject, type AllVariants, type MochiCSSProps, type MergeCSSVariants, type VariantSlot } from "@/cssObject"
 import { isMochiCSS, MochiCSS, mergeMochiCss } from "@/mochiCss"
 
 export { isMochiCSS, MochiCSS, mergeMochiCss } from "@/mochiCss"
 export { _mochiPrebuilt } from "@/mochiCss"
 
-export function css<V extends AllVariants[]>(
-    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS | string }
+/**
+ * Each slot of `V` is inferred from one style's `variants`. Slots are `unknown` rather than
+ * `AllVariants` so a style without variants doesn't make inference give up on the whole tuple.
+ */
+export function css<V extends unknown[] | []>(
+    ...props: { [K in keyof V]: MochiCSSProps<VariantSlot<V[K]>> | MochiCSS | string }
 ): MochiCSS<MergeCSSVariants<V>> {
     const cssToMerge: MochiCSS<AllVariants>[] = []
     for (const p of props) {
@@ -23,5 +27,5 @@ export function css<V extends AllVariants[]>(
         }
     }
 
-    return mergeMochiCss(cssToMerge)
+    return mergeMochiCss<V>(cssToMerge)
 }

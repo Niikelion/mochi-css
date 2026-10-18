@@ -5,11 +5,11 @@
  */
 
 import { ComponentProps, ComponentType, createElement, FC, HTMLElementType } from "react"
-import { css, MochiCSS, AllVariants, MergeCSSVariants, MochiCSSProps, RefineVariants } from "@mochi-css/vanilla"
+import { css, MochiCSS, MergeCSSVariants, MochiCSSProps, RefineVariants, VariantSlot } from "@mochi-css/vanilla"
 import clsx from "clsx"
 
 /** Props added by MochiCSS to styled components */
-type MochiProps<V extends AllVariants[]> = {
+type MochiProps<V extends unknown[]> = {
     className?: string
 } & Partial<RefineVariants<MergeCSSVariants<V>>>
 
@@ -17,7 +17,7 @@ type MochiProps<V extends AllVariants[]> = {
 type Cls = { className?: string }
 
 /** A styled component FC augmented with a CSS selector for component targeting */
-export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]> = FC<
+export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>, V extends unknown[]> = FC<
     Omit<ComponentProps<T>, keyof MochiProps<V>> & MochiProps<V>
 > & {
     toString(): string
@@ -58,11 +58,11 @@ export type MochiStyledComponent<T extends HTMLElementType | ComponentType<Cls>,
  *
  * // Usage: <Button size="large" variant="primary">Click me</Button>
  */
-export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends AllVariants[]>(
+export function styled<T extends HTMLElementType | ComponentType<Cls>, V extends unknown[] | []>(
     target: T,
-    ...props: { [K in keyof V]: MochiCSSProps<V[K]> | MochiCSS<V[K]> | string }
+    ...props: { [K in keyof V]: MochiCSSProps<VariantSlot<V[K]>> | MochiCSS<VariantSlot<V[K]>> | string }
 ): MochiStyledComponent<T, V> {
-    const styles = css<V>(...(props as Parameters<typeof css<V>>))
+    const styles = css(...(props as Parameters<typeof css>))
     const selector = styles.selector
     const variantKeys = new Set(Object.keys(styles.variantClassNames))
     return Object.assign(
