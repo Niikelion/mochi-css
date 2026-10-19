@@ -1,5 +1,12 @@
 # @mochi-css/tsuki
 
+## 7.2.14
+
+### Patch Changes
+
+- 9f143ea: New `assetExtensions` option in `mochi.config.ts` adds file extensions that count as assets, on top of the built-in stylesheet, image, font, data and media types: `defineConfig({ assetExtensions: ["glsl", "riv"] })`. Local imports of those files aren't reported when they can't be resolved as modules. Builder exposes it as `BuilderOptions.assetExtensions` and `StageContext.assetExtensions`, and plugins' `isAssetImport` takes the extra list as a second argument.
+- b5c3e35: No more `Cannot resolve local import` warnings for local imports of stylesheets, images, fonts, data files and other assets (such as `import "./styles.css"`), or for imports with a bundler query like `?url` or `?raw`. They hold no styles to extract. A missing script module, including one with a dotted name like `./Button.styles`, still warns.
+
 ## 7.2.13
 
 ### Patch Changes

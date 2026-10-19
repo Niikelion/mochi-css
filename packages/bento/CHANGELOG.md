@@ -1,5 +1,11 @@
 # @mochi-css/bento
 
+## 0.2.2
+
+### Patch Changes
+
+- @mochi-css/vanilla@12.0.0
+
 ## 0.2.1
 
 ### Patch Changes

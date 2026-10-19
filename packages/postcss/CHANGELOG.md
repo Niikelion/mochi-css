@@ -1,5 +1,13 @@
 # @mochi-css/postcss
 
+## 6.0.6
+
+### Patch Changes
+
+- Updated dependencies [9f143ea]
+  - @mochi-css/config@8.1.0
+  - @mochi-css/builder@8.1.0
+
 ## 6.0.5
 
 ### Patch Changes

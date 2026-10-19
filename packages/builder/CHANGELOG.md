@@ -1,5 +1,11 @@
 # @mochi-css/builder
 
+## 8.1.0
+
+### Minor Changes
+
+- 9f143ea: New `assetExtensions` option in `mochi.config.ts` adds file extensions that count as assets, on top of the built-in stylesheet, image, font, data and media types: `defineConfig({ assetExtensions: ["glsl", "riv"] })`. Local imports of those files aren't reported when they can't be resolved as modules. Builder exposes it as `BuilderOptions.assetExtensions` and `StageContext.assetExtensions`, and plugins' `isAssetImport` takes the extra list as a second argument.
+
 ## 8.0.0
 
 ### Major Changes

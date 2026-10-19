@@ -1,7 +1,7 @@
 {
     "name": "@mochi-css/stitches",
     "repository": "git@github.com:Niikelion/mochi-css.git",
-    "version": "6.0.4",
+    "version": "7.0.0",
     "license": "MIT",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
@@ -48,13 +48,13 @@
     },
     "dependencies": {
         "@mochi-css/core": "6.0.0",
-        "@mochi-css/vanilla": "11.0.4",
+        "@mochi-css/vanilla": "12.0.0",
         "clsx": "^2.1.1"
     },
     "peerDependencies": {
-        "@mochi-css/builder": "8.0.0",
-        "@mochi-css/config": "8.0.0",
-        "@mochi-css/plugins": "7.2.2",
+        "@mochi-css/builder": "8.1.0",
+        "@mochi-css/config": "8.1.0",
+        "@mochi-css/plugins": "7.3.0",
         "@swc/core": "^1",
         "react": "^19"
     },
@@ -77,9 +77,9 @@
         "@eslint/js": "^9.18.0",
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@gamedev-sensei/tsdown-config": "^2.1.0",
-        "@mochi-css/builder": "8.0.0",
-        "@mochi-css/config": "8.0.0",
-        "@mochi-css/plugins": "7.2.2",
+        "@mochi-css/builder": "8.1.0",
+        "@mochi-css/config": "8.1.0",
+        "@mochi-css/plugins": "7.3.0",
         "@mochi-css/shared-config": "^2.0.0",
         "@swc/types": "^0.1.25",
         "@types/node": "^24.8.1",

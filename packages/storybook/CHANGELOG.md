@@ -1,5 +1,11 @@
 # @mochi-css/storybook
 
+## 0.3.2
+
+### Patch Changes
+
+- @mochi-css/vite@6.1.5
+
 ## 0.3.1
 
 ### Patch Changes
