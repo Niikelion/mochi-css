@@ -1,5 +1,11 @@
 # @mochi-css/tsuki
 
+## 7.2.12
+
+### Patch Changes
+
+- 2d1a844: Values returned by `keyframes()` and `css()` keep their methods while styles are extracted, so they work inside other styles: `` animation: `${pulse} 1s` `` gets the keyframes name and ``[`${box} &`]`` gets the class selector. Previously the extraction copied them into plain objects, which produced `[object Object]` in the CSS.
+
 ## 7.2.11
 
 ### Patch Changes

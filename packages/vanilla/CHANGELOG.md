@@ -1,5 +1,12 @@
 # @mochi-css/vanilla
 
+## 11.0.4
+
+### Patch Changes
+
+- Updated dependencies [2d1a844]
+    - @mochi-css/plugins@7.2.2
+
 ## 11.0.3
 
 ### Patch Changes
