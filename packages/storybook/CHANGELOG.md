@@ -1,5 +1,12 @@
 # @mochi-css/storybook
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [0c8d6e9]
+  - @mochi-css/vite@6.1.4
+
 ## 0.3.0
 
 ### Minor Changes

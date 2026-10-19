@@ -1,5 +1,11 @@
 # @mochi-css/next
 
+## 6.1.3
+
+### Patch Changes
+
+- 0c8d6e9: `styled(OtherComponent, ...)` overrides now win over the component's own styles when the two live in different files. Each file's CSS import was prepended, so it loaded before the CSS of the modules the file imports and lost on equal specificity; it now comes after the file's code (imports are hoisted, so it still loads). The global CSS import stays first.
+
 ## 6.1.2
 
 ### Patch Changes
