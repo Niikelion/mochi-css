@@ -11,6 +11,7 @@ export function createBuilder(config: Config, context: FullContext): Builder {
         onDiagnostic: context.onDiagnostic,
         debug: config.debug,
         tsConfigPath: config.tsConfigPath,
+        assetExtensions: config.assetExtensions,
         filePreProcess: ({ content, filePath }) => context.filePreProcess.transform(content, { filePath }),
         stages: [...context.stages.getAll()],
         sourceTransforms: [...context.sourceTransforms.getAll()],

@@ -58,7 +58,7 @@ export const ExportsStage = defineStage({
                 for (const item of ast.body) {
                     if (item.type === "ExportNamedDeclaration" && item.source) {
                         const sourceValue = item.source.value
-                        if (!isLocalImport(sourceValue) || isAssetImport(sourceValue)) continue
+                        if (!isLocalImport(sourceValue) || isAssetImport(sourceValue, context.assetExtensions)) continue
                         const sourcePath = resolveImport(file, sourceValue)
                         if (sourcePath === null) {
                             onDiagnostic({
@@ -82,7 +82,7 @@ export const ExportsStage = defineStage({
 
                     if (item.type === "ExportAllDeclaration") {
                         const sourceValue = item.source.value
-                        if (!isLocalImport(sourceValue) || isAssetImport(sourceValue)) continue
+                        if (!isLocalImport(sourceValue) || isAssetImport(sourceValue, context.assetExtensions)) continue
                         const sourcePath = resolveImport(file, sourceValue)
                         if (sourcePath === null) {
                             onDiagnostic({

@@ -117,7 +117,7 @@ export type BindingStageOut = {
 export const BindingStage = defineStage({
     dependsOn: [StyleExprStage] as const,
     init(context: StageContext, styleExprInst: StyleExprStageOut): BindingStageOut {
-        const { registry, resolveImport, log: onDiagnostic } = context
+        const { registry, resolveImport, log: onDiagnostic, assetExtensions } = context
         const fileBindings = registry.fileCache(
             (file) => [registry.fileData.for(file), styleExprInst.derived.for(file)],
             (file): BindingStageResult => {
@@ -136,7 +136,7 @@ export const BindingStage = defineStage({
                             const isLocal = isLocalImport(item.source.value)
                             const sourcePath = isLocal ? resolveImport(file, item.source.value) : null
 
-                            if (isLocal && sourcePath === null && !isAssetImport(item.source.value)) {
+                            if (isLocal && sourcePath === null && !isAssetImport(item.source.value, assetExtensions)) {
                                 onDiagnostic({
                                     code: "MOCHI_UNRESOLVED_IMPORT",
                                     message: `Cannot resolve local import "${item.source.value}"`,

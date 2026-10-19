@@ -65,10 +65,11 @@ const assetExtensions = new Set([
 /**
  * An import of a stylesheet, image, font, data file or other asset, or one with a bundler query
  * such as `?url` or `?raw`. These aren't modules the extractor can read, so failing to resolve
- * them isn't worth a warning.
+ * them isn't worth a warning. `extra` adds extensions from the config, with or without the dot.
  */
-export function isAssetImport(source: string): boolean {
+export function isAssetImport(source: string, extra: readonly string[] = []): boolean {
     if (/[?#]/.test(source)) return true
-    const extension = /\.([a-z0-9]+)$/i.exec(source)?.[1]
-    return extension !== undefined && assetExtensions.has(extension.toLowerCase())
+    const extension = /\.([a-z0-9]+)$/i.exec(source)?.[1]?.toLowerCase()
+    if (extension === undefined) return false
+    return assetExtensions.has(extension) || extra.some((e) => e.replace(/^\./, "").toLowerCase() === extension)
 }

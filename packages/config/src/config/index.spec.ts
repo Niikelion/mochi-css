@@ -60,6 +60,16 @@ describe("resolveConfig", () => {
         expect(result.splitCss).toBe(true)
     })
 
+    it("merges assetExtensions from fileConfig and inlineOpts", async () => {
+        const result = await resolveConfig({ assetExtensions: ["glsl"] }, { assetExtensions: ["riv"] })
+        expect(result.assetExtensions).toEqual(["glsl", "riv"])
+    })
+
+    it("leaves assetExtensions undefined when nothing sets it", async () => {
+        const result = await resolveConfig({}, undefined)
+        expect(result.assetExtensions).toBeUndefined()
+    })
+
     it("merges roots from fileConfig and inlineOpts, overriding defaults", async () => {
         const fileConfig: Partial<Config> = { roots: ["lib"], splitCss: false }
         const inlineOpts: Partial<Config> = { roots: ["app"], splitCss: true }
