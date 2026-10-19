@@ -6,7 +6,7 @@ import type { FileCache, StageContext } from "@mochi-css/builder"
 import { RefMap } from "@mochi-css/builder"
 import type { BindingInfo, BindingDeclarator, LocalImport } from "@mochi-css/builder"
 import { idToRef, type Ref } from "@mochi-css/builder"
-import { isLocalImport } from "@/utils"
+import { isAssetImport, isLocalImport } from "@/utils"
 import { StyleExprStage, type StyleExprStageOut } from "./StyleExprStage"
 
 function collectBindingsFromPattern(
@@ -136,7 +136,7 @@ export const BindingStage = defineStage({
                             const isLocal = isLocalImport(item.source.value)
                             const sourcePath = isLocal ? resolveImport(file, item.source.value) : null
 
-                            if (isLocal && sourcePath === null) {
+                            if (isLocal && sourcePath === null && !isAssetImport(item.source.value)) {
                                 onDiagnostic({
                                     code: "MOCHI_UNRESOLVED_IMPORT",
                                     message: `Cannot resolve local import "${item.source.value}"`,

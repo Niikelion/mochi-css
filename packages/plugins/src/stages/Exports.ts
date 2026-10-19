@@ -1,5 +1,5 @@
 import { type StageContext, defineStage, type FileCache, type ResolveImport } from "@mochi-css/builder"
-import { isLocalImport, getOrInsert } from "../utils"
+import { isAssetImport, isLocalImport, getOrInsert } from "../utils"
 
 /** A single named reexport specifier from one source file. */
 export type ReexportEntry = {
@@ -58,7 +58,7 @@ export const ExportsStage = defineStage({
                 for (const item of ast.body) {
                     if (item.type === "ExportNamedDeclaration" && item.source) {
                         const sourceValue = item.source.value
-                        if (!isLocalImport(sourceValue)) continue
+                        if (!isLocalImport(sourceValue) || isAssetImport(sourceValue)) continue
                         const sourcePath = resolveImport(file, sourceValue)
                         if (sourcePath === null) {
                             onDiagnostic({
@@ -82,7 +82,7 @@ export const ExportsStage = defineStage({
 
                     if (item.type === "ExportAllDeclaration") {
                         const sourceValue = item.source.value
-                        if (!isLocalImport(sourceValue)) continue
+                        if (!isLocalImport(sourceValue) || isAssetImport(sourceValue)) continue
                         const sourcePath = resolveImport(file, sourceValue)
                         if (sourcePath === null) {
                             onDiagnostic({

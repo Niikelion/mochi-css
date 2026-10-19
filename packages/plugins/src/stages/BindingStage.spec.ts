@@ -160,6 +160,26 @@ describe("BindingStage — unresolved local import diagnostic", () => {
         expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ code: "MOCHI_UNRESOLVED_IMPORT" }))
     })
 
+    it.each([
+        "./styles.css",
+        "../theme.scss",
+        "./logo.svg",
+        "./data.json",
+        "./font.woff2",
+        "./icon.png?url",
+        "./raw.txt?raw",
+    ])("does not emit diagnostic for an asset import (%s)", async (source) => {
+        const onDiagnostic = vi.fn()
+        await buildFileInfo(`import "${source}"`, () => null, onDiagnostic)
+        expect(onDiagnostic).not.toHaveBeenCalled()
+    })
+
+    it("still emits the diagnostic for a missing module with a dotted name", async () => {
+        const onDiagnostic = vi.fn()
+        await buildFileInfo(`import { styles } from "./Button.styles"`, () => null, onDiagnostic)
+        expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ code: "MOCHI_UNRESOLVED_IMPORT" }))
+    })
+
     it("does not emit diagnostic for unresolvable package imports", async () => {
         const onDiagnostic = vi.fn()
         await buildFileInfo(`import { foo } from "some-package"`, () => null, onDiagnostic)
