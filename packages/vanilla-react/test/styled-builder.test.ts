@@ -241,3 +241,36 @@ describe("styled builder pipeline", () => {
         expect(variantMatch?.[1]).not.toBe("card")
     })
 })
+
+describe("values used inside other styles", () => {
+    const cssOf = async (source: string) => {
+        const { chunks } = await runDefineConfig(source, path.resolve("src/values.tsx"))
+        return [...chunks.entries()].flatMap(([, v]) => [...v]).join("\n")
+    }
+
+    it("puts a keyframes name into a template string", async () => {
+        const css = await cssOf(dedent`
+            import { css, keyframes } from "@mochi-css/vanilla"
+
+            const pulse = keyframes({ "50%": { opacity: 0.5 } })
+            export const a = css({ animation: \`\${pulse} 1s ease-in-out infinite\` })
+            export const b = css({ animationName: pulse.toString() })
+        `)
+        const name = /@keyframes (\S+)/.exec(css)?.[1]
+        expect(name).toBeTruthy()
+        expect(css).toContain(`animation: ${name} 1s ease-in-out infinite;`)
+        expect(css).toContain(`animation-name: ${name};`)
+        expect(css).not.toContain("[object Object]")
+    })
+
+    it("puts a style's class into a selector", async () => {
+        const css = await cssOf(dedent`
+            import { css } from "@mochi-css/vanilla"
+
+            const box = css({ color: "red" })
+            export const label = css({ [\`\${box} &\`]: { color: "blue" } })
+        `)
+        expect(css).toMatch(/\.[\w-]+ \.[\w-]+ \{\s*color: blue;/)
+        expect(css).not.toContain("[object Object]")
+    })
+})

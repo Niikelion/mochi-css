@@ -72,8 +72,12 @@ function wrapGenerator(
                 return result
             }
 
-            // wrap all sub-generators
-            const ret: Record<string, unknown> = { ...result }
+            // Wrap all sub-generators. The copy keeps the result's prototype, so methods such as
+            // toString() still work during evaluation (`${keyframes(...)} 1s`, `${css(...)} &`).
+            const ret = Object.assign(
+                Object.create(Object.getPrototypeOf(result) as object | null) as object,
+                result,
+            ) as Record<string, unknown>
 
             for (const key in ret) {
                 const v = ret[key]
