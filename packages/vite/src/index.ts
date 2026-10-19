@@ -260,27 +260,30 @@ export function mochiCss(opts?: MochiViteOptions): Plugin {
             // The map is only meaningful for a pre-built sourcemod; the live fallback has none.
             const sourcemod_map = sourcemod !== undefined ? manifest?.sourcemaps?.[id] : undefined
 
-            const imports: string[] = []
-
-            // Inject global CSS import (keyframes, globalCss, and all CSS when splitCss: false)
+            // Global CSS (keyframes, globalCss, and all CSS when splitCss: false) comes first.
+            const prepend: string[] = []
             if (resolvedEntries.has(id) && manifest?.global) {
-                imports.push(`import "${GLOBAL_ID}";`)
+                prepend.push(`import "${GLOBAL_ID}";`)
             }
 
-            // Inject per-file CSS import (splitCss: true)
+            // Per-file CSS (splitCss: true) goes after the file's code. Imports are hoisted, so it still
+            // loads, but after the CSS of every module this file imports: styled(Base, ...) here then
+            // comes after Base's rules and wins.
+            const append: string[] = []
             if (manifest?.files?.[id] !== undefined) {
                 const hash = fileHash(id)
-                imports.push(`import "${VIRTUAL_PREFIX}${hash}.css";`)
+                append.push(`import "${VIRTUAL_PREFIX}${hash}.css";`)
             }
 
-            if (imports.length === 0) {
+            if (prepend.length === 0 && append.length === 0) {
                 if (transformed === code) return undefined
                 return sourcemod_map ? { code: transformed, map: sourcemod_map } : { code: transformed }
             }
 
-            // Prepended imports push the source down by `imports.length` lines; re-align the map.
-            const map = sourcemod_map ? offsetSourcemapLines(sourcemod_map, imports.length) : undefined
-            const out = imports.join("\n") + "\n" + transformed
+            // Prepended imports push the source down by `prepend.length` lines; re-align the map.
+            // Appended ones come after the last mapped line and don't move anything.
+            const map = sourcemod_map ? offsetSourcemapLines(sourcemod_map, prepend.length) : undefined
+            const out = [...prepend, transformed, ...append].join("\n")
             return map ? { code: out, map } : { code: out }
         },
     }

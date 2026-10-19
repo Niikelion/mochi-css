@@ -214,28 +214,38 @@ export function mochiCss(opts?: MochiRolldownOptions): Plugin {
                 manifest.sourcemods?.[filePath] ??
                 (await context.filePreProcess.transform(code, { filePath }));
 
-            const imports: string[] = [];
+            // Global CSS comes first.
+            const prepend: string[] = [];
             if (entries.has(filePath) && manifest.global) {
                 // External mode: inject the final CSS path directly so Rolldown preserves
                 // the specifier in chunk output without needing to rewrite it.
-                imports.push(
+                prepend.push(
                     externalCss
                         ? `import "./global.css"`
                         : `import "${ASSET_PREFIX}global"`,
                 );
             }
+            // Per-file CSS goes after the file's code. Imports are hoisted, so it still
+            // loads, but after the CSS of every module this file imports: styled(Base, ...) here then
+            // comes after Base's rules and wins.
+            const append: string[] = [];
             if (manifest.files?.[filePath]) {
                 const hash = fileHash(filePath);
-                imports.push(
+                append.push(
                     externalCss
                         ? `import "./${hash}.css"`
                         : `import "${ASSET_PREFIX}${hash}"`,
                 );
             }
 
-            if (imports.length === 0 && transformed === code) return null;
+            if (
+                prepend.length === 0 &&
+                append.length === 0 &&
+                transformed === code
+            )
+                return null;
 
-            return { code: imports.join("\n") + "\n" + transformed };
+            return { code: [...prepend, transformed, ...append].join("\n") };
         },
 
         async writeBundle(outputOptions: NormalizedOutputOptions) {

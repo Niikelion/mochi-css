@@ -224,6 +224,26 @@ describe("mochiCss rolldown plugin — virtual mode", () => {
         expect(result?.code).toContain(`import "mochi-css-asset:Button"`);
     });
 
+    it("transform imports a file's CSS after its code, so it follows the CSS of the modules it imports", async () => {
+        const srcPath = path.resolve("src/Button.tsx").replaceAll("\\", "/");
+        mockCollectMochiCss.mockResolvedValue({
+            files: { [srcPath]: ".btn { color: blue; }" },
+            global: undefined,
+        });
+        const plugin = mochiCss();
+        const mock = createMockPlugin(plugin);
+        await mock.triggerBuildStart();
+
+        const result = await mock.triggerTransform(
+            'import { Base } from "./Base";\nconst x = 1',
+            srcPath,
+        );
+        const code = result?.code ?? "";
+        expect(code.indexOf(`import "mochi-css-asset:Button"`)).toBeGreaterThan(
+            code.indexOf('from "./Base"'),
+        );
+    });
+
     it("transform injects global CSS import into entry files", async () => {
         mockCollectMochiCss.mockResolvedValue({ global: ".g {}", files: {} });
         const entryPath = path.resolve("src/index.ts").replaceAll("\\", "/");
