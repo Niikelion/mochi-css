@@ -11,12 +11,22 @@ import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, it } from "vitest";
+import { afterAll, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, "..");
-const localPackage = (name: string): string =>
-    `file:${resolve(packageRoot, "..", name).replaceAll("\\", "/")}`;
+// Each package is packed once into a tarball. A tarball is a fixed snapshot with a fixed checksum, so
+// Yarn's hardened mode (on for public pull requests) can't see a package folder change while other
+// tests run alongside this one, which failed installs with "Invalid resolution".
+const packDir = mkdtempSync(join(tmpdir(), "mochi-storybook-packs-"));
+const localPackage = (name: string): string => {
+    const tarball = join(packDir, `${name}.tgz`);
+    execSync(`yarn pack --out ${JSON.stringify(tarball)}`, {
+        cwd: resolve(packageRoot, "..", name),
+        stdio: "ignore",
+    });
+    return `file:${tarball.replaceAll("\\", "/")}`;
+};
 // Test this checkout's builds, including release versions not yet published to npm.
 const localPackages = Object.fromEntries(
     [
@@ -39,6 +49,12 @@ const swcVersion = (
 const { packageManager } = JSON.parse(
     readFileSync(resolve(packageRoot, "../../package.json"), "utf8"),
 ) as { packageManager: string };
+
+afterAll(() => {
+    if (dirname(resolve(packDir)) !== resolve(tmpdir()))
+        throw new Error("Unexpected pack directory");
+    rmSync(packDir, { recursive: true, force: true, maxRetries: 3 });
+});
 
 it.each(["8", "9", "10.0.0", "10"])(
     "builds extracted component and global CSS with Storybook %s",
