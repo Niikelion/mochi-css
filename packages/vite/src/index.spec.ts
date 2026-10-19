@@ -184,18 +184,36 @@ describe("mochiCss vite plugin transform", () => {
         expect(JSON.parse(result?.map ?? "{}").mappings).toBe("AAAA")
     })
 
-    it("offsets the sourcemap when a CSS import is injected", async () => {
+    it("imports a file's CSS after its code, so it follows the CSS of the modules it imports", async () => {
         const id = "/src/App.tsx"
         const map = JSON.stringify({ version: 3, sources: [id], names: [], mappings: "AAAA" })
         const hooks = await setupPlugin({
             files: { [id]: ".s-abc { color: red; }" },
             global: undefined,
-            sourcemods: { [id]: "const x = 2" },
+            sourcemods: { [id]: 'import { Base } from "./Base"\nconst x = 2' },
             sourcemaps: { [id]: map },
         })
 
         const result = await hooks.transform("const x = 1", id)
-        expect(result?.code).toContain("virtual:mochi-css/")
+        const code = result?.code ?? ""
+        expect(code.indexOf("virtual:mochi-css/")).toBeGreaterThan(code.indexOf('from "./Base"'))
+        // Nothing is prepended, so the map is unchanged.
+        expect(JSON.parse(result?.map ?? "{}").mappings).toBe("AAAA")
+    })
+
+    it("offsets the sourcemap by the prepended global CSS import", async () => {
+        const appPath = path.resolve(process.cwd(), "src/App.tsx").replaceAll("\\", "/")
+        const map = JSON.stringify({ version: 3, sources: [appPath], names: [], mappings: "AAAA" })
+        const hooks = await setupPlugin({
+            files: { [appPath]: ".s-abc { color: red; }" },
+            global: ".global { box-sizing: border-box; }",
+            sourcemods: { [appPath]: "const x = 2" },
+            sourcemaps: { [appPath]: map },
+        }, ["src/App.tsx"])
+
+        const result = await hooks.transform("const x = 1", appPath)
+        const code = result?.code ?? ""
+        expect(code.startsWith(`import "virtual:mochi-css/global.css"`)).toBe(true)
         // One import line prepended → one leading empty mapping line.
         expect(JSON.parse(result?.map ?? "{}").mappings).toBe(";AAAA")
     })

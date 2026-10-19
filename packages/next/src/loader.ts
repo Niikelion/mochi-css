@@ -38,7 +38,8 @@ function injectImports(
     manifest: DiskManifest,
     source: string,
 ): { code: string; prependedLines: number } {
-    const imports: string[] = []
+    const prepend: string[] = []
+    const append: string[] = []
     const sourceDir = path.dirname(ctx.resourcePath)
 
     function toImportPath(absPath: string): string {
@@ -47,23 +48,25 @@ function injectImports(
         return rel
     }
 
-    // Import per-file CSS (splitCss: true)
-    const cssPath = manifest.files[ctx.resourcePath.replaceAll("\\", "/")]
-    if (cssPath) {
-        const absoluteCssPath = path.resolve(cssPath)
-        imports.push(`import ${JSON.stringify(toImportPath(absoluteCssPath))};`)
-        ctx.addDependency(absoluteCssPath)
-    }
-
-    // Import global CSS (keyframes, globalCss, and all CSS when splitCss: false)
+    // Import global CSS first (keyframes, globalCss, and all CSS when splitCss: false)
     if (manifest.global) {
         const absoluteGlobalPath = path.resolve(manifest.global)
-        imports.push(`import ${JSON.stringify(toImportPath(absoluteGlobalPath))};`)
+        prepend.push(`import ${JSON.stringify(toImportPath(absoluteGlobalPath))};`)
         ctx.addDependency(absoluteGlobalPath)
     }
 
-    if (imports.length === 0) return { code: source, prependedLines: 0 }
-    return { code: imports.join("\n") + "\n" + source, prependedLines: imports.length }
+    // Per-file CSS (splitCss: true) goes after the file's code. Imports are hoisted, so it still
+    // loads, but after the CSS of every module this file imports: styled(Base, ...) here then
+    // comes after Base's rules and wins.
+    const cssPath = manifest.files[ctx.resourcePath.replaceAll("\\", "/")]
+    if (cssPath) {
+        const absoluteCssPath = path.resolve(cssPath)
+        append.push(`import ${JSON.stringify(toImportPath(absoluteCssPath))};`)
+        ctx.addDependency(absoluteCssPath)
+    }
+
+    if (prepend.length === 0 && append.length === 0) return { code: source, prependedLines: 0 }
+    return { code: [...prepend, source, ...append].join("\n"), prependedLines: prepend.length }
 }
 
 /**

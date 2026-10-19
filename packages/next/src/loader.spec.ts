@@ -134,7 +134,7 @@ describe("mochiLoader", () => {
         expect((call?.[2] as { mappings: string }).mappings).toBe("AAAA")
     })
 
-    it("offsets the sourcemap by injected CSS import lines", () => {
+    it("imports a file's CSS after its code without moving the sourcemap", () => {
         const resourcePath = "/project/src/App.tsx"
         const modified = "const x = 2\n"
         const map = JSON.stringify({ version: 3, sources: [resourcePath], names: [], mappings: "AAAA" })
@@ -152,9 +152,10 @@ describe("mochiLoader", () => {
         mochiLoader.call(ctx, "const x = 1\n")
 
         const call = callback.mock.calls[0]
-        expect(call?.[1] as string).toContain("abc123.css")
-        // One import line prepended → one leading empty mapping line.
-        expect((call?.[2] as { mappings: string }).mappings).toBe(";AAAA")
+        const code = call?.[1] as string
+        expect(code.indexOf("abc123.css")).toBeGreaterThan(code.indexOf("const x = 2"))
+        // Nothing is prepended, so the map is unchanged.
+        expect((call?.[2] as { mappings: string }).mappings).toBe("AAAA")
     })
 
     it("injects global CSS import alongside per-file CSS (splitCss: true)", () => {
