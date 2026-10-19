@@ -23,7 +23,7 @@ export { GeneratorsCollectionStage } from "./stages/GeneratorsCollectionStage"
 export type { ClassnameLiteralsStageOut } from "./stages/ClassnameLiteralsStage"
 export { ClassnameLiteralsStage } from "./stages/ClassnameLiteralsStage"
 export { extractRelevantSymbols } from "./extractRelevantSymbols"
-export { getOrInsert, isLocalImport } from "./utils"
+export { getOrInsert, isAssetImport, isLocalImport } from "./utils"
 export { propagateUsagesFromRef, propagateUsagesFromExpr } from "./propagation"
 export type { ReexportResolver } from "./propagation"
 

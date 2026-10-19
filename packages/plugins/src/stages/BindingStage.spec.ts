@@ -6,14 +6,20 @@ import { DerivedStage } from "./DerivedExtractorStage"
 import { StyleExprStage } from "./StyleExprStage"
 import { BindingStage } from "./BindingStage"
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-async function buildFileInfo(source: string, resolveImport = () => null, onDiagnostic: OnDiagnostic = () => {}) {
+async function buildFileInfo(
+    source: string,
+    resolveImport = () => null,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    onDiagnostic: OnDiagnostic = () => {},
+    assetExtensions: string[] = [],
+) {
     const module = await parseSource(source, "test.ts")
     const runner = new StageRunner(
         [module],
         [ImportStage, DerivedStage, StyleExprStage, BindingStage],
         onDiagnostic,
         resolveImport,
+        assetExtensions,
     )
     const importOut = runner.getInstance(ImportStage)
     importOut.extractors.set(new Map())
@@ -157,6 +163,43 @@ describe("BindingStage — unresolved local import diagnostic", () => {
     it("emits MOCHI_UNRESOLVED_IMPORT diagnostic when resolveImport returns null", async () => {
         const onDiagnostic = vi.fn()
         await buildFileInfo(`import { foo } from "./local"`, () => null, onDiagnostic)
+        expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ code: "MOCHI_UNRESOLVED_IMPORT" }))
+    })
+
+    it.each([
+        "./styles.css",
+        "../theme.scss",
+        "./logo.svg",
+        "./data.json",
+        "./font.woff2",
+        "./icon.png?url",
+        "./raw.txt?raw",
+    ])("does not emit diagnostic for an asset import (%s)", async (source) => {
+        const onDiagnostic = vi.fn()
+        await buildFileInfo(`import "${source}"`, () => null, onDiagnostic)
+        expect(onDiagnostic).not.toHaveBeenCalled()
+    })
+
+    it("still emits the diagnostic for a missing module with a dotted name", async () => {
+        const onDiagnostic = vi.fn()
+        await buildFileInfo(`import { styles } from "./Button.styles"`, () => null, onDiagnostic)
+        expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ code: "MOCHI_UNRESOLVED_IMPORT" }))
+    })
+
+    it("does not emit diagnostic for an extension added in the config", async () => {
+        const onDiagnostic = vi.fn()
+        await buildFileInfo(
+            `import shader from "./water.glsl"\nimport anim from "./intro.RIV"`,
+            () => null,
+            onDiagnostic,
+            ["glsl", ".riv"],
+        )
+        expect(onDiagnostic).not.toHaveBeenCalled()
+    })
+
+    it("still emits the diagnostic for that extension when the config doesn't add it", async () => {
+        const onDiagnostic = vi.fn()
+        await buildFileInfo(`import shader from "./water.glsl"`, () => null, onDiagnostic)
         expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ code: "MOCHI_UNRESOLVED_IMPORT" }))
     })
 

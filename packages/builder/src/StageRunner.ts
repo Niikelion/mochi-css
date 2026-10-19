@@ -23,7 +23,13 @@ export class StageRunner {
     public readonly engine: CacheEngine
     private readonly evaluationSignal: Signal
 
-    constructor(modules: Module[], stages: readonly AnyStage[], log: OnDiagnostic, resolveImport: ResolveImport) {
+    constructor(
+        modules: Module[],
+        stages: readonly AnyStage[],
+        log: OnDiagnostic,
+        resolveImport: ResolveImport,
+        assetExtensions: readonly string[] = [],
+    ) {
         this.filePaths = modules.map((m) => m.filePath)
         this.engine = createCacheEngine(this.filePaths)
 
@@ -40,6 +46,7 @@ export class StageRunner {
             registry: this.engine,
             log,
             resolveImport,
+            assetExtensions,
             steps: {
                 evaluation: this.evaluationSignal,
             },

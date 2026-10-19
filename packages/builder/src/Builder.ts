@@ -98,6 +98,8 @@ export type BuilderOptions = {
     postProcessHooks?: PostProcessHook[]
     /** Base directory for files produced via context.emitChunk(). */
     emitDir?: string
+    /** Extra asset file extensions (e.g. `["glsl"]`); local imports of these aren't reported when they can't be resolved. */
+    assetExtensions?: readonly string[]
     /** Called once at the end of the pipeline. Use to release any caches built between sourceTransforms and postEvalTransforms. */
     cleanup?: () => void | Promise<void>
     /** Analysis stages to run. Pass stages from createExtractorsPlugin() here — they carry the extractor configuration. */
@@ -203,7 +205,13 @@ export class Builder {
     }
 
     private createRunner(modules: Module[], resolveImport: ResolveImport): StageRunner {
-        const runner = new StageRunner(modules, this.options.stages ?? [], this.options.onDiagnostic, resolveImport)
+        const runner = new StageRunner(
+            modules,
+            this.options.stages ?? [],
+            this.options.onDiagnostic,
+            resolveImport,
+            this.options.assetExtensions,
+        )
         this.options.initializeStages?.(runner)
         return runner
     }

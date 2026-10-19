@@ -18,6 +18,8 @@ export type StageContext = {
     resolveImport: ResolveImport
     /** Builder pipeline step signals. */
     steps: StageSteps
+    /** Extra asset file extensions from the config, on top of the built-in ones. */
+    assetExtensions?: readonly string[]
 }
 
 /** Supertype of all stages. Use to constrain type parameters that accept any Stage. */

@@ -49,6 +49,16 @@ describe("ExportsStage — named reexports", () => {
         expect(result.reexports.size).toBe(0)
     })
 
+    it("does not emit MOCHI_UNRESOLVED_IMPORT for reexported assets", async () => {
+        const onDiagnostic = vi.fn()
+        await buildExportsInfo(
+            `export { default as logo } from "./logo.svg"\nexport * from "./tokens.json"`,
+            () => null,
+            onDiagnostic,
+        )
+        expect(onDiagnostic).not.toHaveBeenCalled()
+    })
+
     it("does not track direct export declarations (those belong to BindingStage)", async () => {
         const result = await buildExportsInfo(`export function foo() {}`)
         expect(result.reexports.size).toBe(0)

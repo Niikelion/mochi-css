@@ -14,6 +14,12 @@ export interface Config {
     tmpDir?: string
     debug?: boolean
     tsConfigPath?: string
+    /**
+     * Extra file extensions of local imports that hold no styles, on top of the built-in stylesheet,
+     * image, font, data and media types (e.g. `["glsl", "riv"]`). Imports of these files aren't
+     * reported when they can't be resolved as modules.
+     */
+    assetExtensions?: string[]
 }
 
 export type MochiPlugin = Plugin<Config>
@@ -37,6 +43,8 @@ export async function resolveConfig(
         tmpDir: inlineConfig?.tmpDir ?? fileConfig.tmpDir ?? defaults?.tmpDir,
         debug: inlineConfig?.debug ?? fileConfig.debug ?? defaults?.debug,
         tsConfigPath: inlineConfig?.tsConfigPath ?? defaults?.tsConfigPath,
+        assetExtensions:
+            mergeArrays(fileConfig.assetExtensions, inlineConfig?.assetExtensions) ?? defaults?.assetExtensions,
     }
 
     return await makePipeline(

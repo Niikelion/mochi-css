@@ -82,14 +82,15 @@ async function resolveConfig(
 
 The config shape. All fields are optional in `defineConfig`; `resolveConfig` fills required fields from defaults.
 
-| Field          | Type            | Description                                                 |
-| -------------- | --------------- | ----------------------------------------------------------- |
-| `roots`        | `RootEntry[]`   | Directories scanned for source files (default: `["src"]`)   |
-| `splitCss`     | `boolean`       | Emit per-source-file CSS instead of one global file         |
-| `onDiagnostic` | `OnDiagnostic`  | Callback for warnings and non-fatal errors                  |
-| `plugins`      | `MochiPlugin[]` | Mochi plugins — register stages, transforms, and emit hooks |
-| `tmpDir`       | `string`        | Manifest/styles output directory                            |
-| `debug`        | `boolean`       | Enable debug output                                         |
+| Field             | Type            | Description                                                                                                                  |
+| ----------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `roots`           | `RootEntry[]`   | Directories scanned for source files (default: `["src"]`)                                                                    |
+| `splitCss`        | `boolean`       | Emit per-source-file CSS instead of one global file                                                                          |
+| `onDiagnostic`    | `OnDiagnostic`  | Callback for warnings and non-fatal errors                                                                                   |
+| `plugins`         | `MochiPlugin[]` | Mochi plugins — register stages, transforms, and emit hooks                                                                  |
+| `tmpDir`          | `string`        | Manifest/styles output directory                                                                                             |
+| `debug`           | `boolean`       | Enable debug output                                                                                                          |
+| `assetExtensions` | `string[]`      | Extra asset file extensions (e.g. `["glsl"]`); local imports of these aren't reported when they can't be resolved as modules |
 
 ### `MochiPlugin`
 
